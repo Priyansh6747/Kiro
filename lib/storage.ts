@@ -314,6 +314,8 @@ export async function findTaskWithProject(
       deletedAt: tasks.deletedAt,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
+      recurrenceRule: tasks.recurrenceRule,
+      recurrenceEndsAt: tasks.recurrenceEndsAt,
       isDefault: projects.isDefault,
     })
     .from(tasks)
