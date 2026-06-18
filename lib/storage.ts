@@ -5,19 +5,24 @@
  * they go through functions exported from this module.
  */
 
-import { and, asc, count, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { db } from "./db/client";
 import {
-  dayLogs,
-  memoryBaseline,
-  preferences,
-  projects,
-  taskClosure,
-  taskDependencies,
-  tasks,
-  users,
   type DayLog,
+  dayLogs,
   type MemoryBaseline,
+  memoryBaseline,
   type NewDayLog,
   type NewMemoryBaseline,
   type NewPreference,
@@ -26,8 +31,14 @@ import {
   type NewUser,
   type Preference,
   type Project,
+  preferences,
+  projects,
   type Task,
+  taskClosure,
+  taskDependencies,
+  tasks,
   type User,
+  users,
 } from "./db/models";
 import { nowSec } from "./utils";
 
@@ -47,9 +58,15 @@ export async function createUser(data: NewUser): Promise<User> {
 
 export async function updateUser(
   id: string,
-  data: Partial<Pick<User, "email" | "username" | "name" | "avatarUrl" | "updatedAt">>,
+  data: Partial<
+    Pick<User, "email" | "username" | "name" | "avatarUrl" | "updatedAt">
+  >,
 ): Promise<User | undefined> {
-  const rows = await db.update(users).set(data).where(eq(users.id, id)).returning();
+  const rows = await db
+    .update(users)
+    .set(data)
+    .where(eq(users.id, id))
+    .returning();
   return rows[0];
 }
 
@@ -57,7 +74,9 @@ export async function updateUser(
 // Preferences
 // ---------------------------------------------------------------------------
 
-export async function findPrefsByUserId(userId: string): Promise<Preference | undefined> {
+export async function findPrefsByUserId(
+  userId: string,
+): Promise<Preference | undefined> {
   const rows = await db
     .select()
     .from(preferences)
@@ -66,7 +85,9 @@ export async function findPrefsByUserId(userId: string): Promise<Preference | un
   return rows[0];
 }
 
-export async function createPreferences(data: NewPreference): Promise<Preference> {
+export async function createPreferences(
+  data: NewPreference,
+): Promise<Preference> {
   const rows = await db.insert(preferences).values(data).returning();
   return rows[0];
 }
@@ -82,7 +103,9 @@ export async function createPreferences(data: NewPreference): Promise<Preference
  * constraint error. In that case we return an **in-memory** default object so
  * the app keeps working; the real row will be persisted once the webhook runs.
  */
-export async function getOrCreatePreferences(userId: string): Promise<Preference> {
+export async function getOrCreatePreferences(
+  userId: string,
+): Promise<Preference> {
   const existing = await findPrefsByUserId(userId);
   if (existing) return existing;
 
@@ -104,22 +127,48 @@ export async function getOrCreatePreferences(userId: string): Promise<Preference
     // The user row doesn't exist yet (FK constraint). Return an in-memory
     // default so the request can still proceed; the row will be persisted
     // once the Clerk webhook syncs the user.
+    const errObj =
+      err && typeof err === "object" ? (err as Record<string, unknown>) : null;
+    const errStr = String(err);
+    const causeStr = errObj && "cause" in errObj ? String(errObj.cause) : "";
+    const code = errObj && "code" in errObj ? String(errObj.code) : "";
+
+    let causeCode = "";
+    if (
+      errObj &&
+      "cause" in errObj &&
+      errObj.cause &&
+      typeof errObj.cause === "object"
+    ) {
+      const causeObj = errObj.cause as Record<string, unknown>;
+      if ("code" in causeObj) {
+        causeCode = String(causeObj.code);
+      }
+    }
+
     const isConstraintError =
-      err instanceof Error &&
-      (err.message.includes("FOREIGN KEY") || err.message.includes("SQLITE_CONSTRAINT"));
+      errStr.includes("FOREIGN KEY") ||
+      errStr.includes("SQLITE_CONSTRAINT") ||
+      causeStr.includes("FOREIGN KEY") ||
+      causeStr.includes("SQLITE_CONSTRAINT") ||
+      code === "SQLITE_CONSTRAINT" ||
+      causeCode === "SQLITE_CONSTRAINT";
 
     if (isConstraintError) return defaults as Preference;
     throw err;
   }
 }
 
-
 export async function updatePreferences(
   userId: string,
   data: Partial<
     Pick<
       Preference,
-      "timezone" | "defaultAvailableMin" | "ratioMode" | "morningNudgeTime" | "updatedAt"
+      | "timezone"
+      | "defaultAvailableMin"
+      | "ratioMode"
+      | "morningNudgeTime"
+      | "updatedAt"
     >
   >,
 ): Promise<Preference | undefined> {
@@ -156,7 +205,9 @@ export async function findProjectById(
 }
 
 /** Count of non-default active projects for a user. */
-export async function countActiveNonDefaultProjects(userId: string): Promise<number> {
+export async function countActiveNonDefaultProjects(
+  userId: string,
+): Promise<number> {
   const rows = await db
     .select({ cnt: count() })
     .from(projects)
@@ -209,14 +260,13 @@ export interface ListTasksFilter {
 }
 
 export async function listTasks(filter: ListTasksFilter): Promise<Task[]> {
-  const conditions = [
-    eq(tasks.userId, filter.userId),
-    isNull(tasks.deletedAt),
-  ];
+  const conditions = [eq(tasks.userId, filter.userId), isNull(tasks.deletedAt)];
 
   if (filter.projectId) conditions.push(eq(tasks.projectId, filter.projectId));
-  if (filter.date !== undefined) conditions.push(eq(tasks.scheduledDate, filter.date));
-  if (filter.status) conditions.push(eq(tasks.status, filter.status as Task["status"]));
+  if (filter.date !== undefined)
+    conditions.push(eq(tasks.scheduledDate, filter.date));
+  if (filter.status)
+    conditions.push(eq(tasks.status, filter.status as Task["status"]));
   if (filter.bucket) {
     conditions.push(isNull(tasks.scheduledDate));
     conditions.push(eq(tasks.status, "pending"));
@@ -539,8 +589,8 @@ export async function countTasksByStatusForDay(
 
   const result = { done: 0, missed: 0, carried: 0 };
   for (const row of rows) {
-    if (row.status === "done")    result.done    = row.cnt;
-    if (row.status === "missed")  result.missed  = row.cnt;
+    if (row.status === "done") result.done = row.cnt;
+    if (row.status === "missed") result.missed = row.cnt;
     if (row.status === "carried") result.carried = row.cnt;
   }
   return result;
@@ -590,7 +640,9 @@ export async function insertMemoryBaseline(
 // ---------------------------------------------------------------------------
 
 /** Returns the MAX(updated_at) across all tasks for a user. */
-export async function latestTaskUpdateSec(userId: string): Promise<number | null> {
+export async function latestTaskUpdateSec(
+  userId: string,
+): Promise<number | null> {
   const rows = await db
     .select({ maxUpdatedAt: sql<number | null>`MAX(${tasks.updatedAt})` })
     .from(tasks)
@@ -643,14 +695,14 @@ export async function listProjectsWithStats(
       type: projects.type,
       deadlineAt: projects.deadlineAt,
       archivedAt: projects.archivedAt,
-      lastCompletedAt: sql<number | null>`MAX(CASE WHEN ${tasks.completedAt} IS NOT NULL THEN ${tasks.completedAt} END)`,
+      lastCompletedAt: sql<
+        number | null
+      >`MAX(CASE WHEN ${tasks.completedAt} IS NOT NULL THEN ${tasks.completedAt} END)`,
       todayCount: sql<number>`COUNT(CASE WHEN ${tasks.scheduledDate} = ${todayDate} THEN 1 END)`,
     })
     .from(projects)
     .leftJoin(tasks, eq(tasks.projectId, projects.id))
-    .where(
-      and(eq(projects.userId, userId), isNull(projects.archivedAt)),
-    )
+    .where(and(eq(projects.userId, userId), isNull(projects.archivedAt)))
     .groupBy(projects.id);
 
   return rows as Array<{
