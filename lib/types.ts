@@ -134,8 +134,7 @@ export function formatTimestamp(ts: number | null): string {
 /** Return the current unix day integer in the browser's local timezone. */
 export function todayUnixDay(): number {
   const now = new Date();
-  const localMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.floor(localMidnight.getTime() / 86400000);
+  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
 }
 
 /** How many minutes as "Xh Ym" or "Ym". */
