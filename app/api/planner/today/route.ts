@@ -6,8 +6,27 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { findDayLog, getOrCreatePreferences, listTasks } from "@/lib/storage";
-import { todayUnixDay } from "@/lib/utils";
+import {
+  findDayLog,
+  getOrCreatePreferences,
+  listTasks,
+  listRecurringTemplateTasks,
+  findTodayInstanceOfTemplate,
+  createTask,
+  insertTaskClosureSelf,
+} from "@/lib/storage";
+import { todayUnixDay, nowSec } from "@/lib/utils";
+
+const DAY_ABBREV = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+function ruleMatchesToday(rule: string, dateObj: Date): boolean {
+  if (rule === "daily") return true;
+  if (rule === "weekly") return dateObj.getUTCDay() === 1; // Default weekly to Monday
+
+  const todayStr = DAY_ABBREV[dateObj.getUTCDay()];
+  const days = rule.split(",").map((d) => d.trim().toUpperCase());
+  return days.includes(todayStr);
+}
 
 export async function GET(): Promise<Response> {
   const { userId } = await auth();
@@ -16,6 +35,43 @@ export async function GET(): Promise<Response> {
   const prefs = await getOrCreatePreferences(userId);
 
   const todayDate = todayUnixDay(prefs.timezone);
+  const now = nowSec();
+
+  // ── Auto-generate recurring instances for today ──────────────────────────
+  const templates = await listRecurringTemplateTasks(userId);
+  const dateObj = new Date(todayDate * 86400000);
+
+  for (const t of templates) {
+    if (t.taskRecurrenceEndsAt && now > t.taskRecurrenceEndsAt) {
+      continue; // Recurrence expired
+    }
+
+    if (ruleMatchesToday(t.taskRecurrenceRule, dateObj)) {
+      const existing = await findTodayInstanceOfTemplate(t.taskId, todayDate);
+      if (!existing) {
+        const newTaskId = crypto.randomUUID();
+        await createTask({
+          id: newTaskId,
+          userId,
+          projectId: t.projectId,
+          parentId: null,
+          carriedFromId: t.taskId, // Link to template
+          title: t.taskTitle,
+          estimateMin: t.taskEstimateMin,
+          status: "pending",
+          scheduledDate: todayDate,
+          deadlineAt: null,
+          completedAt: null,
+          deletedAt: null,
+          recurrenceRule: null, // Instance is one-off
+          recurrenceEndsAt: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+        await insertTaskClosureSelf(newTaskId);
+      }
+    }
+  }
 
   const scheduledTasks = await listTasks({ userId, date: todayDate });
 

@@ -349,12 +349,15 @@ export default function TodayPage() {
           projects={projects}
           defaultScheduledDate={todayUnixDay()}
           onCreated={(task) => {
-            if (task.scheduledDate !== null) {
-              setPlan((prev) =>
-                prev ? { ...prev, tasks: [...prev.tasks, task] } : prev
-              );
-            } else {
-              setBucketTasks((prev) => [...prev, task]);
+            const tasksList = Array.isArray(task) ? task : [task];
+            for (const t of tasksList) {
+              if (t.scheduledDate !== null) {
+                setPlan((prev) =>
+                  prev ? { ...prev, tasks: [...prev.tasks, t] } : prev
+                );
+              } else {
+                setBucketTasks((prev) => [...prev, t]);
+              }
             }
             setShowCapture(false);
           }}

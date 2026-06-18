@@ -143,11 +143,18 @@ function ProjectWorkspace({
     e.preventDefault();
     setSavingEdit(true);
     try {
+      let cadence: "daily" | "weekly" | "custom" | undefined;
+      if (editType === "habit") cadence = "daily";
+      else if (editType === "recurring") {
+        cadence = "custom";
+      }
+
       const updated = await updateProject(project.id, {
         name: editName.trim(),
         importance: editImportance,
         type: editType,
-        deadline_at: editDeadline
+        cadence,
+        deadline_at: (editType !== "habit" && editType !== "recurring" && editDeadline)
           ? Math.floor(new Date(editDeadline).getTime() / 1000)
           : null,
       });
@@ -165,8 +172,12 @@ function ProjectWorkspace({
     if (selectedTask?.id === updated.id) setSelectedTask(updated);
   };
 
-  const handleTaskCreated = (task: Task) => {
-    setTasks((prev) => [...prev, task]);
+  const handleTaskCreated = (task: Task | Task[]) => {
+    if (Array.isArray(task)) {
+      setTasks((prev) => [...prev, ...task]);
+    } else {
+      setTasks((prev) => [...prev, task]);
+    }
   };
 
   const pendingTasks = tasks.filter((t) => t.status === "pending");
@@ -219,12 +230,14 @@ function ProjectWorkspace({
                   </option>
                 ))}
               </select>
-              <input
-                type="date"
-                className="border rounded px-2 py-1 text-sm"
-                value={editDeadline}
-                onChange={(e) => setEditDeadline(e.target.value)}
-              />
+              {(editType === "critical" || editType === "nicetohave") && (
+                <input
+                  type="date"
+                  className="border rounded px-2 py-1 text-sm"
+                  value={editDeadline}
+                  onChange={(e) => setEditDeadline(e.target.value)}
+                />
+              )}
             </div>
             <div className="flex gap-2">
               <button

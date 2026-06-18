@@ -38,11 +38,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { name, importance, type, deadline_at } = body as {
+  const { name, importance, type, deadline_at, cadence } = body as {
     name?: unknown;
     importance?: unknown;
     type?: unknown;
     deadline_at?: unknown;
+    cadence?: unknown;
   };
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
+  let finalCadence: "daily" | "weekly" | "custom" | null = null;
+  if (cadence !== undefined && cadence !== null) {
+    if (typeof cadence !== "string" || !["daily", "weekly", "custom"].includes(cadence)) {
+      return Response.json({ error: "cadence must be daily, weekly, or custom" }, { status: 400 });
+    }
+    finalCadence = cadence as "daily" | "weekly" | "custom";
+  }
+
   // ── Enforce project cap (max 10 non-default active) ──────────────────────
   const activeCount = await countActiveNonDefaultProjects(userId);
   if (activeCount >= 10) {
@@ -89,6 +98,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     importance: importanceNum,
     type: type as ProjectType,
     deadlineAt,
+    cadence: finalCadence,
     isDefault: false,
     createdAt: now,
     archivedAt: null,

@@ -58,8 +58,20 @@ export const createTask = (body: {
   scheduled_date?: number | null;
   deadline_at?: number | null;
   parent_id?: string;
+  recurrence_rule?: string | null;
+  recurrence_ends_at?: number | null;
 }) =>
   request<import("./types").Task>("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const ingestTasks = (body: {
+  project_id: string;
+  tasks: any[];
+  scheduled_date?: number | null;
+}) =>
+  request<import("./types").Task[]>("/api/tasks/ingest", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -72,6 +84,8 @@ export const updateTask = (
     status: import("./types").TaskStatus;
     scheduled_date: number | null;
     deadline_at: number | null;
+    recurrence_rule: string | null;
+    recurrence_ends_at: number | null;
   }>,
 ) =>
   request<import("./types").Task>(`/api/tasks/${id}`, {
@@ -98,6 +112,7 @@ export const createProject = (body: {
   importance: number;
   type: import("./types").ProjectType;
   deadline_at?: number | null;
+  cadence?: import("./types").Cadence | null;
 }) =>
   request<import("./types").Project>("/api/projects", {
     method: "POST",
@@ -111,6 +126,7 @@ export const updateProject = (
     importance: number;
     type: import("./types").ProjectType;
     deadline_at: number | null;
+    cadence?: import("./types").Cadence | null;
   }>,
 ) =>
   request<import("./types").Project>(`/api/projects/${id}`, {

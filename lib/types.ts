@@ -4,6 +4,9 @@ export type TaskStatus = "pending" | "done" | "missed" | "carried" | "adjusted" 
 export type ProjectType = "critical" | "recurring" | "habit" | "nicetohave";
 export type RatioMode = "cumulative" | "streak";
 export type DayType = "normal" | "adjusted" | "break";
+export type Cadence = "daily" | "weekly" | "custom";
+/** Recurrence rule: "daily", "weekly", or comma-separated day abbreviations like "MON,THU" */
+export type RecurrenceRule = string;
 
 export interface Task {
   id: string;
@@ -14,10 +17,14 @@ export interface Task {
   title: string;
   estimateMin: number;
   status: TaskStatus;
-  scheduledDate: number | null; // unix day (null = bucket)
+  scheduledDate: number | null; // unix day (null = bucket or recurring template)
   deadlineAt: number | null;    // unix timestamp
   completedAt: number | null;
   deletedAt: number | null;
+  /** Recurrence rule: null = one-off, "daily", "weekly", or "MON,THU" etc. */
+  recurrenceRule: RecurrenceRule | null;
+  /** Until when to recur; null = forever */
+  recurrenceEndsAt: number | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -30,6 +37,8 @@ export interface Project {
   type: ProjectType;
   deadlineAt: number | null;
   isDefault: boolean;
+  /** cadence: null = no auto-suggest, daily = habit, weekly/custom = recurring */
+  cadence: Cadence | null;
   createdAt: number;
   archivedAt: number | null;
 }

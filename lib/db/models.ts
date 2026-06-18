@@ -58,6 +58,14 @@ export const projects = sqliteTable(
         isDefault:  integer("is_default", { mode: "boolean" })
             .notNull()
             .default(false),
+        /**
+         * cadence – controls Planner auto-suggest frequency.
+         * null = no auto-suggest (critical / nicetohave)
+         * daily = habit (every morning)
+         * weekly = recurring with a fixed weekly pattern
+         * custom = recurring with explicit day-of-week selection
+         */
+        cadence:    text("cadence", { enum: ["daily", "weekly", "custom"] }),
         createdAt:  integer("created_at").notNull(),
         archivedAt: integer("archived_at"),                     // soft delete
     },
@@ -88,10 +96,18 @@ export const tasks = sqliteTable(
         })
             .notNull()
             .default("pending"),
-        scheduledDate: integer("scheduled_date"),   // unix date (day only), null = bucket
+        scheduledDate: integer("scheduled_date"),   // unix date (day only), null = bucket/template
         deadlineAt:    integer("deadline_at"),
         completedAt:   integer("completed_at"),
         deletedAt:     integer("deleted_at"),
+        /**
+         * recurrence_rule – when null the task is a one-off.
+         * Values: "daily" | comma-separated day abbreviations e.g. "MON" | "MON,THU" | "weekly"
+         * Day abbreviations: MON TUE WED THU FRI SAT SUN
+         */
+        recurrenceRule:    text("recurrence_rule"),
+        /** recurrence_ends_at – optional unix timestamp; null = recur forever */
+        recurrenceEndsAt:  integer("recurrence_ends_at"),
         createdAt:     integer("created_at").notNull(),
         updatedAt:     integer("updated_at").notNull(),
     },

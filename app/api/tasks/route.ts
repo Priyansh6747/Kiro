@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { project_id, title, estimate_min, scheduled_date, deadline_at, parent_id } =
+  const { project_id, title, estimate_min, scheduled_date, deadline_at, parent_id, recurrence_rule, recurrence_ends_at } =
     body as {
       project_id?: unknown;
       title?: unknown;
@@ -62,6 +62,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       scheduled_date?: unknown;
       deadline_at?: unknown;
       parent_id?: unknown;
+      recurrence_rule?: unknown;
+      recurrence_ends_at?: unknown;
     };
 
   // ── Required field validation ─────────────────────────────────────────────
@@ -112,6 +114,22 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
+  let recurrenceRule: string | null = null;
+  if (recurrence_rule !== undefined && recurrence_rule !== null) {
+    if (typeof recurrence_rule !== "string") {
+      return Response.json({ error: "recurrence_rule must be a string" }, { status: 400 });
+    }
+    recurrenceRule = recurrence_rule;
+  }
+
+  let recurrenceEndsAt: number | null = null;
+  if (recurrence_ends_at !== undefined && recurrence_ends_at !== null) {
+    recurrenceEndsAt = Number(recurrence_ends_at);
+    if (Number.isNaN(recurrenceEndsAt)) {
+      return Response.json({ error: "recurrence_ends_at must be a unix timestamp" }, { status: 400 });
+    }
+  }
+
   // ── Parent task validation ────────────────────────────────────────────────
   let parentId: string | null = null;
   if (parent_id !== undefined && parent_id !== null && typeof parent_id === "string") {
@@ -143,6 +161,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     deadlineAt,
     completedAt: null,
     deletedAt: null,
+    recurrenceRule,
+    recurrenceEndsAt,
     createdAt: now,
     updatedAt: now,
   });

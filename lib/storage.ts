@@ -228,7 +228,7 @@ export async function createProject(data: NewProject): Promise<Project> {
 
 export async function updateProject(
   id: string,
-  data: Partial<Pick<Project, "name" | "importance" | "type" | "deadlineAt">>,
+  data: Partial<Pick<Project, "name" | "importance" | "type" | "deadlineAt" | "cadence">>,
 ): Promise<Project | undefined> {
   const rows = await db
     .update(projects)
@@ -341,6 +341,8 @@ export async function updateTask(
       | "completedAt"
       | "deletedAt"
       | "updatedAt"
+      | "recurrenceRule"
+      | "recurrenceEndsAt"
     >
   >,
 ): Promise<Task | undefined> {
@@ -377,6 +379,8 @@ export async function listUnresolvedTasksForDay(
       deadlineAt: tasks.deadlineAt,
       completedAt: tasks.completedAt,
       deletedAt: tasks.deletedAt,
+      recurrenceRule: tasks.recurrenceRule,
+      recurrenceEndsAt: tasks.recurrenceEndsAt,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
       isDefault: projects.isDefault,
@@ -391,6 +395,77 @@ export async function listUnresolvedTasksForDay(
         isNull(tasks.deletedAt),
       ),
     );
+}
+
+// ---------------------------------------------------------------------------
+// Recurring task templates
+// ---------------------------------------------------------------------------
+
+export interface RecurringTemplate {
+  taskId: string;
+  taskTitle: string;
+  taskEstimateMin: number;
+  taskRecurrenceRule: string;
+  taskRecurrenceEndsAt: number | null;
+  projectId: string;
+  projectCadence: string;
+  userId: string;
+}
+
+/**
+ * Fetch all recurring template tasks (no scheduled_date, has recurrence_rule)
+ * for projects with a non-null cadence.
+ */
+export async function listRecurringTemplateTasks(
+  userId: string,
+): Promise<RecurringTemplate[]> {
+  const rows = await db
+    .select({
+      taskId: tasks.id,
+      taskTitle: tasks.title,
+      taskEstimateMin: tasks.estimateMin,
+      taskRecurrenceRule: tasks.recurrenceRule,
+      taskRecurrenceEndsAt: tasks.recurrenceEndsAt,
+      projectId: projects.id,
+      projectCadence: projects.cadence,
+      userId: tasks.userId,
+    })
+    .from(tasks)
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        isNull(tasks.scheduledDate),
+        isNull(tasks.deletedAt),
+        eq(tasks.status, "pending"),
+        sql`${tasks.recurrenceRule} IS NOT NULL`,
+        sql`${projects.cadence} IS NOT NULL`,
+      ),
+    );
+
+  return rows.filter((r) => r.taskRecurrenceRule !== null) as RecurringTemplate[];
+}
+
+/**
+ * Check if a today-instance already exists for a given template task on a date.
+ * An instance is identified by carriedFromId = templateTaskId.
+ */
+export async function findTodayInstanceOfTemplate(
+  templateTaskId: string,
+  date: number,
+): Promise<Task | undefined> {
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.carriedFromId, templateTaskId),
+        eq(tasks.scheduledDate, date),
+        isNull(tasks.deletedAt),
+      ),
+    )
+    .limit(1);
+  return rows[0];
 }
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import {
   updateTask,
   deleteTask,
   createProject,
+  ingestTasks,
 } from "@/lib/api-client";
 import { todayUnixDay } from "@/lib/types";
 
@@ -358,7 +359,7 @@ export function QuickCapture({
   defaultScheduledDate,
 }: {
   projects: Project[];
-  onCreated: (task: Task) => void;
+  onCreated: (task: Task | Task[]) => void;
   onClose: () => void;
   defaultProjectId?: string;
   defaultScheduledDate?: number | null;
@@ -374,19 +375,48 @@ export function QuickCapture({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [importJson, setImportJson] = useState(false);
+  const [jsonText, setJsonText] = useState("");
+  const [showExample, setShowExample] = useState(false);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !projectId) return;
+    if (!importJson && !title.trim()) return;
+    if (importJson && !jsonText.trim()) return;
+    if (!projectId) return;
     setSaving(true);
     setError(null);
     try {
-      const task = await createTask({
-        project_id: projectId,
-        title: title.trim(),
-        estimate_min: Number(estimate) || 30,
-        scheduled_date: scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null,
-      });
-      onCreated(task);
+      let tasksData: any[] = [];
+      if (importJson) {
+        try {
+          tasksData = JSON.parse(jsonText);
+          if (!Array.isArray(tasksData)) {
+            throw new Error("JSON must be an array of task objects");
+          }
+          validateTasksData(tasksData);
+        } catch (err) {
+          throw new Error(`JSON validation error: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      if (importJson) {
+        const schedDate = scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null;
+        const res = await ingestTasks({
+          project_id: projectId,
+          tasks: tasksData,
+          scheduled_date: schedDate,
+        });
+        onCreated(res);
+      } else {
+        const task = await createTask({
+          project_id: projectId,
+          title: title.trim(),
+          estimate_min: Number(estimate) || 30,
+          scheduled_date: scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null,
+        });
+        onCreated(task);
+      }
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -396,7 +426,7 @@ export function QuickCapture({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4">
-      <div className="bg-white rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5">
+      <div className="bg-white rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">Quick Capture</h3>
           <button
@@ -408,16 +438,18 @@ export function QuickCapture({
         </div>
 
         <form onSubmit={submit} className="space-y-3">
-          <div>
-            <input
-              autoFocus
-              required
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Task title…"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+          {!importJson && (
+            <div>
+              <input
+                autoFocus
+                required={!importJson}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Task title…"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="flex gap-2">
             <select
@@ -433,15 +465,17 @@ export function QuickCapture({
               ))}
             </select>
 
-            <input
-              type="number"
-              min={1}
-              max={480}
-              className="w-20 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="min"
-              value={estimate}
-              onChange={(e) => setEstimate(e.target.value)}
-            />
+            {!importJson && (
+              <input
+                type="number"
+                min={1}
+                max={480}
+                className="w-20 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="min"
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
+              />
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -454,11 +488,89 @@ export function QuickCapture({
             Schedule for today
           </label>
 
+          <div className="border-t pt-3 mt-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={importJson}
+                onChange={(e) => {
+                  setImportJson(e.target.checked);
+                  setError(null);
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Import Tasks from JSON
+            </label>
+          </div>
+
+          {importJson && (
+            <div className="space-y-2 pt-2 border-t border-dashed border-gray-200">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-medium text-gray-500">
+                  Tasks JSON
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowExample(!showExample)}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  {showExample ? "Hide Structure Example" : "Show Structure Example"}
+                </button>
+              </div>
+
+              {showExample && (
+                <div className="bg-gray-50 border rounded-lg p-2.5 text-[10px] font-mono text-gray-600 overflow-x-auto max-h-40 leading-relaxed whitespace-pre">
+{`[
+  {
+    "title": "Design Database Schema",
+    "estimate_min": 60,
+    "deadline": "2026-06-25",
+    "subtasks": [
+      { "title": "Define User Table", "estimate_min": 20 },
+      { "title": "Define Task Table", "estimate_min": 30 }
+    ]
+  },
+  {
+    "title": "Implement Webhook Handler",
+    "estimate_min": 90
+  }
+]`}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const text = event.target?.result;
+                      if (typeof text === "string") {
+                        setJsonText(text);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }}
+                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <textarea
+                  className="w-full border rounded-lg px-3 py-2 text-xs font-mono h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder='Paste JSON here (e.g. [{"title": "Task 1", "estimate_min": 30}])'
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
           {error && <p className="text-xs text-red-600">{error}</p>}
 
           <button
             type="submit"
-            disabled={saving || !title.trim()}
+            disabled={saving || (!importJson && !title.trim()) || (importJson && !jsonText.trim())}
             className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "Adding…" : "Add Task"}
@@ -470,6 +582,29 @@ export function QuickCapture({
 }
 
 // ── Create Project Form ───────────────────────────────────────────────────────
+
+function validateTasksData(list: any[]): void {
+  for (const item of list) {
+    if (!item || typeof item !== "object") {
+      throw new Error("Each task in the array must be an object");
+    }
+    if (!item.title || typeof item.title !== "string" || item.title.trim() === "") {
+      throw new Error("Each task must have a non-empty string title");
+    }
+    if (item.estimate_min !== undefined && (typeof item.estimate_min !== "number" || item.estimate_min <= 0)) {
+      throw new Error(`Task "${item.title}" estimate_min must be a positive number`);
+    }
+    if (item.deadline && Number.isNaN(new Date(item.deadline).getTime())) {
+      throw new Error(`Task "${item.title}" has an invalid deadline format (use YYYY-MM-DD)`);
+    }
+    if (item.subtasks) {
+      if (!Array.isArray(item.subtasks)) {
+        throw new Error(`Task "${item.title}" subtasks must be an array`);
+      }
+      validateTasksData(item.subtasks);
+    }
+  }
+}
 
 export function CreateProjectForm({
   onCreated,
@@ -485,20 +620,56 @@ export function CreateProjectForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // For recurring projects
+  const [recurrenceDays, setRecurrenceDays] = useState<string[]>([]);
+
+  const toggleDay = (day: string) => {
+    setRecurrenceDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      const deadline_at = deadline
+      let cadence: "daily" | "weekly" | "custom" | undefined;
+      if (type === "habit") cadence = "daily";
+      else if (type === "recurring") {
+        cadence = "custom"; // Or weekly if it's every day, but custom works for selected days
+      }
+
+      const deadline_at = (type !== "habit" && type !== "recurring" && deadline)
         ? Math.floor(new Date(deadline).getTime() / 1000)
         : null;
+
       const project = await createProject({
         name: name.trim(),
         type,
         importance,
         deadline_at,
+        cadence,
       });
+
+      // If recurring/habit, create a default template task
+      if (type === "habit" || type === "recurring") {
+        let recurrenceRule: string | null = null;
+        if (type === "habit") recurrenceRule = "daily";
+        else if (type === "recurring" && recurrenceDays.length > 0) {
+          recurrenceRule = recurrenceDays.join(",");
+        }
+
+        if (recurrenceRule) {
+          await createTask({
+            project_id: project.id,
+            title: project.name,
+            estimate_min: 30,
+            recurrence_rule: recurrenceRule,
+          });
+        }
+      }
+
       onCreated(project);
       onClose();
     } catch (e) {
@@ -555,17 +726,43 @@ export function CreateProjectForm({
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">
-              Deadline (optional)
-            </label>
-            <input
-              type="date"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-            />
-          </div>
+          {(type === "critical" || type === "nicetohave") && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Deadline (optional)
+              </label>
+              <input
+                type="date"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+          )}
+
+          {type === "recurring" && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Repeat on days:
+              </label>
+              <div className="flex gap-1">
+                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`flex-1 py-1 text-xs rounded border ${
+                      recurrenceDays.includes(day)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300"
+                    }`}
+                  >
+                    {day.substring(0, 1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 
