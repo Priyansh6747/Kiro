@@ -640,6 +640,24 @@ export async function updateDayLog(
   return rows[0];
 }
 
+export async function syncDayLogStats(userId: string, date: number): Promise<void> {
+  const log = await findDayLog(userId, date);
+  if (!log) return;
+
+  const tasksForDay = await listTasks({ userId, date });
+  const completed = tasksForDay.filter(t => t.status === "done").length;
+  const missed = tasksForDay.filter(t => t.status === "missed" || t.status === "carried").length;
+  // ratio is against tasksAssigned which was locked in at the time of confirmDay
+  const ratio = log.tasksAssigned > 0 ? completed / log.tasksAssigned : 0.0;
+
+  await updateDayLog(userId, date, {
+    tasksCompleted: completed,
+    tasksMissed: missed,
+    ratio: Math.min(ratio, 1.0),
+    updatedAt: Math.floor(Date.now() / 1000)
+  });
+}
+
 /** Count tasks by status for a given day (used in carry route). */
 export async function countTasksByStatusForDay(
   userId: string,

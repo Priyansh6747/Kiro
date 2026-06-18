@@ -40,6 +40,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const scheduledTasks = await listTasks({ userId, date: todayDate });
   const tasksAssigned  = scheduledTasks.length;
+  const tasksCompleted = scheduledTasks.filter(t => t.status === "done").length;
+  const tasksMissed = scheduledTasks.filter(t => t.status === "missed" || t.status === "carried").length;
+  const ratio = tasksAssigned > 0 ? tasksCompleted / tasksAssigned : 0.0;
   const now            = nowSec();
 
   const dayLog = await upsertDayLog({
@@ -48,10 +51,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     date: todayDate,
     availableMin,
     tasksAssigned,
-    tasksCompleted: 0,
-    tasksMissed: 0,
+    tasksCompleted,
+    tasksMissed,
     tasksCarried: 0,
-    ratio: 0.0,
+    ratio: Math.min(ratio, 1.0),
     penalty: 0.0,
     dayType: "normal",
     createdAt: now,

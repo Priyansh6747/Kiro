@@ -233,15 +233,7 @@ export default function TodayPage() {
             )}
           </div>
 
-          {/* EOD Summary */}
-          {(eodSummary || eodError) && (
-            <div className="border-t p-4 bg-gray-50">
-              {eodError && <p className="text-xs text-red-600">{eodError}</p>}
-              {eodSummary && (
-                <p className="text-sm text-gray-700 leading-relaxed">{eodSummary}</p>
-              )}
-            </div>
-          )}
+
         </div>
 
         {/* ── Right / Supporting column ── */}
@@ -294,6 +286,24 @@ export default function TodayPage() {
               </button>
             </div>
           </div>
+
+          {/* EOD Summary Result */}
+          {(eodLoading || eodSummary !== null || eodError !== null) && (
+            <div className="border-b p-4 bg-blue-50">
+              {eodLoading && (
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <Spinner size="sm" /> Generating summary…
+                </div>
+              )}
+              {!eodLoading && eodError && <p className="text-xs text-red-600">{eodError}</p>}
+              {!eodLoading && typeof eodSummary === "string" && eodSummary.trim() !== "" && (
+                <p className="text-sm text-gray-800 leading-relaxed">{eodSummary}</p>
+              )}
+              {!eodLoading && typeof eodSummary === "string" && eodSummary.trim() === "" && (
+                <p className="text-sm text-gray-500 italic">No summary could be generated.</p>
+              )}
+            </div>
+          )}
 
           {/* Inbox / Bucket */}
           <div className="flex-1 flex flex-col bg-white border-b">

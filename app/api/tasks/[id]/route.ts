@@ -10,6 +10,7 @@ import {
   findTaskWithProject,
   softDeleteTask,
   updateTask,
+  syncDayLogStats,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
@@ -112,6 +113,13 @@ export async function PATCH(
   updates.updatedAt = nowSec();
 
   const updated = await updateTask(id, updates);
+
+  // Sync day log if task is scheduled for a date
+  const oldDate = task.scheduledDate;
+  const newDate = updates.scheduledDate !== undefined ? updates.scheduledDate : task.scheduledDate;
+  if (oldDate !== null) await syncDayLogStats(userId, oldDate);
+  if (newDate !== null && newDate !== oldDate) await syncDayLogStats(userId, newDate);
+
   return Response.json({ data: updated });
 }
 
@@ -134,5 +142,10 @@ export async function DELETE(
   }
 
   await softDeleteTask(id);
+
+  if (task.scheduledDate !== null) {
+    await syncDayLogStats(userId, task.scheduledDate);
+  }
+
   return Response.json({ data: "ok" });
 }

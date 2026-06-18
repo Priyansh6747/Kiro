@@ -19,7 +19,7 @@ import {
 import { buildEodSummaryPrompt, type EodSummaryPayload } from "@/lib/scoring";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 
-const STALE_THRESHOLD_SEC = 8 * 3600; // 8 hours
+const STALE_THRESHOLD_SEC = 24 * 3600; // 24 hours
 
 export async function POST(): Promise<Response> {
   const { userId } = await auth();
@@ -33,12 +33,14 @@ export async function POST(): Promise<Response> {
   // ── Staleness check ───────────────────────────────────────────────────────
   const latestUpdate = await latestTaskUpdateForDay(userId, todayDate);
   if (latestUpdate === null || now - latestUpdate > STALE_THRESHOLD_SEC) {
+    console.log("Task data is stale. Update your tasks first.");
     return Response.json({ error: "Task data is stale." }, { status: 422 });
   }
 
   // ── Day log must exist (plan confirmed) ───────────────────────────────────
   const dayLog = await findDayLog(userId, todayDate);
   if (!dayLog) {
+    console.log("No day log found for today. Confirm your plan first.");
     return Response.json(
       { error: "Confirm today's plan before generating summary." },
       { status: 422 },
@@ -65,7 +67,9 @@ export async function POST(): Promise<Response> {
 
   // ── Build prompt and call Groq ───────────────────────────────────────────
   const prompt      = buildEodSummaryPrompt(payload);
+  console.log("EOD summary prompt:", prompt);
   const summaryText = await callGroq(prompt, 300);
+  console.log("EOD summary:", summaryText);
 
   return Response.json({ data: { summary: summaryText, stats: payload } });
 }
