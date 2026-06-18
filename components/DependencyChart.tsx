@@ -1,16 +1,45 @@
 "use client";
 
 import { useMemo } from "react";
-import { ReactFlow, Controls, Background, Edge, Node, MarkerType, Position } from "@xyflow/react";
+import { ReactFlow, Controls, Background, Edge, Node, MarkerType, Position, Handle } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Task } from "@/lib/types";
+
+const TaskNode = ({ data, id }: any) => {
+  return (
+    <div style={data.style} className="relative group">
+      <Handle type="target" position={Position.Left} />
+      <div className="w-full h-full flex items-center justify-center">
+        {data.label}
+      </div>
+      <Handle type="source" position={Position.Right} />
+      
+      {data.onAddSubtask && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onAddSubtask(id);
+          }}
+          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-400 border-2 border-white rounded-full cursor-pointer hover:bg-blue-600 hover:scale-150 transition-all z-10"
+          title="Add dependent task"
+        />
+      )}
+    </div>
+  );
+};
+
+const nodeTypes = {
+  task: TaskNode,
+};
 
 export function DependencyChart({
   tasks,
   dependencies,
+  onAddSubtask,
 }: {
   tasks: Task[];
   dependencies: { taskId: string; predecessorId: string }[];
+  onAddSubtask?: (predecessorId: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => {
     // Simple layout calculation:
@@ -83,11 +112,11 @@ export function DependencyChart({
         if (!task) return;
         nodes.push({
           id,
+          type: 'task',
           sourcePosition: Position.Right,
           targetPosition: Position.Left,
           position: { x: x * X_SPACING, y: y * Y_SPACING },
-          data: { label: task.title },
-          style: {
+          data: { label: task.title, onAddSubtask, style: {
             background: task.status === 'done' ? '#f8fafc' : '#ffffff',
             border: 'none',
             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
@@ -99,7 +128,7 @@ export function DependencyChart({
             minWidth: '160px',
             textAlign: 'center',
             color: '#334155'
-          }
+          }},
         });
       });
     });
@@ -129,7 +158,7 @@ export function DependencyChart({
 
   return (
     <div style={{ height: 500, width: "100%", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#f1f5f9" }}>
-      <ReactFlow nodes={nodes} edges={edges} fitView>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
         <Background color="#cbd5e1" gap={16} size={2} />
         <Controls />
       </ReactFlow>

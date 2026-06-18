@@ -97,6 +97,7 @@ function ProjectWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
+  const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(project.name);
   const [editImportance, setEditImportance] = useState(project.importance);
@@ -372,8 +373,15 @@ function ProjectWorkspace({
         </button>
       </div>
       {showChart && (
-         <div className="p-4 border-b bg-white">
-           <DependencyChart tasks={tasks} dependencies={dependencies} />
+         <div className="p-4 border-b bg-white relative">
+           <DependencyChart 
+             tasks={tasks} 
+             dependencies={dependencies} 
+             onAddSubtask={(predId) => {
+               setCapturePredecessorId(predId);
+               setShowCapture(true);
+             }}
+           />
          </div>
       )}
 
@@ -385,7 +393,10 @@ function ProjectWorkspace({
             title={`Tasks (${tasks.length})`}
             action={
               <button
-                onClick={() => setShowCapture(true)}
+                onClick={() => {
+                  setCapturePredecessorId(undefined);
+                  setShowCapture(true);
+                }}
                 className="text-xs text-blue-600 hover:underline"
               >
                 + Add
@@ -428,8 +439,10 @@ function ProjectWorkspace({
             <TaskDetailPanel
               task={selectedTask}
               allTasks={tasks}
+              dependencies={dependencies}
               onUpdated={handleTaskUpdated}
               onDependencyAdded={loadTasks}
+              onDependencyRemoved={loadTasks}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-400 text-sm">
@@ -443,15 +456,20 @@ function ProjectWorkspace({
         <QuickCapture
           projects={allProjects.filter((p) => p.id === project.id)}
           defaultProjectId={project.id}
+          defaultPredecessorId={capturePredecessorId}
           tasks={tasks}
           onCreated={(task) => {
             handleTaskCreated(task);
             setShowCapture(false);
+            setCapturePredecessorId(undefined);
             // Optionally reload dependencies if needed, or we can just let it be loaded on next refresh
             // But doing a full loadTasks() is safer to get the new edge
             loadTasks();
           }}
-          onClose={() => setShowCapture(false)}
+          onClose={() => {
+            setShowCapture(false);
+            setCapturePredecessorId(undefined);
+          }}
         />
       )}
     </div>
@@ -463,13 +481,17 @@ function ProjectWorkspace({
 function TaskDetailPanel({
   task,
   allTasks,
+  dependencies,
   onUpdated,
   onDependencyAdded,
+  onDependencyRemoved,
 }: {
   task: Task;
   allTasks: Task[];
+  dependencies: { taskId: string; predecessorId: string }[];
   onUpdated: (t: Task) => void;
   onDependencyAdded?: () => void;
+  onDependencyRemoved?: () => void;
 }) {
   const [notes, setNotes] = useState("");
   const [depPredId, setDepPredId] = useState("");
@@ -477,6 +499,17 @@ function TaskDetailPanel({
   const [depError, setDepError] = useState<string | null>(null);
 
   const otherTasks = allTasks.filter((t) => t.id !== task.id);
+  const currentDeps = dependencies.filter((d) => d.taskId === task.id);
+  
+  const removeDep = async (predId: string) => {
+    try {
+      const { deleteDependency } = await import("@/lib/api-client");
+      await deleteDependency(task.id, predId);
+      onDependencyRemoved?.();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
 
   const addDep = async () => {
     if (!depPredId) return;
@@ -551,6 +584,29 @@ function TaskDetailPanel({
       {/* Dependencies */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dependencies</p>
+        
+        {/* Existing dependencies list */}
+        {currentDeps.length > 0 && (
+          <div className="space-y-1 mb-3">
+            {currentDeps.map((dep) => {
+              const predTask = allTasks.find(t => t.id === dep.predecessorId);
+              return (
+                <div key={dep.predecessorId} className="flex items-center justify-between bg-gray-50 border rounded px-2 py-1 text-xs">
+                  <span className="truncate flex-1 mr-2">{predTask?.title || "Unknown task"}</span>
+                  <button
+                    onClick={() => removeDep(dep.predecessorId)}
+                    className="text-red-400 hover:text-red-600 font-bold px-1"
+                    title="Remove dependency"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Add new dependency */}
         <div className="flex gap-1">
           <select
             className="flex-1 border rounded px-2 py-1 text-xs"
@@ -558,10 +614,12 @@ function TaskDetailPanel({
             onChange={(e) => setDepPredId(e.target.value)}
           >
             <option value="">Select predecessor…</option>
-            {otherTasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
+            {otherTasks
+              .filter(t => !currentDeps.some(d => d.predecessorId === t.id))
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
             ))}
           </select>
           <button
@@ -573,9 +631,6 @@ function TaskDetailPanel({
           </button>
         </div>
         {depError && <p className="text-xs text-red-600 mt-1">{depError}</p>}
-        <p className="text-xs text-gray-400 mt-1">
-          This task depends on the selected task.
-        </p>
       </div>
     </div>
   );

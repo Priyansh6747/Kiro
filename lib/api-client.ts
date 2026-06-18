@@ -103,6 +103,11 @@ export const addDependency = (taskId: string, predecessorId: string) =>
     body: JSON.stringify({ predecessor_id: predecessorId }),
   });
 
+export const deleteDependency = (taskId: string, predecessorId: string) =>
+  request<"ok">(`/api/tasks/${taskId}/dependencies/${predecessorId}`, {
+    method: "DELETE",
+  });
+
 export const getProjectDependencies = (projectId: string) =>
   request<{ taskId: string; predecessorId: string }[]>(`/api/projects/${projectId}/dependencies`);
 

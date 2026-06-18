@@ -357,6 +357,7 @@ export function QuickCapture({
   onClose,
   defaultProjectId,
   defaultScheduledDate,
+  defaultPredecessorId,
   tasks,
 }: {
   projects: Project[];
@@ -364,6 +365,7 @@ export function QuickCapture({
   onClose: () => void;
   defaultProjectId?: string;
   defaultScheduledDate?: number | null;
+  defaultPredecessorId?: string;
   tasks?: Task[];
 }) {
   const [title, setTitle] = useState("");
@@ -375,9 +377,9 @@ export function QuickCapture({
     defaultScheduledDate !== undefined ? defaultScheduledDate !== null : false,
   );
   
-  // By default depend on the last task in the list
+  // By default depend on the defaultPredecessorId or the last task in the list
   const [predecessorId, setPredecessorId] = useState<string>(
-    tasks && tasks.length > 0 ? tasks[tasks.length - 1].id : ""
+    defaultPredecessorId || (tasks && tasks.length > 0 ? tasks[tasks.length - 1].id : "")
   );
 
   const [saving, setSaving] = useState(false);
