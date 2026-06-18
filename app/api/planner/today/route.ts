@@ -6,15 +6,14 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { findDayLog, findPrefsByUserId, listTasks } from "@/lib/storage";
+import { findDayLog, getOrCreatePreferences, listTasks } from "@/lib/storage";
 import { todayUnixDay } from "@/lib/utils";
 
 export async function GET(): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const prefs = await findPrefsByUserId(userId);
-  if (!prefs) return Response.json({ error: "Preferences not found" }, { status: 404 });
+  const prefs = await getOrCreatePreferences(userId);
 
   const todayDate = todayUnixDay(prefs.timezone);
 

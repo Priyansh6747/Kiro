@@ -6,7 +6,7 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { findPrefsByUserId, listTasks, upsertDayLog } from "@/lib/storage";
+import { getOrCreatePreferences, listTasks, upsertDayLog } from "@/lib/storage";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
@@ -14,8 +14,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const prefs = await findPrefsByUserId(userId);
-  if (!prefs) return Response.json({ error: "Preferences not found" }, { status: 404 });
+  const prefs = await getOrCreatePreferences(userId);
 
   let body: Record<string, unknown> = {};
   try {

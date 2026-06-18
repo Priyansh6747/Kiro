@@ -10,7 +10,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { callGroq } from "@/lib/groq";
 import {
-  findPrefsByUserId,
+  getOrCreatePreferences,
   latestTaskUpdateSec,
   listProjectsWithStats,
 } from "@/lib/storage";
@@ -27,8 +27,7 @@ export async function POST(): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const prefs = await findPrefsByUserId(userId);
-  if (!prefs) return Response.json({ error: "Preferences not found" }, { status: 404 });
+  const prefs = await getOrCreatePreferences(userId);
 
   const todayDate = todayUnixDay(prefs.timezone);
   const now       = nowSec();

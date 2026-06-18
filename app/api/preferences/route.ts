@@ -4,7 +4,7 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { findPrefsByUserId, updatePreferences } from "@/lib/storage";
+import { getOrCreatePreferences, updatePreferences } from "@/lib/storage";
 import { isValidHHMM, isValidTimezone, nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
@@ -17,8 +17,7 @@ export async function GET(): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const prefs = await findPrefsByUserId(userId);
-  if (!prefs) return Response.json({ error: "Preferences not found" }, { status: 404 });
+  const prefs = await getOrCreatePreferences(userId);
 
   return Response.json({ data: prefs });
 }

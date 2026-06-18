@@ -13,7 +13,7 @@ import {
   countTasksByStatusForDay,
   createTask,
   findDayLog,
-  findPrefsByUserId,
+  getOrCreatePreferences,
   insertTaskClosureSelf,
   listUnresolvedTasksForDay,
   updateDayLog,
@@ -37,8 +37,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const toCarry = new Set<string>(body.task_ids_to_carry ?? []);
   const toDrop  = new Set<string>(body.task_ids_to_drop ?? []);
 
-  const prefs = await findPrefsByUserId(userId);
-  if (!prefs) return Response.json({ error: "Preferences not found" }, { status: 404 });
+  const prefs = await getOrCreatePreferences(userId);
 
   const todayDate     = todayUnixDay(prefs.timezone);
   const yesterdayDate = todayDate - 1;

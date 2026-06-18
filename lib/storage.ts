@@ -71,6 +71,29 @@ export async function createPreferences(data: NewPreference): Promise<Preference
   return rows[0];
 }
 
+/**
+ * Returns the user's preference row, creating one with default values if it
+ * doesn't exist yet. Use this instead of `findPrefsByUserId` in routes so that
+ * a missing row is never treated as an error — defaults apply until the user
+ * visits the Settings page and customises their preferences.
+ */
+export async function getOrCreatePreferences(userId: string): Promise<Preference> {
+  const existing = await findPrefsByUserId(userId);
+  if (existing) return existing;
+
+  const now = nowSec();
+  return createPreferences({
+    id: crypto.randomUUID(),
+    userId,
+    timezone: "UTC",
+    defaultAvailableMin: 240,
+    ratioMode: "cumulative",
+    morningNudgeTime: "08:00",
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 export async function updatePreferences(
   userId: string,
   data: Partial<
