@@ -180,12 +180,14 @@ export function TaskRow({
   task,
   onUpdated,
   onDeleted,
+  onUnscheduled,
   showProject,
   projects,
 }: {
   task: Task;
   onUpdated: (t: Task) => void;
   onDeleted?: (id: string) => void;
+  onUnscheduled?: (t: Task) => void;
   showProject?: boolean;
   projects?: Project[];
 }) {
@@ -235,6 +237,22 @@ export function TaskRow({
     try {
       await deleteTask(task.id);
       onDeleted?.(task.id);
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  };
+
+  const handleUnschedule = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateTask(task.id, { scheduled_date: null });
+      if (onUnscheduled) {
+        onUnscheduled(updated);
+      } else {
+        onUpdated(updated);
+      }
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);
@@ -292,13 +310,14 @@ export function TaskRow({
     >
       {/* Checkbox */}
       <button
-        disabled={saving}
+        disabled={saving || task.scheduledDate === null}
         onClick={toggleDone}
         className={`mt-0.5 h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center ${
           isDone
             ? "border-green-500 bg-green-500 text-white"
             : "border-gray-300"
-        }`}
+        } ${task.scheduledDate === null ? "opacity-50 cursor-not-allowed" : ""}`}
+        title={task.scheduledDate === null ? "Schedule task to complete it" : ""}
       >
         {isDone && <span className="text-[10px] leading-none">✓</span>}
       </button>
@@ -335,6 +354,15 @@ export function TaskRow({
         >
           Edit
         </button>
+        {onUnscheduled && (
+          <button
+            onClick={handleUnschedule}
+            disabled={saving}
+            className="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-100"
+          >
+            To Inbox
+          </button>
+        )}
         {onDeleted && (
           <button
             onClick={handleDelete}

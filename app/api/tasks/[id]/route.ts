@@ -95,10 +95,49 @@ export async function PATCH(
     }
   }
 
+  let allSuccessorsToUnschedule: { id: string; date: number }[] = [];
+
   // ── scheduled_date ─────────────────────────────────────────────────────────
   if ("scheduled_date" in body) {
     if (body.scheduled_date === null) {
       updates.scheduledDate = null;
+      
+      // Unschedule all dependent tasks recursively
+      const { db } = await import("@/lib/db/client");
+      const { tasks, taskDependencies } = await import("@/lib/db/models");
+      const { inArray } = await import("drizzle-orm");
+      
+      let currentLevelIds = [id];
+      
+      while (currentLevelIds.length > 0) {
+        const depsRows = await db
+          .select({ taskId: taskDependencies.taskId })
+          .from(taskDependencies)
+          .where(inArray(taskDependencies.predecessorId, currentLevelIds));
+          
+        const nextLevelIds = depsRows.map(r => r.taskId);
+        if (nextLevelIds.length === 0) break;
+        
+        const allNextSuccessors = await db
+          .select({ id: tasks.id, date: tasks.scheduledDate })
+          .from(tasks)
+          .where(inArray(tasks.id, nextLevelIds));
+          
+        for (const s of allNextSuccessors) {
+          if (s.date !== null) {
+            allSuccessorsToUnschedule.push(s as { id: string; date: number });
+          }
+        }
+        
+        currentLevelIds = allNextSuccessors.map(s => s.id);
+      }
+
+      if (allSuccessorsToUnschedule.length > 0) {
+        const successorIds = allSuccessorsToUnschedule.map(s => s.id);
+        await db.update(tasks)
+          .set({ scheduledDate: null, updatedAt: nowSec() })
+          .where(inArray(tasks.id, successorIds));
+      }
     } else {
       const scheduledDate = Number(body.scheduled_date);
       if (Number.isNaN(scheduledDate)) {
@@ -137,8 +176,18 @@ export async function PATCH(
   // Sync day log if task is scheduled for a date
   const oldDate = task.scheduledDate;
   const newDate = updates.scheduledDate !== undefined ? updates.scheduledDate : task.scheduledDate;
-  if (oldDate !== null) await syncDayLogStats(userId, oldDate);
-  if (newDate !== null && newDate !== oldDate) await syncDayLogStats(userId, newDate);
+  
+  const datesToSync = new Set<number>();
+  if (oldDate !== null) datesToSync.add(oldDate);
+  if (newDate !== null) datesToSync.add(newDate);
+
+  for (const succ of allSuccessorsToUnschedule) {
+    if (succ.date !== null) datesToSync.add(succ.date);
+  }
+  
+  for (const d of datesToSync) {
+    await syncDayLogStats(userId, d);
+  }
 
   return Response.json({ data: updated });
 }

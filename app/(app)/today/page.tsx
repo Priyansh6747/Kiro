@@ -40,6 +40,14 @@ export default function TodayPage() {
   const [eodLoading, setEodLoading] = useState(false);
   const [eodError, setEodError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
+  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
+
+  const toggleProject = (projectId: string) => {
+    setCollapsedProjects(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +120,11 @@ export default function TodayPage() {
       setPlan((prev) =>
         prev ? { ...prev, tasks: [...prev.tasks, updated] } : prev
       );
+      
+      // Silently refresh the bucket to load any newly unblocked tasks
+      listTasks({ bucket: true }).then((newBucketTasks) => {
+        setBucketTasks(newBucketTasks);
+      });
     } catch (e) {
       alert((e as Error).message);
     }
@@ -177,6 +190,12 @@ export default function TodayPage() {
   const capacityPct = plan.availableMin > 0
     ? Math.min(plan.totalEstimatedMin / plan.availableMin, 1.5)
     : 0;
+
+  const bucketTasksByProject = bucketTasks.reduce((acc, task) => {
+    if (!acc[task.projectId]) acc[task.projectId] = [];
+    acc[task.projectId].push(task);
+    return acc;
+  }, {} as Record<string, Task[]>);
 
   return (
     <div className="flex flex-col flex-1">
@@ -251,6 +270,7 @@ export default function TodayPage() {
                     task={task}
                     projects={projects}
                     onUpdated={handleTaskUpdated}
+                    onUnscheduled={load}
                   />
                 ))}
               </div>
@@ -350,23 +370,49 @@ export default function TodayPage() {
               <EmptyState icon="✅" title="Inbox clear" />
             ) : (
               <div className="flex flex-col overflow-y-auto">
-                {bucketTasks.map((task) => (
-                  <div key={task.id} className="border-b last:border-b-0">
-                    <TaskRow
-                      task={task}
-                      projects={projects}
-                      onUpdated={handleBucketUpdated}
-                    />
-                    <div className="px-4 pb-2">
-                      <button
-                        onClick={() => scheduleFromBucket(task)}
-                        className="text-xs text-blue-600 hover:underline"
+                {Object.entries(bucketTasksByProject).map(([projectId, tasks]) => {
+                  const project = projects.find(p => p.id === projectId);
+                  const projectName = project?.name || "Unknown Project";
+                  const isCollapsed = collapsedProjects[projectId];
+                  
+                  return (
+                    <div key={projectId} className="border-b last:border-b-0">
+                      <div 
+                        className="px-4 py-2 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => toggleProject(projectId)}
                       >
-                        → Schedule today
-                      </button>
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          {projectName} <span className="text-gray-400 font-normal">({tasks.length})</span>
+                        </span>
+                        <span className="text-gray-400 text-xs">
+                          {isCollapsed ? "▼" : "▲"}
+                        </span>
+                      </div>
+                      
+                      {!isCollapsed && (
+                        <div className="flex flex-col">
+                          {tasks.map((task) => (
+                            <div key={task.id} className="border-b last:border-b-0 border-gray-100">
+                              <TaskRow
+                                task={task}
+                                projects={projects}
+                                onUpdated={handleBucketUpdated}
+                              />
+                              <div className="px-4 pb-2">
+                                <button
+                                  onClick={() => scheduleFromBucket(task)}
+                                  className="text-xs text-blue-600 hover:underline"
+                                >
+                                  → Schedule today
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
