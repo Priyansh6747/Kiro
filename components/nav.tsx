@@ -1,7 +1,9 @@
 "use client";
 
+import { getPreferences, patchPreferences } from "@/lib/api-client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 
 const NAV_ITEMS = [
   { href: "/today", label: "Today", icon: "⚡" },
@@ -65,6 +67,28 @@ export function Sidebar() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    let active = true;
+    async function syncTimezone() {
+      try {
+        const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (!localTz) return;
+
+        const prefs = await getPreferences();
+        if (active && prefs && prefs.timezone !== localTz) {
+          console.log(`[Timezone Sync] Updating timezone from ${prefs.timezone} to ${localTz}`);
+          await patchPreferences({ timezone: localTz });
+        }
+      } catch (err) {
+        console.error("[Timezone Sync] Failed to sync timezone:", err);
+      }
+    }
+    syncTimezone();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
