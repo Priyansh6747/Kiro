@@ -11,6 +11,7 @@ import {
   generateMorningNudge,
   generateEodSummary,
   updateTask,
+  placeDayPlanBlock,
 } from "@/lib/api-client";
 import {
   LoadingScreen,
@@ -22,6 +23,7 @@ import {
   ProgressBar,
   Spinner,
 } from "@/components/ui";
+import { Timeline } from "@/components/Timeline";
 
 export default function TodayPage() {
   const [plan, setPlan] = useState<TodayPlannerData | null>(null);
@@ -139,6 +141,28 @@ export default function TodayPage() {
     }
   };
 
+  const handlePlaceBlock = async (taskId: string, startTime: number) => {
+    if (!plan) return;
+    try {
+      await placeDayPlanBlock(taskId, plan.date, startTime);
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const newPlans = prev.dayPlans.filter(p => p.taskId !== taskId);
+        newPlans.push({
+          userId: "", // Placeholder or ignored by UI
+          taskId,
+          planDate: plan.date,
+          startTime,
+          createdAt: Math.floor(Date.now() / 1000),
+          updatedAt: Math.floor(Date.now() / 1000),
+        });
+        return { ...prev, dayPlans: newPlans };
+      });
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
   if (loading) return <LoadingScreen message="Loading today's plan…" />;
   if (error) return (
     <div className="p-4">
@@ -233,7 +257,11 @@ export default function TodayPage() {
             )}
           </div>
 
-
+          <Timeline
+            tasks={scheduledTasks}
+            dayPlans={plan.dayPlans}
+            onPlaceBlock={handlePlaceBlock}
+          />
         </div>
 
         {/* ── Right / Supporting column ── */}

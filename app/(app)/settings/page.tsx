@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { UserProfile } from "@clerk/nextjs";
 import type { Preference, RatioMode } from "@/lib/types";
 import { getPreferences, patchPreferences } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
@@ -246,16 +247,16 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Account */}
+        {/* Account Management */}
         <div className="bg-white border-b mt-4">
           <div className="px-4 py-3 border-b">
-            <p className="text-xs font-semibold text-gray-500 uppercase">Account</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase">Account Management</p>
           </div>
           <div className="px-4 py-4 space-y-3">
             {prefs && (
-              <div className="text-sm space-y-2">
+              <div className="text-sm space-y-2 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">User ID</span>
+                  <span className="text-gray-500">Internal User ID</span>
                   <span className="text-gray-700 font-mono text-xs truncate max-w-[200px]">
                     {prefs.userId}
                   </span>
@@ -266,9 +267,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-            <div className="pt-2 border-t">
-              {/* Clerk provides a built-in sign-out button but we can use their hook */}
-              <SignOutButton />
+            <div className="flex justify-center pt-4">
+              <UserProfile routing="hash" appearance={{ elements: { rootBox: "w-full shadow-none", cardBox: "shadow-none border border-gray-200" } }} />
             </div>
           </div>
         </div>
@@ -279,25 +279,4 @@ export default function SettingsPage() {
   );
 }
 
-function SignOutButton() {
-  // Dynamically import Clerk's hook to avoid SSR issues
-  const [ready, setReady] = useState(false);
-  const [signOutFn, setSignOutFn] = useState<(() => void) | null>(null);
 
-  useEffect(() => {
-    import("@clerk/nextjs").then(({ useClerk }) => {
-      // Can't call hooks dynamically, so render an anchor instead
-      setReady(true);
-    });
-  }, []);
-
-  // Fallback: link to Clerk's sign-out page
-  return (
-    <a
-      href="/sign-in"
-      className="inline-block rounded border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-    >
-      Sign out
-    </a>
-  );
-}

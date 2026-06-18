@@ -16,6 +16,7 @@ import {
   lte,
   or,
   sql,
+  ne,
 } from "drizzle-orm";
 import { db } from "./db/client";
 import {
@@ -39,6 +40,9 @@ import {
   tasks,
   type User,
   users,
+  dayPlan,
+  type DayPlan,
+  type NewDayPlan,
 } from "./db/models";
 import { nowSec } from "./utils";
 
@@ -850,4 +854,92 @@ export async function listProjectsWithStats(
     lastCompletedAt: number | null;
     todayCount: number;
   }>;
+}
+
+// ---------------------------------------------------------------------------
+// Day Plan (Timeline Blocks)
+// ---------------------------------------------------------------------------
+
+export class OverlapConflictError extends Error {
+  constructor() {
+    super("OVERLAP_CONFLICT");
+    this.name = "OverlapConflictError";
+  }
+}
+
+export async function checkOverlap(
+  userId: string,
+  planDate: number,
+  startTime: number,
+  estimateMin: number,
+  excludeTaskId?: string
+): Promise<boolean> {
+  const blocks = await db
+    .select({
+      taskId: dayPlan.taskId,
+      startTime: dayPlan.startTime,
+      estimateMin: tasks.estimateMin,
+    })
+    .from(dayPlan)
+    .innerJoin(tasks, eq(tasks.id, dayPlan.taskId))
+    .where(
+      and(
+        eq(dayPlan.userId, userId),
+        eq(dayPlan.planDate, planDate),
+        excludeTaskId ? ne(dayPlan.taskId, excludeTaskId) : undefined
+      )
+    );
+
+  const newEnd = startTime + estimateMin * 60;
+
+  return blocks.some((block) => {
+    const blockEnd = block.startTime + block.estimateMin * 60;
+    return startTime < blockEnd && newEnd > block.startTime;
+  });
+}
+
+export async function placeDayPlanBlock(
+  userId: string,
+  taskId: string,
+  planDate: number,
+  startTime: number
+): Promise<void> {
+  const task = await findTaskById(taskId, userId);
+  if (!task) throw new Error("Task not found");
+
+  const hasOverlap = await checkOverlap(
+    userId,
+    planDate,
+    startTime,
+    task.estimateMin,
+    taskId
+  );
+
+  if (hasOverlap) throw new OverlapConflictError();
+
+  await db
+    .insert(dayPlan)
+    .values({
+      userId,
+      taskId,
+      planDate,
+      startTime,
+      createdAt: nowSec(),
+      updatedAt: nowSec(),
+    })
+    .onConflictDoUpdate({
+      target: [dayPlan.userId, dayPlan.taskId],
+      set: { startTime, planDate, updatedAt: nowSec() },
+    });
+}
+
+export async function listDayPlansForDate(
+  userId: string,
+  planDate: number
+): Promise<DayPlan[]> {
+  return db
+    .select()
+    .from(dayPlan)
+    .where(and(eq(dayPlan.userId, userId), eq(dayPlan.planDate, planDate)))
+    .orderBy(asc(dayPlan.startTime));
 }

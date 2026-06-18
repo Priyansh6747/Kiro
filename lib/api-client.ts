@@ -35,6 +35,12 @@ export const carryTasks = (toCarry: string[], toDrop: string[]) =>
     body: JSON.stringify({ task_ids_to_carry: toCarry, task_ids_to_drop: toDrop }),
   });
 
+export const placeDayPlanBlock = (taskId: string, planDate: number, startTime: number) =>
+  request<"ok">("/api/planner/day-plan", {
+    method: "POST",
+    body: JSON.stringify({ task_id: taskId, plan_date: planDate, start_time: startTime }),
+  });
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 export const listTasks = (params: {

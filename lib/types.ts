@@ -72,6 +72,15 @@ export interface DayLog {
 
 // ── API response shapes ───────────────────────────────────────────────────────
 
+export interface DayPlan {
+  userId: string;
+  taskId: string;
+  planDate: number;
+  startTime: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface TodayPlannerData {
   date: number;
   tasks: Task[];
@@ -79,6 +88,7 @@ export interface TodayPlannerData {
   availableMin: number;
   overloaded: boolean;
   dayLog: DayLog | null;
+  dayPlans: DayPlan[];
 }
 
 export interface MorningNudgeData {

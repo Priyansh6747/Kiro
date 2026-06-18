@@ -14,6 +14,7 @@ import {
   findTodayInstanceOfTemplate,
   createTask,
   insertTaskClosureSelf,
+  listDayPlansForDate,
 } from "@/lib/storage";
 import { todayUnixDay, nowSec } from "@/lib/utils";
 
@@ -85,6 +86,7 @@ export async function GET(): Promise<Response> {
   const overloaded = totalEstimatedMin > availableMin * 1.2;
 
   const dayLog = await findDayLog(userId, todayDate);
+  const dayPlans = await listDayPlansForDate(userId, todayDate);
 
   return Response.json({
     data: {
@@ -94,6 +96,7 @@ export async function GET(): Promise<Response> {
       availableMin,
       overloaded,
       dayLog: dayLog ?? null,
+      dayPlans,
     },
   });
 }

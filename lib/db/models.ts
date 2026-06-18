@@ -212,6 +212,25 @@ export const memoryBaseline = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// day_plan
+// ---------------------------------------------------------------------------
+export const dayPlan = sqliteTable(
+    "day_plan",
+    {
+        userId:    text("user_id").notNull().references(() => users.id),
+        taskId:    text("task_id").notNull().references(() => tasks.id),
+        planDate:  integer("plan_date").notNull(),  // unix date (day only)
+        startTime: integer("start_time").notNull(), // unix timestamp
+        createdAt: integer("created_at").notNull(),
+        updatedAt: integer("updated_at").notNull(),
+    },
+    (t) => [
+        primaryKey({ columns: [t.userId, t.taskId] }),
+        index("idx_day_plan_user_date").on(t.userId, t.planDate),
+    ]
+);
+
+// ---------------------------------------------------------------------------
 // Inferred types  (handy for service/repo layers)
 // ---------------------------------------------------------------------------
 export type User             = typeof users.$inferSelect;
@@ -237,3 +256,6 @@ export type NewDayLog        = typeof dayLogs.$inferInsert;
 
 export type MemoryBaseline   = typeof memoryBaseline.$inferSelect;
 export type NewMemoryBaseline = typeof memoryBaseline.$inferInsert;
+
+export type DayPlan          = typeof dayPlan.$inferSelect;
+export type NewDayPlan       = typeof dayPlan.$inferInsert;
