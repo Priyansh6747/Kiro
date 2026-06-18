@@ -76,23 +76,43 @@ export async function createPreferences(data: NewPreference): Promise<Preference
  * doesn't exist yet. Use this instead of `findPrefsByUserId` in routes so that
  * a missing row is never treated as an error — defaults apply until the user
  * visits the Settings page and customises their preferences.
+ *
+ * If the user row doesn't exist yet in the DB (e.g. the Clerk `user.created`
+ * webhook hasn't fired yet), the insert would fail with a FOREIGN KEY
+ * constraint error. In that case we return an **in-memory** default object so
+ * the app keeps working; the real row will be persisted once the webhook runs.
  */
 export async function getOrCreatePreferences(userId: string): Promise<Preference> {
   const existing = await findPrefsByUserId(userId);
   if (existing) return existing;
 
   const now = nowSec();
-  return createPreferences({
+  const defaults = {
     id: crypto.randomUUID(),
     userId,
     timezone: "UTC",
     defaultAvailableMin: 240,
-    ratioMode: "cumulative",
+    ratioMode: "cumulative" as const,
     morningNudgeTime: "08:00",
     createdAt: now,
     updatedAt: now,
-  });
+  };
+
+  try {
+    return await createPreferences(defaults);
+  } catch (err) {
+    // The user row doesn't exist yet (FK constraint). Return an in-memory
+    // default so the request can still proceed; the row will be persisted
+    // once the Clerk webhook syncs the user.
+    const isConstraintError =
+      err instanceof Error &&
+      (err.message.includes("FOREIGN KEY") || err.message.includes("SQLITE_CONSTRAINT"));
+
+    if (isConstraintError) return defaults as Preference;
+    throw err;
+  }
 }
+
 
 export async function updatePreferences(
   userId: string,

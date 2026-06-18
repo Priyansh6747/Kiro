@@ -10,6 +10,36 @@ import { createPreferences, createProject, createUser, updateUser } from "@/lib/
 import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
+interface ClerkEmailAddress {
+  id: string;
+  email_address: string;
+}
+
+/** Extract the primary email from the Clerk payload using primary_email_address_id. */
+function parsePrimaryEmail(data: Record<string, unknown>): string {
+  const emailAddresses = (data.email_addresses as ClerkEmailAddress[] | null) ?? [];
+  const primaryId = data.primary_email_address_id as string | null;
+
+  if (primaryId) {
+    const match = emailAddresses.find((e) => e.id === primaryId);
+    if (match?.email_address) return match.email_address;
+  }
+
+  // Fallback: first address in the list
+  return emailAddresses[0]?.email_address ?? "";
+}
+
+/** Extract display name and username from a Clerk user payload. */
+function parseUserFields(data: Record<string, unknown>, userId: string) {
+  const email     = parsePrimaryEmail(data);
+  const username  = (data.username as string | null) ?? userId;
+  const firstName = (data.first_name as string | null) ?? "";
+  const lastName  = (data.last_name  as string | null) ?? "";
+  const name      = `${firstName} ${lastName}`.trim() || username;
+  const avatarUrl = (data.image_url as string | null) ?? null;
+  return { email, username, name, avatarUrl };
+}
+
 export async function POST(request: NextRequest): Promise<Response> {
   // ── Svix signature verification ─────────────────────────────────────────
   const secret = process.env.CLERK_WEBHOOK_SECRET;
@@ -39,15 +69,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── user.created ─────────────────────────────────────────────────────────
   if (eventType === "user.created") {
-    const userId    = data.id as string;
-    const email     = (data.email_addresses as Array<{ email_address: string }>)[0]
-      ?.email_address ?? "";
-    const username  = (data.username as string | null) ?? userId;
-    const firstName = (data.first_name as string | null) ?? "";
-    const lastName  = (data.last_name  as string | null) ?? "";
-    const name      = `${firstName} ${lastName}`.trim() || username;
-    const avatarUrl = (data.image_url as string | null) ?? null;
-    const now       = nowSec();
+    const userId = data.id as string;
+    const { email, username, name, avatarUrl } = parseUserFields(data, userId);
+    const now = nowSec();
 
     await createUser({
       id: userId,
@@ -85,14 +109,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── user.updated ─────────────────────────────────────────────────────────
   if (eventType === "user.updated") {
-    const userId    = data.id as string;
-    const email     = (data.email_addresses as Array<{ email_address: string }>)[0]
-      ?.email_address ?? "";
-    const username  = (data.username as string | null) ?? userId;
-    const firstName = (data.first_name as string | null) ?? "";
-    const lastName  = (data.last_name  as string | null) ?? "";
-    const name      = `${firstName} ${lastName}`.trim() || username;
-    const avatarUrl = (data.image_url as string | null) ?? null;
+    const userId = data.id as string;
+    const { email, username, name, avatarUrl } = parseUserFields(data, userId);
 
     await updateUser(userId, {
       email,
