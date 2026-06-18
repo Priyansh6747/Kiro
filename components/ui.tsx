@@ -357,12 +357,14 @@ export function QuickCapture({
   onClose,
   defaultProjectId,
   defaultScheduledDate,
+  tasks,
 }: {
   projects: Project[];
   onCreated: (task: Task | Task[]) => void;
   onClose: () => void;
   defaultProjectId?: string;
   defaultScheduledDate?: number | null;
+  tasks?: Task[];
 }) {
   const [title, setTitle] = useState("");
   const [projectId, setProjectId] = useState(
@@ -372,6 +374,12 @@ export function QuickCapture({
   const [scheduleToday, setScheduleToday] = useState(
     defaultScheduledDate !== undefined ? defaultScheduledDate !== null : false,
   );
+  
+  // By default depend on the last task in the list
+  const [predecessorId, setPredecessorId] = useState<string>(
+    tasks && tasks.length > 0 ? tasks[tasks.length - 1].id : ""
+  );
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -414,6 +422,7 @@ export function QuickCapture({
           title: title.trim(),
           estimate_min: Number(estimate) || 30,
           scheduled_date: scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null,
+          predecessor_id: predecessorId || undefined,
         });
         onCreated(task);
       }
@@ -488,6 +497,24 @@ export function QuickCapture({
             Schedule for today
           </label>
 
+          {!importJson && tasks && tasks.length > 0 && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Depends On (optional)
+              </label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={predecessorId}
+                onChange={(e) => setPredecessorId(e.target.value)}
+              >
+                <option value="">None</option>
+                {tasks.map(t => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="border-t pt-3 mt-3">
             <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
               <input
@@ -522,6 +549,7 @@ export function QuickCapture({
                 <div className="bg-gray-50 border rounded-lg p-2.5 text-[10px] font-mono text-gray-600 overflow-x-auto max-h-40 leading-relaxed whitespace-pre">
 {`[
   {
+    "id": "task1",
     "title": "Design Database Schema",
     "estimate_min": 60,
     "deadline": "2026-06-25",
@@ -532,7 +560,8 @@ export function QuickCapture({
   },
   {
     "title": "Implement Webhook Handler",
-    "estimate_min": 90
+    "estimate_min": 90,
+    "depends_on": ["task1"]
   }
 ]`}
                 </div>
@@ -602,6 +631,9 @@ function validateTasksData(list: any[]): void {
         throw new Error(`Task "${item.title}" subtasks must be an array`);
       }
       validateTasksData(item.subtasks);
+    }
+    if (item.depends_on && !Array.isArray(item.depends_on)) {
+      throw new Error(`Task "${item.title}" depends_on must be an array`);
     }
   }
 }

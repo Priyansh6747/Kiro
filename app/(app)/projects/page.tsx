@@ -23,6 +23,7 @@ import {
   QuickCapture,
   CreateProjectForm,
 } from "@/components/ui";
+import { DependencyChart } from "@/components/DependencyChart";
 
 // ── Project Card ──────────────────────────────────────────────────────────────
 
@@ -110,13 +111,20 @@ function ProjectWorkspace({
   // Dependency management state
   const [depTaskId, setDepTaskId] = useState("");
   const [depPredId, setDepPredId] = useState("");
+  const [dependencies, setDependencies] = useState<{ taskId: string; predecessorId: string }[]>([]);
+  const [showChart, setShowChart] = useState(false);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listTasks({ project_id: project.id });
+      const { getProjectDependencies } = await import("@/lib/api-client");
+      const [data, deps] = await Promise.all([
+        listTasks({ project_id: project.id }),
+        getProjectDependencies(project.id)
+      ]);
       setTasks(data);
+      setDependencies(deps);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -137,6 +145,47 @@ function ProjectWorkspace({
     } catch (e) {
       alert((e as Error).message);
     }
+  };
+
+  const exportTasksToJson = () => {
+    const taskMap = new Map<string, any>();
+    tasks.forEach(t => {
+      taskMap.set(t.id, {
+        id: t.id,
+        title: t.title,
+        estimate_min: t.estimateMin,
+        deadline: t.deadlineAt ? new Date(t.deadlineAt * 1000).toISOString().split('T')[0] : undefined,
+        subtasks: [],
+        depends_on: dependencies.filter(d => d.taskId === t.id).map(d => d.predecessorId)
+      });
+    });
+
+    const roots: any[] = [];
+    tasks.forEach(t => {
+      if (t.parentId && taskMap.has(t.parentId)) {
+        taskMap.get(t.parentId).subtasks.push(taskMap.get(t.id));
+      } else {
+        roots.push(taskMap.get(t.id));
+      }
+    });
+
+    const clean = (item: any) => {
+      if (item.subtasks.length === 0) delete item.subtasks;
+      if (item.depends_on.length === 0) delete item.depends_on;
+      if (item.subtasks) item.subtasks.forEach(clean);
+    };
+    roots.forEach(clean);
+
+    const jsonStr = JSON.stringify(roots, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `project_${project.name.replace(/\s+/g, '_')}_tasks.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const saveProjectEdit = async (e: React.FormEvent) => {
@@ -272,6 +321,12 @@ function ProjectWorkspace({
             </div>
             <div className="flex gap-2 shrink-0">
               <button
+                onClick={exportTasksToJson}
+                className="text-xs text-gray-500 hover:underline"
+              >
+                Export
+              </button>
+              <button
                 onClick={() => setEditing(true)}
                 className="text-xs text-gray-500 hover:underline"
               >
@@ -307,6 +362,19 @@ function ProjectWorkspace({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Chart View Toggle */}
+      <div className="px-4 py-2 bg-gray-50 border-b flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-500 uppercase">Dependency Chart</p>
+        <button onClick={() => setShowChart(!showChart)} className="text-xs text-blue-600 hover:underline">
+          {showChart ? "Hide Chart" : "Show Chart"}
+        </button>
+      </div>
+      {showChart && (
+         <div className="p-4 border-b bg-white">
+           <DependencyChart tasks={tasks} dependencies={dependencies} />
+         </div>
       )}
 
       {/* Main content: task list + detail */}
@@ -361,6 +429,7 @@ function ProjectWorkspace({
               task={selectedTask}
               allTasks={tasks}
               onUpdated={handleTaskUpdated}
+              onDependencyAdded={loadTasks}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-400 text-sm">
@@ -374,9 +443,13 @@ function ProjectWorkspace({
         <QuickCapture
           projects={allProjects.filter((p) => p.id === project.id)}
           defaultProjectId={project.id}
+          tasks={tasks}
           onCreated={(task) => {
             handleTaskCreated(task);
             setShowCapture(false);
+            // Optionally reload dependencies if needed, or we can just let it be loaded on next refresh
+            // But doing a full loadTasks() is safer to get the new edge
+            loadTasks();
           }}
           onClose={() => setShowCapture(false)}
         />
@@ -391,10 +464,12 @@ function TaskDetailPanel({
   task,
   allTasks,
   onUpdated,
+  onDependencyAdded,
 }: {
   task: Task;
   allTasks: Task[];
   onUpdated: (t: Task) => void;
+  onDependencyAdded?: () => void;
 }) {
   const [notes, setNotes] = useState("");
   const [depPredId, setDepPredId] = useState("");
@@ -411,6 +486,7 @@ function TaskDetailPanel({
       const { addDependency } = await import("@/lib/api-client");
       await addDependency(task.id, depPredId);
       setDepPredId("");
+      onDependencyAdded?.();
     } catch (e) {
       setDepError((e as Error).message);
     } finally {

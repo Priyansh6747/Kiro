@@ -560,6 +560,19 @@ export async function deleteTaskDependency(
     );
 }
 
+export async function listTaskDependenciesForProject(
+  projectId: string,
+): Promise<{ taskId: string; predecessorId: string }[]> {
+  return db
+    .select({
+      taskId: taskDependencies.taskId,
+      predecessorId: taskDependencies.predecessorId,
+    })
+    .from(taskDependencies)
+    .innerJoin(tasks, eq(taskDependencies.taskId, tasks.id))
+    .where(eq(tasks.projectId, projectId));
+}
+
 // ---------------------------------------------------------------------------
 // Day Logs
 // ---------------------------------------------------------------------------

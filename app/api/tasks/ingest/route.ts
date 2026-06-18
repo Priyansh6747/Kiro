@@ -9,10 +9,12 @@ import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
 interface IngestTaskItem {
+  id?: string;
   title: string;
   estimate_min?: number;
   deadline?: string;
   subtasks?: IngestTaskItem[];
+  depends_on?: string[];
 }
 
 function validateTasksInput(list: any[]): void {
@@ -37,6 +39,9 @@ function validateTasksInput(list: any[]): void {
         throw new Error(`Task "${item.title}" subtasks must be an array`);
       }
       validateTasksInput(item.subtasks);
+    }
+    if (item.depends_on && !Array.isArray(item.depends_on)) {
+      throw new Error(`Task "${item.title}" depends_on must be an array of ids`);
     }
   }
 }
@@ -91,6 +96,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── Recursive Ingest & DB Insertions ──────────────────────────────────────
   const createdTasks: any[] = [];
+  const idMap = new Map<string, string>(); // JSON id -> DB newTaskId
+  const dependencyQueue: { taskId: string; dependsOn: string[] }[] = [];
 
   const insertImportedTasks = async (
     list: IngestTaskItem[],
@@ -143,11 +150,33 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (item.subtasks && Array.isArray(item.subtasks)) {
         await insertImportedTasks(item.subtasks, newTaskId);
       }
+      
+      // Store the mapping from JSON id to DB id
+      if (item.id) {
+        idMap.set(item.id, newTaskId);
+      }
+      
+      // Keep track of dependencies to resolve after all insertions
+      if (item.depends_on && Array.isArray(item.depends_on)) {
+        dependencyQueue.push({ taskId: newTaskId, dependsOn: item.depends_on });
+      }
     }
   };
 
   try {
     await insertImportedTasks(tasks as IngestTaskItem[]);
+    
+    // Resolve dependencies
+    const { insertTaskDependency } = await import("@/lib/storage");
+    for (const { taskId, dependsOn } of dependencyQueue) {
+      for (const depId of dependsOn) {
+        const mappedId = idMap.get(depId);
+        if (mappedId) {
+          await insertTaskDependency(taskId, mappedId);
+        }
+      }
+    }
+    
     return Response.json({ data: createdTasks }, { status: 201 });
   } catch (dbError) {
     console.error("[JSON Ingest Error] Database insertion failed:", dbError);

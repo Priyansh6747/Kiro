@@ -60,6 +60,7 @@ export const createTask = (body: {
   parent_id?: string;
   recurrence_rule?: string | null;
   recurrence_ends_at?: number | null;
+  predecessor_id?: string;
 }) =>
   request<import("./types").Task>("/api/tasks", {
     method: "POST",
@@ -101,6 +102,9 @@ export const addDependency = (taskId: string, predecessorId: string) =>
     method: "POST",
     body: JSON.stringify({ predecessor_id: predecessorId }),
   });
+
+export const getProjectDependencies = (projectId: string) =>
+  request<{ taskId: string; predecessorId: string }[]>(`/api/projects/${projectId}/dependencies`);
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { project_id, title, estimate_min, scheduled_date, deadline_at, parent_id, recurrence_rule, recurrence_ends_at } =
+  const { project_id, title, estimate_min, scheduled_date, deadline_at, parent_id, recurrence_rule, recurrence_ends_at, predecessor_id } =
     body as {
       project_id?: unknown;
       title?: unknown;
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       parent_id?: unknown;
       recurrence_rule?: unknown;
       recurrence_ends_at?: unknown;
+      predecessor_id?: unknown;
     };
 
   // ── Required field validation ─────────────────────────────────────────────
@@ -173,6 +174,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   // Propagate ancestors from parent
   if (parentId) {
     await propagateTaskClosure(newTaskId, parentId);
+  }
+
+  // Handle dependency
+  if (predecessor_id && typeof predecessor_id === "string") {
+    const pred = await findTaskById(predecessor_id, userId);
+    if (pred && pred.projectId === project_id) {
+      const { insertTaskDependency } = await import("@/lib/storage");
+      await insertTaskDependency(newTaskId, predecessor_id);
+    }
   }
 
   return Response.json({ data: task }, { status: 201 });

@@ -70,8 +70,28 @@ export async function PATCH(
     updates.status = body.status as TaskStatus;
 
     // Mark completed_at on first transition to "done"
-    if (body.status === "done" && !task.completedAt) {
-      updates.completedAt = nowSec();
+    if (body.status === "done") {
+      // Enforce dependencies: check if all predecessors are "done"
+      const { listTaskDependenciesForProject, listTasks } = await import("@/lib/storage");
+      const deps = await listTaskDependenciesForProject(task.projectId);
+      const myPredecessors = deps.filter(d => d.taskId === id).map(d => d.predecessorId);
+      
+      if (myPredecessors.length > 0) {
+        const allTasks = await listTasks({ userId, projectId: task.projectId });
+        const predTasks = allTasks.filter(t => myPredecessors.includes(t.id));
+        const notDone = predTasks.filter(t => t.status !== "done");
+        
+        if (notDone.length > 0) {
+          return Response.json(
+            { error: `Cannot complete task. Dependencies not satisfied: ${notDone.map(t => t.title).join(", ")}` },
+            { status: 422 },
+          );
+        }
+      }
+
+      if (!task.completedAt) {
+        updates.completedAt = nowSec();
+      }
     }
   }
 
