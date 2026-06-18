@@ -37,7 +37,15 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const bucket = bucketVal === "true";
 
-  const rows = await listTasks({ userId, projectId, date, status: statusVal, bucket });
+  let todayDate: number | undefined;
+  if (bucket) {
+    const { getOrCreatePreferences } = await import("@/lib/storage");
+    const { todayUnixDay } = await import("@/lib/utils");
+    const prefs = await getOrCreatePreferences(userId);
+    todayDate = todayUnixDay(prefs.timezone);
+  }
+
+  const rows = await listTasks({ userId, projectId, date, status: statusVal, bucket, todayDate });
   return Response.json({ data: rows });
 }
 

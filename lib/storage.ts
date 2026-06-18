@@ -257,6 +257,7 @@ export interface ListTasksFilter {
   date?: number;
   status?: string;
   bucket?: boolean;
+  todayDate?: number;
 }
 
 export async function listTasks(filter: ListTasksFilter): Promise<Task[]> {
@@ -272,11 +273,37 @@ export async function listTasks(filter: ListTasksFilter): Promise<Task[]> {
     conditions.push(eq(tasks.status, "pending"));
   }
 
-  return db
+  let rows = await db
     .select()
     .from(tasks)
     .where(and(...conditions))
     .orderBy(asc(tasks.createdAt));
+
+  if (filter.bucket && filter.todayDate !== undefined && rows.length > 0) {
+    const { inArray } = await import("drizzle-orm");
+    const taskIds = rows.map((r) => r.id);
+
+    const deps = await db
+      .select({
+        taskId: taskDependencies.taskId,
+        predecessorStatus: tasks.status,
+        predecessorDate: tasks.scheduledDate,
+      })
+      .from(taskDependencies)
+      .innerJoin(tasks, eq(taskDependencies.predecessorId, tasks.id))
+      .where(inArray(taskDependencies.taskId, taskIds));
+
+    const blockedTaskIds = new Set<string>();
+    for (const d of deps) {
+      if (d.predecessorStatus !== "done" && d.predecessorDate !== filter.todayDate) {
+        blockedTaskIds.add(d.taskId);
+      }
+    }
+
+    rows = rows.filter((r) => !blockedTaskIds.has(r.id));
+  }
+
+  return rows;
 }
 
 export async function findTaskById(
