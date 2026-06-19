@@ -7,9 +7,11 @@ interface ArcDialProps {
   selectedDate: number;
   onChange: (date: number) => void;
   totalPlannedMin?: number;
+  completedCount?: number;
+  totalTasksCount?: number;
 }
 
-export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDialProps) {
+export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0, completedCount = 0, totalTasksCount = 0 }: ArcDialProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dates, setDates] = useState<number[]>([]);
   const itemWidth = 80; // width of each item slot
@@ -102,8 +104,8 @@ export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDial
   const selectedDateObj = new Date(selectedDate * 86400000);
 
   const cap = 480;
-  const ratio = Math.min(totalPlannedMin / cap, 1);
   const isOverload = totalPlannedMin > cap;
+  const progressRatio = totalTasksCount > 0 ? completedCount / totalTasksCount : 0;
 
   const formatTime = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -130,6 +132,21 @@ export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDial
         </p>
       </div>
 
+      <div className="absolute top-4 right-6 flex flex-col items-end z-20 pointer-events-none">
+        <span 
+          className="text-[10px] font-bold uppercase tracking-wider"
+          style={{ color: isOverload ? 'var(--status-warning)' : 'var(--accent)' }}
+        >
+          {isOverload ? 'Overload' : 'Chill'}
+        </span>
+        <span 
+          className="text-[10px] font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {formatTime(totalPlannedMin)} planned
+        </span>
+      </div>
+
       <div 
         className="w-full relative h-[124px] overflow-hidden"
       >
@@ -141,7 +158,7 @@ export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDial
         >
           <defs>
             <clipPath id="arcProgressClip">
-              <rect x="0" y="0" height="92" width={`${ratio * 1000}`} className="transition-all duration-500" />
+              <rect x="0" y="0" height="92" width={`${progressRatio * 1000}`} className="transition-all duration-500" />
             </clipPath>
           </defs>
 
@@ -155,8 +172,8 @@ export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDial
           {/* Progress area */}
           <path 
             d="M 0 60 Q 500 -10 1000 60 L 1000 92 L 0 92 Z" 
-            style={{ fill: isOverload ? 'var(--status-warning)' : 'var(--accent)' }}
-            className="opacity-30 transition-all duration-500"
+            style={{ fill: 'var(--color-done)' }}
+            className="opacity-40 transition-all duration-500"
             clipPath="url(#arcProgressClip)"
           />
 
@@ -231,24 +248,6 @@ export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDial
               </div>
             );
           })}
-        </div>
-        
-        {/* Progress Text */}
-        <div className="absolute bottom-2 left-6 z-10 pointer-events-none">
-          <span 
-            className="text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {formatTime(totalPlannedMin)} planned
-          </span>
-        </div>
-        <div className="absolute bottom-2 right-6 z-10 pointer-events-none">
-          <span 
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: isOverload ? 'var(--status-warning)' : 'var(--accent)' }}
-          >
-            {isOverload ? 'Overload' : 'Chill'}
-          </span>
         </div>
       </div>
 

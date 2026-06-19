@@ -25,6 +25,7 @@ import {
 } from "@/components/ui";
 import { DependencyChart } from "@/components/DependencyChart";
 import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/hooks/useConfirm";
 
 // ── Project Card ──────────────────────────────────────────────────────────────
 
@@ -99,10 +100,16 @@ function ProjectWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
   const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
+  const [dependencies, setDependencies] = useState<{taskId: string, predecessorId: string}[]>([]);
+  const [taskToDeleteWithDeps, setTaskToDeleteWithDeps] = useState<Task | null>(null);
+  const [transferTargetId, setTransferTargetId] = useState<string>("none");
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [animatingTasksStatus, setAnimatingTasksStatus] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const { showToast } = useToast();
+  const { confirm, ConfirmModal } = useConfirm();
 
   const [editName, setEditName] = useState(project.name);
   const [editImportance, setEditImportance] = useState(project.importance);
@@ -113,10 +120,6 @@ function ProjectWorkspace({
       : ""
   );
 
-  // Dependency management state
-  const [depTaskId, setDepTaskId] = useState("");
-  const [depPredId, setDepPredId] = useState("");
-  const [dependencies, setDependencies] = useState<{ taskId: string; predecessorId: string }[]>([]);
   const [showChart, setShowChart] = useState(false);
 
   const loadTasks = useCallback(async () => {
@@ -143,7 +146,7 @@ function ProjectWorkspace({
   }, [loadTasks]);
 
   const handleArchive = async () => {
-    if (!confirm(`Archive project "${project.name}"?`)) return;
+    if (!await confirm("Archive project", `Archive project "${project.name}"?`)) return;
     try {
       await archiveProject(project.id);
       onProjectArchived(project.id);
@@ -233,6 +236,69 @@ function ProjectWorkspace({
       setTasks((prev) => [...prev, ...task]);
     } else {
       setTasks((prev) => [...prev, task]);
+    }
+  };
+
+  const handleDeleteTaskRequest = async (task: Task) => {
+    const dependentTasks = dependencies.filter(d => d.predecessorId === task.id);
+    if (dependentTasks.length > 0) {
+      setTaskToDeleteWithDeps(task);
+      setTransferTargetId("none");
+    } else {
+      if (!(await confirm("Delete Task", `Are you sure you want to delete "${task.title}"?`))) return;
+      executeTaskDelete(task.id);
+    }
+  };
+
+  const executeTaskDelete = async (taskId: string, transferToId?: string) => {
+    setIsDeletingTask(true);
+    setTaskToDeleteWithDeps(null);
+    setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'loading' }));
+
+    try {
+      if (transferToId && transferToId !== "none") {
+        const dependentTasks = dependencies.filter(d => d.predecessorId === taskId);
+        for (const dep of dependentTasks) {
+          await import("@/lib/api-client").then(m => m.addDependency(dep.taskId, transferToId));
+          await import("@/lib/api-client").then(m => m.deleteDependency(dep.taskId, taskId));
+        }
+      } else {
+        const dependentTasks = dependencies.filter(d => d.predecessorId === taskId);
+        for (const dep of dependentTasks) {
+          await import("@/lib/api-client").then(m => m.deleteDependency(dep.taskId, taskId));
+        }
+      }
+      
+      await import("@/lib/api-client").then(m => m.deleteTask(taskId));
+      
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'success' }));
+      showToast("Task deleted", "success");
+      
+      setTimeout(() => {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        if (selectedTask?.id === taskId) setSelectedTask(null);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      }, 500);
+      
+      import("@/lib/api-client").then(m => m.getProjectDependencies(project.id).then(setDependencies));
+      
+    } catch (e) {
+      showToast("Failed to delete task: " + (e as Error).message, "error");
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'error' }));
+      setTimeout(() => {
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      }, 500);
+    } finally {
+      setIsDeletingTask(false);
+      setTransferTargetId("none");
     }
   };
 
@@ -413,16 +479,19 @@ function ProjectWorkspace({
             />
           ) : (
             <div className="flex flex-col overflow-y-auto">
-              {tasks.map((task) => (
+              {tasks.map((t) => (
                 <div
-                  key={task.id}
-                  className={`cursor-pointer ${selectedTask?.id === task.id ? "bg-accent-subtle" : ""}`}
-                  onClick={() => setSelectedTask(task)}
+                  key={t.id}
+                  className={`cursor-pointer ${selectedTask?.id === t.id ? "bg-accent-subtle" : ""}`}
+                  onClick={() => setSelectedTask(t)}
                 >
                   <TaskRow
-                    task={task}
+                    key={t.id}
+                    task={t}
                     projects={allProjects}
                     onUpdated={handleTaskUpdated}
+                    onDeleteRequested={handleDeleteTaskRequest}
+                    animatingState={animatingTasksStatus[t.id]}
                   />
                 </div>
               ))}
@@ -448,6 +517,47 @@ function ProjectWorkspace({
         </div>
       </div>
 
+      {taskToDeleteWithDeps && (
+        <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border-default rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-medium text-primary mb-2">Transfer Dependencies</h3>
+            <p className="text-sm text-secondary mb-4">
+              Other tasks depend on &quot;{taskToDeleteWithDeps.title}&quot;. What should happen to those dependencies?
+            </p>
+            
+            <select
+              className="w-full bg-surface-raised border border-border-default rounded-lg px-3 py-2 text-sm text-primary mb-6 focus:outline-none focus:ring-2 focus:ring-accent"
+              value={transferTargetId}
+              onChange={(e) => setTransferTargetId(e.target.value)}
+            >
+              <option value="none">Remove Dependencies</option>
+              {tasks.filter(t => t.id !== taskToDeleteWithDeps.id && t.status !== 'deleted').map(t => (
+                <option key={t.id} value={t.id}>
+                  Transfer to: {t.title}
+                </option>
+              ))}
+            </select>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setTaskToDeleteWithDeps(null)}
+                disabled={isDeletingTask}
+                className="px-4 py-2 text-sm font-medium text-secondary hover:text-primary transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executeTaskDelete(taskToDeleteWithDeps.id, transferTargetId)}
+                disabled={isDeletingTask}
+                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeletingTask ? "Deleting..." : "Delete Task"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCapture && (
         <QuickCapture
           projects={allProjects.filter((p) => p.id === project.id)}
@@ -466,6 +576,8 @@ function ProjectWorkspace({
           }}
         />
       )}
+
+      <ConfirmModal />
     </div>
   );
 }

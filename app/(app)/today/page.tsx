@@ -331,6 +331,8 @@ function TodayPageContent() {
 
   const scheduledTasks = plan.tasks;
   const totalPlannedMin = scheduledTasks.reduce((sum, t) => sum + (t.estimateMin || 30), 0);
+  const totalScheduledCount = scheduledTasks.length;
+  const completedCount = scheduledTasks.filter(t => t.status === 'done').length;
 
   // Find tasks scheduled for today but NOT in dayPlans (Timeline)
   const placedTaskIds = new Set(plan.dayPlans.map(dp => dp.taskId));
@@ -346,7 +348,13 @@ function TodayPageContent() {
 
   return (
     <div className="flex flex-col flex-1 h-screen overflow-hidden bg-base">
-      <ArcDial selectedDate={selectedDate} onChange={handleDateChange} totalPlannedMin={totalPlannedMin} />
+      <ArcDial 
+        selectedDate={selectedDate} 
+        onChange={handleDateChange} 
+        totalPlannedMin={totalPlannedMin} 
+        completedCount={completedCount}
+        totalTasksCount={totalScheduledCount}
+      />
       
       <div className="relative flex flex-1 overflow-hidden bg-surface">
         {/* Skeleton loader sits underneath, revealed as old content slides out, if network is slow */}

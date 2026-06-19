@@ -92,6 +92,9 @@ export async function PATCH(
       if (!task.completedAt) {
         updates.completedAt = nowSec();
       }
+    } else {
+      // If status is changed from "done" back to something else, clear completedAt
+      updates.completedAt = null;
     }
   }
 

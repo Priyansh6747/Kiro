@@ -11,6 +11,7 @@ import {
   ingestTasks,
 } from "@/lib/api-client";
 import { todayUnixDay } from "@/lib/types";
+import { useConfirm } from "@/hooks/useConfirm";
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,7 @@ export function TaskRow({
   showProject,
   projects,
   animatingState,
+  onDeleteRequested,
 }: {
   task: Task;
   onUpdated: (t: Task) => void;
@@ -192,12 +194,14 @@ export function TaskRow({
   showProject?: boolean;
   projects?: Project[];
   animatingState?: 'loading' | 'success' | 'error';
+  onDeleteRequested?: (t: Task) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(task.title);
   const [estimate, setEstimate] = useState(String(task.estimateMin));
+  const { confirm, ConfirmModal } = useConfirm();
 
   const isDone = task.status === "done";
 
@@ -234,7 +238,11 @@ export function TaskRow({
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${task.title}"?`)) return;
+    if (onDeleteRequested) {
+      onDeleteRequested(task);
+      return;
+    }
+    if (!(await confirm("Delete Task", `Are you sure you want to delete "${task.title}"?`))) return;
     setSaving(true);
     try {
       await deleteTask(task.id);
@@ -370,7 +378,7 @@ export function TaskRow({
             To Inbox
           </button>
         )}
-        {onDeleted && (
+        {(onDeleted || onDeleteRequested) && (
           <button
             onClick={handleDelete}
             disabled={saving}
@@ -380,6 +388,7 @@ export function TaskRow({
           </button>
         )}
       </div>
+      <ConfirmModal />
     </div>
   );
 }
