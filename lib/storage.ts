@@ -971,3 +971,9 @@ export async function listDayPlansForDate(
     .where(and(eq(dayPlan.userId, userId), eq(dayPlan.planDate, planDate)))
     .orderBy(asc(dayPlan.startTime));
 }
+
+export async function removeDayPlanBlock(userId: string, taskId: string): Promise<void> {
+  await db
+    .delete(dayPlan)
+    .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)));
+}

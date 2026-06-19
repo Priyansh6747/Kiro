@@ -201,3 +201,6 @@ export const generateEodSummary = () =>
   request<import("./types").EodSummaryData>("/api/generation/eod-summary", {
     method: "POST",
   });
+
+export const removeDayPlanBlock = (taskId: string) =>
+  request<"ok">(`/api/planner/day-plan/${taskId}`, { method: "DELETE" });

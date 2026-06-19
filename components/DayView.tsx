@@ -5,9 +5,10 @@ interface DayViewProps {
   tasks: Task[];
   dayPlans: DayPlan[];
   onOpenPlanner: () => void;
+  animatingPlacements?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function DayView({ tasks, dayPlans, onOpenPlanner }: DayViewProps) {
+export function DayView({ tasks, dayPlans, onOpenPlanner, animatingPlacements = {} }: DayViewProps) {
   // Sort day plans chronologically
   const sortedPlans = [...dayPlans].sort((a, b) => a.startTime - b.startTime);
 
@@ -49,9 +50,9 @@ export function DayView({ tasks, dayPlans, onOpenPlanner }: DayViewProps) {
             </button>
           </div>
         ) : (
-          <div className="relative w-full pr-8 md:pr-12 lg:pr-24 pl-8">
+          <div className="relative w-full pr-4 md:pr-12 lg:pr-24 pl-4 md:pl-8">
             {/* Continuous vertical timeline line */}
-            <div className="absolute top-0 bottom-0 left-[32px] w-px bg-border-default z-0"></div>
+            <div className="absolute top-0 bottom-0 left-[16px] md:left-[32px] w-px bg-border-default z-0"></div>
             
             <div className="space-y-6 relative z-10 py-2">
               {sortedPlans.map((plan, index) => {
@@ -65,36 +66,50 @@ export function DayView({ tasks, dayPlans, onOpenPlanner }: DayViewProps) {
                 return (
                   <div key={plan.taskId} className="relative flex items-stretch group">
                     {/* Timeline Left Axis */}
-                    <div className="w-32 shrink-0 flex flex-col justify-between py-2 -ml-[1px]">
+                    <div className="w-20 md:w-32 shrink-0 flex flex-col justify-between py-2 -ml-[1px]">
                       {/* Top tick (Start Time) */}
                       <div className="flex items-center">
-                        <div className="h-px w-6 bg-border-strong"></div>
-                        <span className="text-[11px] text-tertiary font-medium pl-3 whitespace-nowrap">{startStr}</span>
+                        <div className="h-px w-4 md:w-6 bg-border-strong"></div>
+                        <span className="text-[11px] text-tertiary font-medium pl-2 md:pl-3 whitespace-nowrap">{startStr}</span>
                       </div>
                       
                       {/* Minor ticks */}
                       <div className="flex flex-col justify-evenly flex-1 py-1">
-                        <div className="h-px w-3 bg-border-default"></div>
-                        <div className="h-px w-3 bg-border-default"></div>
-                        <div className="h-px w-3 bg-border-default"></div>
+                        <div className="h-px w-2 md:w-3 bg-border-default"></div>
+                        <div className="h-px w-2 md:w-3 bg-border-default"></div>
+                        <div className="h-px w-2 md:w-3 bg-border-default"></div>
                       </div>
 
                       {/* Bottom tick (End Time) */}
                       <div className="flex items-center">
-                        <div className="h-px w-6 bg-border-strong"></div>
-                        <span className="text-[11px] text-tertiary font-medium pl-3 whitespace-nowrap">{endStr}</span>
+                        <div className="h-px w-4 md:w-6 bg-border-strong"></div>
+                        <span className="text-[11px] text-tertiary font-medium pl-2 md:pl-3 whitespace-nowrap">{endStr}</span>
                       </div>
                     </div>
 
                     {/* Task Card */}
-                    <div className="flex-1 bg-surface-raised border border-border-default rounded-2xl p-4 flex justify-between items-center hover:border-border-strong transition-colors ml-2">
-                      {/* Left side: Task Title */}
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-primary">{task.title}</span>
+                    <div className="flex-1 flex justify-between items-center ml-2">
+                      {/* Left: Task Content */}
+                      <div className={`flex-1 min-w-0 border rounded-xl p-4 md:p-6 shadow-sm transition-colors ${
+                        animatingPlacements[plan.taskId] === 'success' ? 'bg-done-subtle border-done text-done' :
+                        animatingPlacements[plan.taskId] === 'error' ? 'bg-missed-subtle border-missed text-missed' :
+                        animatingPlacements[plan.taskId] === 'loading' ? 'bg-accent-subtle border-accent/50 animate-pulse text-secondary' :
+                        'bg-surface-raised border-border-default hover:border-accent text-primary'
+                      }`}>
+                        <div className="flex flex-col gap-2">
+                          <span className={`text-sm md:text-base font-medium truncate block ${animatingPlacements[plan.taskId] === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
+                            {task.title}
+                          </span>
+                          {task.projectId && (
+                            <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                              {task.projectId}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Middle: Duration with arrows */}
-                      <div className="flex flex-col items-center justify-center px-8">
+                      <div className="flex flex-col items-center justify-center px-4 md:px-8">
                         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="text-tertiary mb-1">
                           <path d="M5 0L10 6H0L5 0Z" fill="currentColor"/>
                         </svg>

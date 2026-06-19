@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import type { Task, Project, TodayPlannerData } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
-import { getTodayPlan, listTasks, listProjects, updateTask, placeDayPlanBlock, createTask } from "@/lib/api-client";
+import { getTodayPlan, listTasks, listProjects, updateTask, placeDayPlanBlock, removeDayPlanBlock, createTask } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner } from "@/components/ui";
 import { DayPlanner } from "@/components/DayPlanner";
 import { DayView } from "@/components/DayView";
@@ -31,12 +31,15 @@ function TodayPageContent() {
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
   const [isExiting, setIsExiting] = useState(false);
   
+  const [activeTab, setActiveTab] = useState<'anytime' | 'dayview'>('anytime');
+  
   const [isBucketOpen, setIsBucketOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
   const [swipingOutTaskIds, setSwipingOutTaskIds] = useState<Set<string>>(new Set());
   const [animatingTasks, setAnimatingTasks] = useState<{task: Task, state: 'adding' | 'success' | 'error' | 'returning' | 'removing'}[]>([]);
+  const [animatingPlacements, setAnimatingPlacements] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
 
   const handleDateChange = (newDate: number) => {
     if (newDate === selectedDate) return;
@@ -172,23 +175,89 @@ function TodayPageContent() {
 
   const handlePlaceBlock = async (taskId: string, startTime: number) => {
     if (!plan) return;
+    
+    const prevDayPlans = [...plan.dayPlans];
+    
+    // 1. Optimistic Update
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const newPlans = prev.dayPlans.filter(p => p.taskId !== taskId);
+      newPlans.push({
+        userId: "",
+        taskId,
+        planDate: plan.date,
+        startTime,
+        createdAt: Math.floor(Date.now() / 1000),
+        updatedAt: Math.floor(Date.now() / 1000),
+      });
+      return { ...prev, dayPlans: newPlans };
+    });
+    
+    setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'loading' }));
+
     try {
       await placeDayPlanBlock(taskId, plan.date, startTime);
-      setPlan((prev) => {
-        if (!prev) return prev;
-        const newPlans = prev.dayPlans.filter(p => p.taskId !== taskId);
-        newPlans.push({
-          userId: "",
-          taskId,
-          planDate: plan.date,
-          startTime,
-          createdAt: Math.floor(Date.now() / 1000),
-          updatedAt: Math.floor(Date.now() / 1000),
+      // 2. Success Blink
+      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'success' }));
+      setTimeout(() => {
+        setAnimatingPlacements(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
         });
-        return { ...prev, dayPlans: newPlans };
-      });
+      }, 500);
     } catch (e) {
-      alert((e as Error).message);
+      // 3. Error Blink & Revert
+      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'error' }));
+      setTimeout(() => {
+        setPlan(prev => prev ? { ...prev, dayPlans: prevDayPlans } : prev);
+        setAnimatingPlacements(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      }, 500);
+    }
+  };
+
+  const handleUnplaceBlock = async (taskId: string) => {
+    if (!plan) return;
+    
+    const prevDayPlans = [...plan.dayPlans];
+    
+    // 1. Optimistic Update
+    setPlan((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        dayPlans: prev.dayPlans.filter((p) => p.taskId !== taskId),
+      };
+    });
+    
+    setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'loading' }));
+
+    try {
+      await removeDayPlanBlock(taskId);
+      // 2. Success Blink
+      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'success' }));
+      setTimeout(() => {
+        setAnimatingPlacements(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      }, 500);
+    } catch (e) {
+      // 3. Error Blink & Revert
+      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'error' }));
+      setTimeout(() => {
+        setPlan(prev => prev ? { ...prev, dayPlans: prevDayPlans } : prev);
+        setAnimatingPlacements(prev => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+      }, 500);
     }
   };
 
@@ -254,10 +323,26 @@ function TodayPageContent() {
               : `animate-slide-${slideDirection}`
           }`}
         >
+          {/* Mobile Tabs */}
+          <div className="md:hidden flex border-b border-border-default shrink-0">
+            <button 
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'anytime' ? 'text-primary border-b-2 border-accent' : 'text-secondary'}`}
+              onClick={() => setActiveTab('anytime')}
+            >
+              Any Time Today
+            </button>
+            <button 
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'dayview' ? 'text-primary border-b-2 border-accent' : 'text-secondary'}`}
+              onClick={() => setActiveTab('dayview')}
+            >
+              Day View
+            </button>
+          </div>
+
           {/* Body */}
           <div className="flex flex-1 overflow-hidden">
             {/* Any Time Today Panel */}
-            <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0 overflow-y-auto">
+            <div className={`${activeTab === 'anytime' ? 'flex' : 'hidden'} md:flex w-full md:w-64 border-r border-border-default flex-col p-6 bg-surface shrink-0 overflow-y-auto`}>
           <h3 className="text-lg font-medium text-primary mb-6 tracking-wide">Any Time Today</h3>
           
           <div className="space-y-4 mb-8">
@@ -335,12 +420,13 @@ function TodayPageContent() {
         </div>
 
         {/* Center Area: DayView or DayPlanner */}
-        <div className="flex-1 overflow-hidden bg-surface relative flex">
+        <div className={`${activeTab === 'dayview' ? 'flex' : 'hidden'} md:flex flex-1 overflow-hidden bg-surface relative flex`}>
           <div className="flex-1 min-w-0">
             <DayView 
               tasks={scheduledTasks} 
               dayPlans={plan.dayPlans} 
               onOpenPlanner={() => setIsPlannerOpen(true)} 
+              animatingPlacements={animatingPlacements}
             />
           </div>
           
@@ -349,7 +435,9 @@ function TodayPageContent() {
               tasks={scheduledTasks}
               dayPlans={plan.dayPlans}
               onPlaceBlock={handlePlaceBlock}
+              onUnplaceBlock={handleUnplaceBlock}
               onClose={() => setIsPlannerOpen(false)}
+              animatingPlacements={animatingPlacements}
             />
           )}
         </div>
