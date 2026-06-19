@@ -81,12 +81,56 @@ function TodayPageContent() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (selectedDate !== todayUnixDay()) {
+      setNudge(null);
+      setEodSummary(null);
+      return;
+    }
+    
+    try {
+      const CACHE_EXPIRY = 3600000; // 1 hour
+      
+      const cachedNudgeStr = localStorage.getItem(`morning_nudge_${selectedDate}`);
+      if (cachedNudgeStr) {
+        const { data, timestamp } = JSON.parse(cachedNudgeStr);
+        if (Date.now() - timestamp < CACHE_EXPIRY) {
+          setNudge(data);
+        } else {
+          localStorage.removeItem(`morning_nudge_${selectedDate}`);
+          setNudge(null);
+        }
+      } else {
+        setNudge(null);
+      }
+
+      const cachedEodStr = localStorage.getItem(`eod_summary_${selectedDate}`);
+      if (cachedEodStr) {
+        const { data, timestamp } = JSON.parse(cachedEodStr);
+        if (Date.now() - timestamp < CACHE_EXPIRY) {
+          setEodSummary(data);
+        } else {
+          localStorage.removeItem(`eod_summary_${selectedDate}`);
+          setEodSummary(null);
+        }
+      } else {
+        setEodSummary(null);
+      }
+    } catch (e) {
+      console.error("Cache parsing error", e);
+    }
+  }, [selectedDate]);
+
   const handleNudge = async () => {
     setNudgeLoading(true);
     setNudgeError(null);
     try {
       const data = await generateMorningNudge();
       setNudge(data);
+      localStorage.setItem(`morning_nudge_${selectedDate}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
     } catch (e) {
       setNudgeError((e as Error).message);
     } finally {
@@ -112,6 +156,10 @@ function TodayPageContent() {
     try {
       const data = await generateEodSummary();
       setEodSummary(data.summary);
+      localStorage.setItem(`eod_summary_${selectedDate}`, JSON.stringify({
+        data: data.summary,
+        timestamp: Date.now()
+      }));
     } catch (e) {
       setEodError((e as Error).message);
     } finally {
@@ -140,6 +188,7 @@ function TodayPageContent() {
   };
 
   const handleTaskUpdated = (updated: Task) => {
+    const oldTask = plan?.tasks.find(t => t.id === updated.id);
     setPlan((prev) => {
       if (!prev) return prev;
       return {
@@ -147,6 +196,12 @@ function TodayPageContent() {
         tasks: prev.tasks.map((t) => (t.id === updated.id ? updated : t)),
       };
     });
+
+    if (oldTask && oldTask.status !== "done" && updated.status === "done") {
+      if (eodSummary && selectedDate === todayUnixDay()) {
+        handleEod();
+      }
+    }
   };
 
   const handleBucketUpdated = (updated: Task) => {
