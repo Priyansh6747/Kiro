@@ -1,80 +1,30 @@
 # Kiro — Color System
-*Design tokens v1*
+*Design tokens v2*
+
+---
+
+## What changed in v2
+
+Paper, Indigo, and Sage previously shared the same bone structure — same violet accent, same gray-scale typography ramp, same neutral surfaces with a different hue dropped in. They read as one theme recolored four times. Midnight is untouched. The other three now have distinct material identities:
+
+- **Paper** — rebuilt around true warm parchment and clay ink, no violet. Meant to feel like a worn notebook, not an app skin.
+- **Sage** — rebuilt around moss, bark, and lichen. Earthy and slightly imperfect, not "green Material Design."
+- **Nebula** — built as a clean, vibrant violet light mode: crisp white and soft gray backgrounds with a powerful, pure violet accent.
 
 ---
 
 ## Reference
 
-| Source | What it informs |
+| Mode | Material reference |
 |---|---|
-| Resonare (DJ marketplace) | Dark mode — deep navy base, teal accent, high contrast type |
-| Marginalia (bookstore UI) | Light mode — warm cream base, earthy text, analog warmth |
+| Midnight | Resonare (DJ marketplace) — deep navy, teal accent, terminal-adjacent contrast |
+| Paper | Worn paperback, tea-stained notebook paper, soft indoor lamp light |
+| Sage | Moss on stone, dried botanicals, unbleached linen, forest floor |
+| Nebula | Vital app inspiration, clean soft gray backgrounds with vibrant violet headers |
 
 ---
 
-## Paper Mode (Light)
-
-Derived from Marginalia's off-white cream (`#F5EFE6` background), dark sepia type, and deep burgundy accents. Warm, considered, unmistakably analog.
-
-### Background
-
-| Token | Hex | Usage |
-|---|---|---|
-| `bg-base` | `#F7F3EC` | Page background — warm cream, never pure white |
-| `bg-surface` | `#FFFFFF` | Cards, modals, panels — lifts off base |
-| `bg-surface-raised` | `#FBF9F5` | Nested cards, sidebars — mid-level surface |
-| `bg-accent-subtle` | `#EEEDFE` | Violet accent fills — tags, selected states |
-| `bg-done-subtle` | `#E6F4EE` | Completed task backgrounds |
-| `bg-missed-subtle` | `#FAECE7` | Missed task backgrounds |
-| `bg-warning-subtle` | `#FEF3E2` | Overload warning backgrounds |
-
-### Accent (Primary Action)
-
-Violet — wisdom, decisiveness, rare in productivity tools.
-
-| Token | Hex | Usage |
-|---|---|---|
-| `accent` | `#7C6AF7` | Primary buttons, active nav, links |
-| `accent-hover` | `#6556E0` | Hover state |
-| `accent-pressed` | `#534AB7` | Pressed / active state |
-| `accent-subtle` | `#EEEDFE` | Accent background fills |
-| `accent-border` | `#CECBF6` | Accent borders, focus rings |
-
-### Typography
-
-| Token | Hex | Usage |
-|---|---|---|
-| `text-primary` | `#1E1B2E` | Headings, body — deep warm navy, not pure black |
-| `text-secondary` | `#6B6880` | Labels, hints, meta — muted violet-gray |
-| `text-tertiary` | `#A09DB8` | Placeholder, disabled |
-| `text-accent` | `#7C6AF7` | Links, interactive labels |
-| `text-done` | `#1D9E75` | Completed task titles |
-| `text-missed` | `#D85A30` | Missed task titles |
-
-### Border
-
-| Token | Hex | Usage |
-|---|---|---|
-| `border-subtle` | `#EDE9E0` | Default card edges, dividers |
-| `border-default` | `#E2DED6` | Input borders, section dividers |
-| `border-strong` | `#C8C3B8` | Focused inputs, emphasized containers |
-| `border-accent` | `#CECBF6` | Accent-adjacent borders |
-
-### Status
-
-| Token | Hex | Role | Usage |
-|---|---|---|---|
-| `done` | `#1D9E75` | Teal-green | Completed tasks, progress |
-| `done-text` | `#085041` | Dark teal | Text on done backgrounds |
-| `missed` | `#D85A30` | Coral | Missed / overdue tasks |
-| `missed-text` | `#993C1D` | Dark coral | Text on missed backgrounds |
-| `warning` | `#BA7517` | Amber | Overload, deadline risk |
-| `warning-text` | `#633806` | Dark amber | Text on warning backgrounds |
-| `critical` | `#7C6AF7` | Violet | Critical project type badge |
-
----
-
-## Midnight Mode (Dark)
+## Midnight Mode (Dark) — unchanged
 
 Derived from Resonare's deep navy (`#0B0F10`, `#121620`), teal accent (`#00FFC2`), and smoke white text (`#F2F2F2`). Focused, high-contrast, terminal-adjacent without being literal.
 
@@ -136,127 +86,195 @@ Teal — Resonare's `#00FFC2` pulled back to `#4DD9AC` to avoid neon harshness w
 
 ---
 
-## Indigo Mode (Corporate Dark)
+## Paper Mode (Light) — rebuilt
 
-Derived from the "Redefined Creative" aesthetic. Deep navy backgrounds mixed with vibrant purple accents and high-contrast cool-white text.
+**Mood:** the most relaxed surface in the system. No violet, no saturated UI-blue. Base is genuinely warm parchment, ink is soft clay-brown rather than navy, and the accent is a muted terracotta — the color of a wax seal, not a startup logo. Built to be looked at for hours without strain.
 
 ### Background
 
 | Token | Hex | Usage |
 |---|---|---|
-| `bg-base` | `#0B132B` | Page background — deep navy |
-| `bg-surface` | `#1C2541` | Cards, panels |
-| `bg-surface-raised` | `#28304D` | Nested cards, dropdowns |
-| `bg-accent-subtle` | `#201E43` | Indigo accent fills |
-| `bg-done-subtle` | `#1A2F2B` | Completed task backgrounds |
-| `bg-missed-subtle` | `#3A1F26` | Missed task backgrounds |
-| `bg-warning-subtle` | `#362A18` | Overload warning backgrounds |
+| `bg-base` | `#F6EFE4` | Page background — warm parchment, never cool or pure white |
+| `bg-surface` | `#FFFCF6` | Cards, modals, panels — barely-there lift off base |
+| `bg-surface-raised` | `#FBF4E8` | Nested cards, sidebars — mid-level surface |
+| `bg-accent-subtle` | `#F3E4D7` | Terracotta accent fills — tags, selected states |
+| `bg-done-subtle` | `#E9F0E1` | Completed task backgrounds |
+| `bg-missed-subtle` | `#F6E2D9` | Missed task backgrounds |
+| `bg-warning-subtle` | `#FBEDD2` | Overload warning backgrounds |
 
 ### Accent (Primary Action)
 
-Vibrant Indigo — `#8E7CFF`
+Terracotta clay — calm and grounded, the warmest possible accent that still reads as "action," not decorative.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `accent` | `#8E7CFF` | Primary buttons, active nav, links |
-| `accent-hover` | `#A395FF` | Hover state |
-| `accent-pressed` | `#7864F0` | Pressed / active state |
-| `accent-subtle` | `#201E43` | Accent background fills |
-| `accent-border` | `#5648A3` | Accent borders, focus rings |
+| `accent` | `#B0623E` | Primary buttons, active nav, links |
+| `accent-hover` | `#9A5234` | Hover state |
+| `accent-pressed` | `#80442A` | Pressed / active state |
+| `accent-subtle` | `#F3E4D7` | Accent background fills |
+| `accent-border` | `#D9B79E` | Accent borders, focus rings |
 
 ### Typography
 
 | Token | Hex | Usage |
 |---|---|---|
-| `text-primary` | `#F8F9FA` | Headings, body — cool bright white |
-| `text-secondary` | `#A0AEC0` | Labels, hints, meta |
-| `text-tertiary` | `#4A5568` | Placeholder, disabled |
-| `text-accent` | `#8E7CFF` | Links, interactive labels |
-| `text-done` | `#48BB78` | Completed task titles |
-| `text-missed` | `#F56565` | Missed task titles |
+| `text-primary` | `#3A2E22` | Headings, body — soft espresso-brown, never black |
+| `text-secondary` | `#7A6B58` | Labels, hints, meta — warm taupe |
+| `text-tertiary` | `#B3A48F` | Placeholder, disabled |
+| `text-accent` | `#B0623E` | Links, interactive labels |
+| `text-done` | `#4F7A4A` | Completed task titles |
+| `text-missed` | `#A8482C` | Missed task titles |
 
 ### Border
 
 | Token | Hex | Usage |
 |---|---|---|
-| `border-subtle` | `#202B47` | Default card edges |
-| `border-default` | `#2A3B5C` | Input borders, section dividers |
-| `border-strong` | `#3A4E7A` | Focused inputs, emphasized containers |
-| `border-accent` | `#5648A3` | Accent-adjacent borders |
+| `border-subtle` | `#EBE0D0` | Default card edges, dividers |
+| `border-default` | `#DDCCB4` | Input borders, section dividers |
+| `border-strong` | `#C2AC8A` | Focused inputs, emphasized containers |
+| `border-accent` | `#D9B79E` | Accent-adjacent borders |
 
 ### Status
 
 | Token | Hex | Role | Usage |
 |---|---|---|---|
-| `done` | `#48BB78` | Green | Completed tasks |
-| `done-text` | `#C6F6D5` | Light green | Text on done |
-| `missed` | `#F56565` | Red | Missed |
-| `missed-text` | `#FED7D7` | Light red | Text on missed |
-| `warning` | `#ECC94B` | Yellow | Warning |
-| `warning-text` | `#FEFCBF` | Light yellow | Text on warning |
-| `critical` | `#8E7CFF` | Indigo | Critical |
+| `done` | `#4F7A4A` | Moss green | Completed tasks, progress |
+| `done-text` | `#27401F` | Dark moss | Text on done backgrounds |
+| `missed` | `#A8482C` | Burnt clay | Missed / overdue tasks |
+| `missed-text` | `#6B2C18` | Dark clay | Text on missed backgrounds |
+| `warning` | `#A57A1E` | Ochre | Overload, deadline risk |
+| `warning-text` | `#5C4310` | Dark ochre | Text on warning backgrounds |
+| `critical` | `#B0623E` | Terracotta | Critical project type badge |
 
 ---
 
-## Sage Mode (Organic Light)
+## Sage Mode (Organic Light) — rebuilt
 
-Derived from the "Zorea" aesthetic. Warm organic greens, earthy creams, and a highly soothing daylight presence.
+**Mood:** a forest floor, not a "green theme." Base is unbleached linen with a faint moss cast, the accent is the color of a fresh stem rather than a flat success-green, and a deep bark brown does the heavy lifting typography would otherwise give to gray. Slightly more saturated and textured than Paper — Paper is calm stillness, Sage is calm *aliveness*.
 
 ### Background
 
 | Token | Hex | Usage |
 |---|---|---|
-| `bg-base` | `#F4F5F0` | Page background — earthy cream |
-| `bg-surface` | `#FFFFFF` | Cards, panels |
-| `bg-surface-raised` | `#FAFAFA` | Nested cards, dropdowns |
-| `bg-accent-subtle` | `#E8EFE9` | Sage accent fills |
-| `bg-done-subtle` | `#E6F4EA` | Completed task backgrounds |
-| `bg-missed-subtle` | `#FCE8E6` | Missed task backgrounds |
-| `bg-warning-subtle` | `#FEF7E0` | Overload warning backgrounds |
+| `bg-base` | `#F0F1E6` | Page background — unbleached linen with a green cast |
+| `bg-surface` | `#FBFCF6` | Cards, panels — fresh leaf-white |
+| `bg-surface-raised` | `#F3F4E9` | Nested cards, dropdowns |
+| `bg-accent-subtle` | `#DFE9D3` | Stem-green accent fills |
+| `bg-done-subtle` | `#DCEBD6` | Completed task backgrounds |
+| `bg-missed-subtle` | `#F2DED2` | Missed task backgrounds |
+| `bg-warning-subtle` | `#F5E9C9` | Overload warning backgrounds |
 
 ### Accent (Primary Action)
 
-Sage Green — `#48825D`
+Fresh stem green — more saturated than a typical "sage," closer to new growth than dried herb.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `accent` | `#48825D` | Primary buttons, active nav, links |
-| `accent-hover` | `#3A6B4A` | Hover state |
-| `accent-pressed` | `#2C5238` | Pressed / active state |
-| `accent-subtle` | `#E8EFE9` | Accent background fills |
-| `accent-border` | `#B0CEB8` | Accent borders, focus rings |
+| `accent` | `#5B8C3E` | Primary buttons, active nav, links |
+| `accent-hover` | `#4C7733` | Hover state |
+| `accent-pressed` | `#3D6128` | Pressed / active state |
+| `accent-subtle` | `#DFE9D3` | Accent background fills |
+| `accent-border` | `#A8C68C` | Accent borders, focus rings |
 
 ### Typography
 
 | Token | Hex | Usage |
 |---|---|---|
-| `text-primary` | `#2D372B` | Headings, body — deep olive |
-| `text-secondary` | `#6B7264` | Labels, hints, meta |
-| `text-tertiary` | `#A3A89F` | Placeholder, disabled |
-| `text-accent` | `#48825D` | Links, interactive labels |
-| `text-done` | `#3A6B4A` | Completed task titles |
-| `text-missed` | `#B23B33` | Missed task titles |
+| `text-primary` | `#283420` | Headings, body — bark brown-green, not olive-gray |
+| `text-secondary` | `#5F6E4F` | Labels, hints, meta — mossy gray-green |
+| `text-tertiary` | `#9DA98A` | Placeholder, disabled |
+| `text-accent` | `#5B8C3E` | Links, interactive labels |
+| `text-done` | `#3D6128` | Completed task titles |
+| `text-missed` | `#9C4A2E` | Missed task titles — clay-rust, not red |
 
 ### Border
 
 | Token | Hex | Usage |
 |---|---|---|
-| `border-subtle` | `#EAECE6` | Default card edges |
-| `border-default` | `#D5D9CD` | Input borders, section dividers |
-| `border-strong` | `#AAB0A3` | Focused inputs, emphasized containers |
-| `border-accent` | `#B0CEB8` | Accent-adjacent borders |
+| `border-subtle` | `#E2E4D2` | Default card edges |
+| `border-default` | `#CDD2B5` | Input borders, section dividers |
+| `border-strong` | `#A8AF8C` | Focused inputs, emphasized containers |
+| `border-accent` | `#A8C68C` | Accent-adjacent borders |
 
 ### Status
 
 | Token | Hex | Role | Usage |
 |---|---|---|---|
-| `done` | `#48825D` | Sage | Completed tasks |
-| `done-text` | `#194025` | Dark green | Text on done |
-| `missed` | `#B23B33` | Rust | Missed |
-| `missed-text` | `#5C1914` | Dark rust | Text on missed |
-| `warning` | `#B37D00` | Golden | Warning |
-| `warning-text` | `#593E00` | Dark golden | Text on warning |
-| `critical` | `#48825D` | Sage | Critical |
+| `done` | `#5B8C3E` | Stem green | Completed tasks |
+| `done-text` | `#243816` | Dark green | Text on done |
+| `missed` | `#9C4A2E` | Clay rust | Missed |
+| `missed-text` | `#4F2415` | Dark rust | Text on missed |
+| `warning` | `#9C7A1E` | Dried-grass gold | Warning |
+| `warning-text` | `#4F3D0E` | Dark gold | Text on warning |
+| `critical` | `#5B8C3E` | Stem green | Critical |
+
+---
+
+## Nebula Mode (Soft Lilac Light)
+
+**Mood:** comforting, hopeful, caring. This is not the energetic mode — that job belongs elsewhere. Nebula is the one that should feel like a hand on your shoulder: soft lilac-blush base instead of clinical cool-gray, a dusty muted violet accent instead of a saturated "pop" purple, and warm rather than cool undertones throughout. The previous version (`#9B4DFA`, cool `#F5F6F8` gray base) read as energetic fintech-app violet — vibrant and confident, but not comforting. Comfort comes from lower saturation, lighter value, and warmth, not from intensity. Even the missed-state color was softened from an alarming rose-red to a gentle clay-rose, so the app feels caring even when delivering bad news.
+
+### Background
+
+| Token | Hex | Usage |
+|---|---|---|
+| `bg-base` | `#FAF7FB` | Page background — soft lilac-blush, warm not cool |
+| `bg-surface` | `#FFFFFF` | Cards, panels — pure white, the one crisp surface in the mode |
+| `bg-surface-raised` | `#FDFAFD` | Nested cards, dropdowns — barely lifted, soft |
+| `bg-accent-subtle` | `#EEE3F4` | Lilac accent fills — tags, selected states |
+| `bg-done-subtle` | `#E6F1E8` | Completed task backgrounds (soft sage-mint) |
+| `bg-missed-subtle` | `#F8EAE5` | Missed task backgrounds (warm dusty rose, not alarming) |
+| `bg-warning-subtle` | `#FBF1E2` | Overload warning backgrounds (soft honey) |
+
+### Accent (Primary Action)
+
+Dusty muted violet — soft and held-back rather than saturated. Reads as gentle reassurance, not energy.
+
+| Token | Hex | Usage |
+|---|---|---|
+| `accent` | `#9579C2` | Primary buttons, active nav, links |
+| `accent-hover` | `#8468AE` | Hover state |
+| `accent-pressed` | `#705590` | Pressed / active state |
+| `accent-subtle` | `#EEE3F4` | Accent background fills |
+| `accent-border` | `#D6C3E4` | Accent borders, focus rings |
+
+### Typography
+
+| Token | Hex | Usage |
+|---|---|---|
+| `text-primary` | `#352E40` | Headings, body — warm deep plum, never charcoal-black |
+| `text-secondary` | `#827697` | Labels, hints, meta — soft dusty mauve |
+| `text-tertiary` | `#B8ACC4` | Placeholder, disabled |
+| `text-accent` | `#8468AE` | Links, interactive labels |
+| `text-done` | `#3D6B4A` | Completed task titles |
+| `text-missed` | `#B0705C` | Missed task titles — warm clay, not red. Reads as gentle, not alarming |
+
+### Border
+
+| Token | Hex | Usage |
+|---|---|---|
+| `border-subtle` | `#F0E8F2` | Default card edges, dividers |
+| `border-default` | `#E5D9EA` | Input borders, section dividers |
+| `border-strong` | `#CDB9D8` | Focused inputs, emphasized containers |
+| `border-accent` | `#D6C3E4` | Accent-adjacent borders |
+
+### Status
+
+| Token | Hex | Role | Usage |
+|---|---|---|---|
+| `done` | `#5E9470` | Soft sage | Completed tasks — gentle, not clinical emerald |
+| `done-text` | `#2E4F38` | Dark sage | Text on done backgrounds |
+| `missed` | `#C58267` | Warm clay-rose | Missed / overdue — soft, never alarm-red |
+| `missed-text` | `#7A4530` | Dark clay | Text on missed backgrounds |
+| `warning` | `#C99A45` | Soft honey | Overload, deadline risk |
+| `warning-text` | `#6B4D1E` | Dark honey | Text on warning backgrounds |
+| `critical` | `#9579C2` | Dusty violet | Critical project type badge |
+
+### Surface gloss (Nebula-only token)
+
+| Token | Value | Usage |
+|---|---|---|
+| `surface-sheen` | `none` | Not used — comfort comes from softness and warmth, not gloss or shine. |
 
 ---
 
@@ -270,7 +288,7 @@ These never change between modes.
 | `radius-sm` | `8px` | Buttons, badges |
 | `radius-md` | `12px` | Cards, panels |
 | `radius-pill` | `99px` | Status pills, tags |
-| `shadow-card` | `0 1px 3px rgba(0,0,0,0.08)` | Light mode card lift (dark mode uses border only) |
+| `shadow-card` | `0 1px 3px rgba(0,0,0,0.08)` | Light mode card lift (dark modes use border/sheen only) |
 | `font-sans` | `Inter` | All UI text |
 | `font-mono` | `JetBrains Mono` | Scores, hex values, metadata |
 
@@ -291,25 +309,26 @@ These never change between modes.
 
 ## Project Type Badge Colors
 
-Each project type gets a distinct badge color. All use subtle background + dark text in light mode, subtle background + light text in dark mode.
+Each project type gets a distinct badge color, derived per-mode from that mode's own palette (not a shared gray-violet system). Light modes use subtle background + dark text; dark modes use subtle background + light text.
 
-| Type | Light bg | Light text | Dark bg | Dark text |
+| Type | Paper bg / text | Sage bg / text | Nebula bg / text | Midnight bg / text |
 |---|---|---|---|---|
-| `critical` | `#EEEDFE` | `#534AB7` | `#1A1040` | `#AFA9EC` |
-| `recurring` | `#E1F5EE` | `#0F6E56` | `#0A2E24` | `#5DCAA5` |
-| `habit` | `#FAEEDA` | `#854F0B` | `#2A1E08` | `#FAC775` |
-| `nicetohave` | `#F1EFE8` | `#5F5E5A` | `#1A1F2E` | `#94A3B8` |
+| `critical` | `#F3E4D7` / `#80442A` | `#DFE9D3` / `#3D6128` | `#EEE3F4` / `#6B5491` | `#1A1040` / `#AFA9EC` |
+| `recurring` | `#E9F0E1` / `#27401F` | `#DCEBD6` / `#243816` | `#E6F1E8` / `#2E4F38` | `#0A2E24` / `#5DCAA5` |
+| `habit` | `#FBEDD2` / `#5C4310` | `#F5E9C9` / `#4F3D0E` | `#FBF1E2` / `#6B4D1E` | `#2A1E08` / `#FAC775` |
+| `nicetohave` | `#EBE0D0` / `#7A6B58` | `#E2E4D2` / `#5F6E4F` | `#F0E8F2` / `#827697` | `#1A1F2E` / `#94A3B8` |
 
 ---
 
 ## Usage Rules
 
-1. **Never use pure black (`#000`) or pure white (`#FFF`) as bg-base.** The warmth in light and depth in dark both depend on off-values.
-2. **Text on colored backgrounds** always uses the dark stop from the same ramp — never generic gray or black.
-3. **Accent color is single-purpose** — only on primary interactive elements. Do not use violet/teal as decorative color.
-4. **Status colors are semantic** — done/missed/warning are never used for non-status meaning.
-5. **Border width is always `0.5px`** except focus rings (`2px`) and featured card emphasis (`2px`).
-6. **Dark mode shadows are removed** — depth is communicated through border and background layering only, never drop shadows.
+1. **Never use pure black (`#000`) or pure white (`#FFF`) as bg-base.** Every mode's warmth, calm, or energy depends on off-values.
+2. **No mode borrows another mode's accent hue.** Paper is terracotta, Sage is stem-green, Nebula is dusty violet, Midnight is teal. If two modes ever look swappable with a find-and-replace on accent color, that's a bug.
+3. **Text on colored backgrounds** always uses the dark (or light, on dark modes) stop from the same ramp — never generic gray or black.
+4. **Accent color is single-purpose** — only on primary interactive elements.
+5. **Status colors are semantic** — done/missed/warning are never used for non-status meaning.
+6. **Border width is always `0.5px`** except focus rings (`2px`) and featured card emphasis (`2px`).
+7. **Nebula avoids gloss, glow, or vibrance entirely** — comfort comes from softness, warmth, and restraint, not shine.
 
 ---
 

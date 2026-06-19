@@ -101,12 +101,18 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
   const selectedDateObj = new Date(selectedDate * 86400000);
 
   return (
-    <div className="w-full bg-surface border-b border-border-default pt-4 pb-2 relative overflow-hidden flex flex-col items-center">
+    <div 
+      className="w-full border-b pt-4 pb-2 relative overflow-hidden flex flex-col items-center transition-colors duration-300"
+      style={{ 
+        background: 'var(--bg-header, var(--color-surface))',
+        borderColor: 'var(--border-header, var(--color-border-default))'
+      }}
+    >
       <div className="text-center z-10 mb-4 select-none">
-        <h2 className="text-lg font-bold text-primary">
+        <h2 className="text-lg font-bold transition-colors duration-300" style={{ color: 'var(--text-header, var(--color-primary))' }}>
           {selectedDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </h2>
-        <p className="text-sm text-secondary">
+        <p className="text-sm transition-colors duration-300" style={{ color: 'var(--text-header-secondary, var(--color-secondary))' }}>
           {selectedDateObj.toLocaleDateString("en-US", { weekday: "long" })}
         </p>
       </div>
@@ -116,14 +122,14 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
       >
         {/* The SVG Arc Background */}
         <svg 
-          className="absolute top-8 left-0 w-full h-[60px] pointer-events-none" 
+          className="absolute top-8 left-0 w-full h-[60px] pointer-events-none transition-colors duration-300" 
           viewBox="0 0 1000 60" 
           preserveAspectRatio="none"
         >
           <path 
             d="M 0 60 Q 500 -10 1000 60" 
             fill="none" 
-            stroke="var(--border-strong)" 
+            style={{ stroke: 'var(--border-header-strong, var(--color-border-strong))' }}
             strokeWidth="1"
           />
         </svg>
@@ -172,13 +178,18 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
               >
                 <button
                   onClick={() => !isFuture && onChange(d)}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
+                  className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-medium transition-all duration-300 ${
                     isSelected 
-                      ? "bg-done text-surface shadow-md" 
+                      ? "shadow-md" 
                       : isFuture
-                        ? "bg-surface border border-border-default text-tertiary cursor-not-allowed"
-                        : "bg-surface border border-border-default text-primary hover:border-border-strong"
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:brightness-110"
                   }`}
+                  style={{
+                    backgroundColor: isSelected ? 'var(--color-done)' : 'var(--bg-header-surface, var(--color-surface))',
+                    color: isSelected ? 'var(--color-surface)' : 'var(--text-header-surface, var(--color-primary))',
+                    border: isSelected ? 'none' : '1px solid var(--border-header, var(--color-border-default))'
+                  }}
                 >
                   {new Date(d * 86400000).getDate()}
                 </button>
