@@ -5,7 +5,8 @@ import type { Task, Project, TodayPlannerData } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
 import { getTodayPlan, listTasks, listProjects, updateTask, placeDayPlanBlock, createTask } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner } from "@/components/ui";
-import { Timeline } from "@/components/Timeline";
+import { DayPlanner } from "@/components/DayPlanner";
+import { DayView } from "@/components/DayView";
 import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
 import { TodaySkeleton } from "@/components/TodaySkeleton";
@@ -32,9 +33,10 @@ function TodayPageContent() {
   
   const [isBucketOpen, setIsBucketOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
   const [swipingOutTaskIds, setSwipingOutTaskIds] = useState<Set<string>>(new Set());
-  const [animatingTasks, setAnimatingTasks] = useState<{task: Task, state: 'adding' | 'success' | 'error' | 'returning'}[]>([]);
+  const [animatingTasks, setAnimatingTasks] = useState<{task: Task, state: 'adding' | 'success' | 'error' | 'returning' | 'removing'}[]>([]);
 
   const handleDateChange = (newDate: number) => {
     if (newDate === selectedDate) return;
@@ -332,13 +334,24 @@ function TodayPageContent() {
           </div>
         </div>
 
-        {/* Timeline Center */}
-        <div className="flex-1 overflow-y-auto bg-surface relative">
-          <Timeline
-            tasks={scheduledTasks}
-            dayPlans={plan.dayPlans}
-            onPlaceBlock={handlePlaceBlock}
-          />
+        {/* Center Area: DayView or DayPlanner */}
+        <div className="flex-1 overflow-hidden bg-surface relative flex">
+          <div className="flex-1 min-w-0">
+            <DayView 
+              tasks={scheduledTasks} 
+              dayPlans={plan.dayPlans} 
+              onOpenPlanner={() => setIsPlannerOpen(true)} 
+            />
+          </div>
+          
+          {isPlannerOpen && (
+            <DayPlanner
+              tasks={scheduledTasks}
+              dayPlans={plan.dayPlans}
+              onPlaceBlock={handlePlaceBlock}
+              onClose={() => setIsPlannerOpen(false)}
+            />
+          )}
         </div>
 
         {/* Bucket Toggle Bar (When closed) */}
