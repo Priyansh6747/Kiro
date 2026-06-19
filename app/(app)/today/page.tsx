@@ -24,8 +24,8 @@ function TodayPageContent() {
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<number>(todayUnixDay());
-  const [displayedDate, setDisplayedDate] = useState<number>(todayUnixDay());
+  const [selectedDate, setSelectedDate] = useState<number>(0);
+  const [displayedDate, setDisplayedDate] = useState<number>(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
   const [isExiting, setIsExiting] = useState(false);
   
@@ -42,6 +42,7 @@ function TodayPageContent() {
   };
 
   const load = useCallback(async () => {
+    if (selectedDate === 0) return;
     setError(null);
     try {
       const [planData, bucket, projs] = await Promise.all([
@@ -60,6 +61,12 @@ function TodayPageContent() {
       setIsExiting(false);
     }
   }, [selectedDate]);
+
+  useEffect(() => {
+    const today = todayUnixDay();
+    setSelectedDate(today);
+    setDisplayedDate(today);
+  }, []);
 
   useEffect(() => {
     load();

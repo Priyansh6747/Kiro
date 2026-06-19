@@ -14,13 +14,13 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
   const itemWidth = 80; // width of each item slot
 
   useEffect(() => {
-    // Generate dates from today down to 30 days ago
+    // Generate dates from today down to 30 days ago, and 15 days in future
     const today = todayUnixDay();
     const arr = [];
-    for (let i = today; i >= today - 30; i--) {
+    for (let i = today + 15; i >= today - 30; i--) {
       arr.push(i);
     }
-    // Reverse so oldest is on left, today is on right
+    // Reverse so oldest is on left, future is on right
     setDates(arr.reverse());
   }, []);
 
@@ -49,7 +49,15 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
     const index = Math.round(scrollRef.current.scrollLeft / itemWidth);
     if (index >= 0 && index < dates.length) {
       closestDate = dates[index];
-      if (closestDate !== selectedDate) {
+      const today = todayUnixDay();
+      
+      if (closestDate > today) {
+        // Prevent navigating to future dates by rubber-banding back to today
+        const todayIndex = dates.indexOf(today);
+        if (todayIndex !== -1 && scrollRef.current) {
+          scrollRef.current.scrollTo({ left: todayIndex * itemWidth, behavior: 'smooth' });
+        }
+      } else if (closestDate !== selectedDate && hasMounted.current) {
         onChange(closestDate);
       }
     }
@@ -61,15 +69,30 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
     scrollTimeout.current = setTimeout(handleScrollEnd, 150);
   };
 
+  const hasMounted = useRef(false);
+
   // Initial scroll to selected date
   useEffect(() => {
     if (dates.length === 0 || !scrollRef.current) return;
     const index = dates.indexOf(selectedDate);
     if (index !== -1) {
       const targetScroll = index * itemWidth;
-      // If we are far away, jump. Else smooth.
       const currentScroll = scrollRef.current.scrollLeft;
-      if (Math.abs(currentScroll - targetScroll) > 0) {
+      
+      if (!hasMounted.current) {
+        const tryScroll = (attempts = 0) => {
+          if (!scrollRef.current || attempts > 15) return;
+          scrollRef.current.scrollLeft = targetScroll;
+          setScrollPos(targetScroll);
+          
+          if (scrollRef.current.scrollLeft !== targetScroll) {
+            requestAnimationFrame(() => tryScroll(attempts + 1));
+          } else {
+            hasMounted.current = true;
+          }
+        };
+        tryScroll();
+      } else if (Math.abs(currentScroll - targetScroll) > 0) {
         scrollRef.current.scrollTo({ left: targetScroll, behavior: 'smooth' });
       }
     }
@@ -133,6 +156,8 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
             const opacity = Math.max(1 - Math.abs(normalizedDist) * 0.8, 0.2);
 
             const isSelected = d === selectedDate;
+            const isFuture = d > todayUnixDay();
+            const futureOpacity = isFuture ? 0.4 : 1;
 
             return (
               <div 
@@ -141,16 +166,18 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
                 style={{ 
                   width: itemWidth,
                   transform: `translateY(${translateY + 5}px) scale(${scale})`,
-                  opacity: opacity,
+                  opacity: opacity * futureOpacity,
                   transition: 'transform 0.1s ease-out, opacity 0.1s ease-out'
                 }}
               >
                 <button
-                  onClick={() => onChange(d)}
+                  onClick={() => !isFuture && onChange(d)}
                   className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
                     isSelected 
                       ? "bg-done text-surface shadow-md" 
-                      : "bg-surface border border-border-default text-primary hover:border-border-strong"
+                      : isFuture
+                        ? "bg-surface border border-border-default text-tertiary cursor-not-allowed"
+                        : "bg-surface border border-border-default text-primary hover:border-border-strong"
                   }`}
                 >
                   {new Date(d * 86400000).getDate()}
