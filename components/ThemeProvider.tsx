@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark";
+type Theme = "paper" | "midnight" | "indigo" | "sage";
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,7 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("midnight");
 
   useEffect(() => {
     const saved = localStorage.getItem("kiro_theme") as Theme | null;
@@ -23,13 +23,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setTheme = (newTheme: Theme) => {
+    const prevTheme = theme;
     setThemeState(newTheme);
     localStorage.setItem("kiro_theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    document.documentElement.classList.remove(`theme-${prevTheme}`);
+    document.documentElement.classList.add(`theme-${newTheme}`);
   };
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    // We no longer toggle since there are multiple themes, this can just be omitted or cycle.
+    // For now we'll just leave it or make it cycle.
+    const themes: Theme[] = ["paper", "midnight", "indigo", "sage"];
+    const nextTheme = themes[(themes.indexOf(theme) + 1) % themes.length];
+    setTheme(nextTheme);
   };
 
   return (

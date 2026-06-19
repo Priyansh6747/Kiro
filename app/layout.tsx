@@ -35,16 +35,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                let isDark = true;
+                let theme = 'midnight';
                 const saved = localStorage.getItem('kiro_theme');
                 if (saved) {
-                  isDark = saved === 'dark';
-                }
-                if (isDark) {
-                  document.documentElement.classList.add('dark');
+                  theme = saved;
                 } else {
-                  document.documentElement.classList.remove('dark');
+                  // Fallback to paper if light mode preferred and nothing saved? 
+                  // Let's just stick to default midnight as before.
                 }
+                document.documentElement.className = 'theme-' + theme;
               } catch(e) {}
             `,
           }}

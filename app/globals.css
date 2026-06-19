@@ -31,8 +31,8 @@
   --color-critical: var(--status-critical);
 }
 
-:root {
-  /* Light Mode */
+.theme-paper {
+  /* Paper Mode (Light) */
   --bg-base: #F7F3EC;
   --bg-surface: #FFFFFF;
   --bg-surface-raised: #FBF9F5;
@@ -67,8 +67,8 @@
   --status-critical: #7C6AF7;
 }
 
-.dark {
-  /* Dark Mode */
+.theme-midnight {
+  /* Midnight Mode (Dark) */
   --bg-base: #0B0F18;
   --bg-surface: #111827;
   --bg-surface-raised: #1E293B;
@@ -101,6 +101,78 @@
   --status-warning: #EF9F27;
   --status-warning-text: #FAC775;
   --status-critical: #4DD9AC;
+}
+
+.theme-indigo {
+  /* Indigo Mode (Deep Navy & Vibrant Purple) */
+  --bg-base: #0B132B;
+  --bg-surface: #1C2541;
+  --bg-surface-raised: #28304D;
+  --bg-accent-subtle: #201E43;
+  --bg-done-subtle: #1A2F2B;
+  --bg-missed-subtle: #3A1F26;
+  --bg-warning-subtle: #362A18;
+
+  --accent: #8E7CFF;
+  --accent-hover: #A395FF;
+  --accent-pressed: #7864F0;
+  --accent-border: #5648A3;
+
+  --text-primary: #F8F9FA;
+  --text-secondary: #A0AEC0;
+  --text-tertiary: #4A5568;
+  --text-accent: #8E7CFF;
+  --text-done: #48BB78;
+  --text-missed: #F56565;
+
+  --border-subtle: #202B47;
+  --border-default: #2A3B5C;
+  --border-strong: #3A4E7A;
+  --border-accent: #5648A3;
+
+  --status-done: #48BB78;
+  --status-done-text: #C6F6D5;
+  --status-missed: #F56565;
+  --status-missed-text: #FED7D7;
+  --status-warning: #ECC94B;
+  --status-warning-text: #FEFCBF;
+  --status-critical: #8E7CFF;
+}
+
+.theme-sage {
+  /* Sage Mode (Organic Earthy Greens) */
+  --bg-base: #F4F5F0;
+  --bg-surface: #FFFFFF;
+  --bg-surface-raised: #FAFAFA;
+  --bg-accent-subtle: #E8EFE9;
+  --bg-done-subtle: #E6F4EA;
+  --bg-missed-subtle: #FCE8E6;
+  --bg-warning-subtle: #FEF7E0;
+
+  --accent: #48825D;
+  --accent-hover: #3A6B4A;
+  --accent-pressed: #2C5238;
+  --accent-border: #B0CEB8;
+
+  --text-primary: #2D372B;
+  --text-secondary: #6B7264;
+  --text-tertiary: #A3A89F;
+  --text-accent: #48825D;
+  --text-done: #3A6B4A;
+  --text-missed: #B23B33;
+
+  --border-subtle: #EAECE6;
+  --border-default: #D5D9CD;
+  --border-strong: #AAB0A3;
+  --border-accent: #B0CEB8;
+
+  --status-done: #48825D;
+  --status-done-text: #194025;
+  --status-missed: #B23B33;
+  --status-missed-text: #5C1914;
+  --status-warning: #B37D00;
+  --status-warning-text: #593E00;
+  --status-critical: #48825D;
 }
 
 body {

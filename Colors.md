@@ -12,7 +12,7 @@
 
 ---
 
-## Light Mode — Warm Paper
+## Paper Mode (Light)
 
 Derived from Marginalia's off-white cream (`#F5EFE6` background), dark sepia type, and deep burgundy accents. Warm, considered, unmistakably analog.
 
@@ -74,7 +74,7 @@ Violet — wisdom, decisiveness, rare in productivity tools.
 
 ---
 
-## Dark Mode — Midnight Teal
+## Midnight Mode (Dark)
 
 Derived from Resonare's deep navy (`#0B0F10`, `#121620`), teal accent (`#00FFC2`), and smoke white text (`#F2F2F2`). Focused, high-contrast, terminal-adjacent without being literal.
 
@@ -133,6 +133,130 @@ Teal — Resonare's `#00FFC2` pulled back to `#4DD9AC` to avoid neon harshness w
 | `warning` | `#EF9F27` | Amber | Overload, deadline risk |
 | `warning-text` | `#FAC775` | Light amber | Text on warning backgrounds |
 | `critical` | `#4DD9AC` | Teal | Critical project type badge |
+
+---
+
+## Indigo Mode (Corporate Dark)
+
+Derived from the "Redefined Creative" aesthetic. Deep navy backgrounds mixed with vibrant purple accents and high-contrast cool-white text.
+
+### Background
+
+| Token | Hex | Usage |
+|---|---|---|
+| `bg-base` | `#0B132B` | Page background — deep navy |
+| `bg-surface` | `#1C2541` | Cards, panels |
+| `bg-surface-raised` | `#28304D` | Nested cards, dropdowns |
+| `bg-accent-subtle` | `#201E43` | Indigo accent fills |
+| `bg-done-subtle` | `#1A2F2B` | Completed task backgrounds |
+| `bg-missed-subtle` | `#3A1F26` | Missed task backgrounds |
+| `bg-warning-subtle` | `#362A18` | Overload warning backgrounds |
+
+### Accent (Primary Action)
+
+Vibrant Indigo — `#8E7CFF`
+
+| Token | Hex | Usage |
+|---|---|---|
+| `accent` | `#8E7CFF` | Primary buttons, active nav, links |
+| `accent-hover` | `#A395FF` | Hover state |
+| `accent-pressed` | `#7864F0` | Pressed / active state |
+| `accent-subtle` | `#201E43` | Accent background fills |
+| `accent-border` | `#5648A3` | Accent borders, focus rings |
+
+### Typography
+
+| Token | Hex | Usage |
+|---|---|---|
+| `text-primary` | `#F8F9FA` | Headings, body — cool bright white |
+| `text-secondary` | `#A0AEC0` | Labels, hints, meta |
+| `text-tertiary` | `#4A5568` | Placeholder, disabled |
+| `text-accent` | `#8E7CFF` | Links, interactive labels |
+| `text-done` | `#48BB78` | Completed task titles |
+| `text-missed` | `#F56565` | Missed task titles |
+
+### Border
+
+| Token | Hex | Usage |
+|---|---|---|
+| `border-subtle` | `#202B47` | Default card edges |
+| `border-default` | `#2A3B5C` | Input borders, section dividers |
+| `border-strong` | `#3A4E7A` | Focused inputs, emphasized containers |
+| `border-accent` | `#5648A3` | Accent-adjacent borders |
+
+### Status
+
+| Token | Hex | Role | Usage |
+|---|---|---|---|
+| `done` | `#48BB78` | Green | Completed tasks |
+| `done-text` | `#C6F6D5` | Light green | Text on done |
+| `missed` | `#F56565` | Red | Missed |
+| `missed-text` | `#FED7D7` | Light red | Text on missed |
+| `warning` | `#ECC94B` | Yellow | Warning |
+| `warning-text` | `#FEFCBF` | Light yellow | Text on warning |
+| `critical` | `#8E7CFF` | Indigo | Critical |
+
+---
+
+## Sage Mode (Organic Light)
+
+Derived from the "Zorea" aesthetic. Warm organic greens, earthy creams, and a highly soothing daylight presence.
+
+### Background
+
+| Token | Hex | Usage |
+|---|---|---|
+| `bg-base` | `#F4F5F0` | Page background — earthy cream |
+| `bg-surface` | `#FFFFFF` | Cards, panels |
+| `bg-surface-raised` | `#FAFAFA` | Nested cards, dropdowns |
+| `bg-accent-subtle` | `#E8EFE9` | Sage accent fills |
+| `bg-done-subtle` | `#E6F4EA` | Completed task backgrounds |
+| `bg-missed-subtle` | `#FCE8E6` | Missed task backgrounds |
+| `bg-warning-subtle` | `#FEF7E0` | Overload warning backgrounds |
+
+### Accent (Primary Action)
+
+Sage Green — `#48825D`
+
+| Token | Hex | Usage |
+|---|---|---|
+| `accent` | `#48825D` | Primary buttons, active nav, links |
+| `accent-hover` | `#3A6B4A` | Hover state |
+| `accent-pressed` | `#2C5238` | Pressed / active state |
+| `accent-subtle` | `#E8EFE9` | Accent background fills |
+| `accent-border` | `#B0CEB8` | Accent borders, focus rings |
+
+### Typography
+
+| Token | Hex | Usage |
+|---|---|---|
+| `text-primary` | `#2D372B` | Headings, body — deep olive |
+| `text-secondary` | `#6B7264` | Labels, hints, meta |
+| `text-tertiary` | `#A3A89F` | Placeholder, disabled |
+| `text-accent` | `#48825D` | Links, interactive labels |
+| `text-done` | `#3A6B4A` | Completed task titles |
+| `text-missed` | `#B23B33` | Missed task titles |
+
+### Border
+
+| Token | Hex | Usage |
+|---|---|---|
+| `border-subtle` | `#EAECE6` | Default card edges |
+| `border-default` | `#D5D9CD` | Input borders, section dividers |
+| `border-strong` | `#AAB0A3` | Focused inputs, emphasized containers |
+| `border-accent` | `#B0CEB8` | Accent-adjacent borders |
+
+### Status
+
+| Token | Hex | Role | Usage |
+|---|---|---|---|
+| `done` | `#48825D` | Sage | Completed tasks |
+| `done-text` | `#194025` | Dark green | Text on done |
+| `missed` | `#B23B33` | Rust | Missed |
+| `missed-text` | `#5C1914` | Dark rust | Text on missed |
+| `warning` | `#B37D00` | Golden | Warning |
+| `warning-text` | `#593E00` | Dark golden | Text on warning |
+| `critical` | `#48825D` | Sage | Critical |
 
 ---
 

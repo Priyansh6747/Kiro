@@ -263,10 +263,12 @@ export default function SettingsPage() {
                 <select
                   className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface text-primary"
                   value={theme}
-                  onChange={(e) => setTheme(e.target.value as "light" | "dark")}
+                  onChange={(e) => setTheme(e.target.value as "paper" | "midnight" | "indigo" | "sage")}
                 >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  <option value="paper">Paper (Light)</option>
+                  <option value="midnight">Midnight (Dark)</option>
+                  <option value="indigo">Indigo (Corporate)</option>
+                  <option value="sage">Sage (Nature)</option>
                 </select>
               </div>
             </Field>
