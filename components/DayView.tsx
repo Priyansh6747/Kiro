@@ -1,14 +1,15 @@
 import React from "react";
-import type { Task, DayPlan } from "@/lib/types";
+import type { Task, DayPlan, Project } from "@/lib/types";
 
 interface DayViewProps {
   tasks: Task[];
+  projects: Project[];
   dayPlans: DayPlan[];
   onOpenPlanner: () => void;
   animatingPlacements?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function DayView({ tasks, dayPlans, onOpenPlanner, animatingPlacements = {} }: DayViewProps) {
+export function DayView({ tasks, projects, dayPlans, onOpenPlanner, animatingPlacements = {} }: DayViewProps) {
   // Sort day plans chronologically
   const sortedPlans = [...dayPlans].sort((a, b) => a.startTime - b.startTime);
 
@@ -89,41 +90,27 @@ export function DayView({ tasks, dayPlans, onOpenPlanner, animatingPlacements = 
 
                     {/* Task Card */}
                     <div className="flex-1 flex justify-between items-center ml-2">
-                      {/* Left: Task Content */}
-                      <div className={`flex-1 min-w-0 border rounded-xl p-4 md:p-6 shadow-sm transition-colors ${
+                      {/* Task Content */}
+                      <div className={`w-full border rounded-xl p-4 md:p-6 shadow-sm flex justify-between items-center transition-colors ${
                         animatingPlacements[plan.taskId] === 'success' ? 'bg-done-subtle border-done text-done' :
                         animatingPlacements[plan.taskId] === 'error' ? 'bg-missed-subtle border-missed text-missed' :
                         animatingPlacements[plan.taskId] === 'loading' ? 'bg-accent-subtle border-accent/50 animate-pulse text-secondary' :
                         'bg-surface-raised border-border-default hover:border-accent text-primary'
                       }`}>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 flex-1 min-w-0">
                           <span className={`text-sm md:text-base font-medium truncate block ${animatingPlacements[plan.taskId] === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
                             {task.title}
                           </span>
                           {task.projectId && (
-                            <span className="text-[10px] uppercase tracking-wider text-tertiary">
-                              {task.projectId}
+                            <span className="text-[10px] uppercase tracking-wider text-tertiary truncate">
+                              {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
                             </span>
                           )}
                         </div>
-                      </div>
-
-                      {/* Middle: Duration with arrows */}
-                      <div className="flex flex-col items-center justify-center px-4 md:px-8">
-                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="text-tertiary mb-1">
-                          <path d="M5 0L10 6H0L5 0Z" fill="currentColor"/>
-                        </svg>
-                        <div className="h-4 w-px border-l border-dotted border-tertiary"></div>
-                        <span className="text-xs font-mono text-secondary my-1">{formatDuration(task.estimateMin)}</span>
-                        <div className="h-4 w-px border-l border-dotted border-tertiary"></div>
-                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="text-tertiary mt-1">
-                          <path d="M5 6L0 0H10L5 6Z" fill="currentColor"/>
-                        </svg>
-                      </div>
-
-                      {/* Right side: Time Range */}
-                      <div className="flex-1 text-right">
-                        <span className="text-xs text-secondary font-mono tracking-wide">{startStr}</span>
+                        {/* Duration */}
+                        <div className="ml-4 shrink-0 text-xs font-mono text-tertiary">
+                          {formatDuration(task.estimateMin)}
+                        </div>
                       </div>
                     </div>
                   </div>

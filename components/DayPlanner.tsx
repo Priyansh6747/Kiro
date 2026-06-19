@@ -1,15 +1,17 @@
 import React, { useState, useRef } from "react";
-import type { Task, DayPlan } from "@/lib/types";
+import type { Task, DayPlan, Project } from "@/lib/types";
 
 interface TimelineProps {
   tasks: Task[];
+  projects: Project[];
   dayPlans: DayPlan[];
   onPlaceBlock: (taskId: string, startTime: number) => Promise<void>;
   onUnplaceBlock: (taskId: string) => Promise<void>;
+  onClose: () => void;
   animatingPlacements?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function DayPlanner({ tasks, dayPlans, onPlaceBlock, onUnplaceBlock, onClose, animatingPlacements = {} }: TimelineProps & { onClose: () => void }) {
+export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceBlock, onClose, animatingPlacements = {} }: TimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
   const [previewTop, setPreviewTop] = useState<number | null>(null);
@@ -152,6 +154,11 @@ export function DayPlanner({ tasks, dayPlans, onPlaceBlock, onUnplaceBlock, onCl
                     }`}
                   >
                     <div className={`font-medium text-[11px] md:text-sm line-clamp-2 ${animState === 'loading' ? 'text-secondary' : 'text-inherit'}`}>{task.title}</div>
+                    {task.projectId && (
+                      <div className="text-[9px] uppercase tracking-wider opacity-60 truncate mt-1">
+                        {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                      </div>
+                    )}
                     <div className={`text-[10px] md:text-xs mt-1 md:mt-2 font-mono ${
                       animState === 'success' ? 'text-done' :
                       animState === 'error' ? 'text-missed' :
@@ -212,8 +219,15 @@ export function DayPlanner({ tasks, dayPlans, onPlaceBlock, onUnplaceBlock, onCl
                     style={{ top, height }}
                   >
                     <div className="flex justify-between items-start">
-                      <div className={`text-xs md:text-sm font-medium truncate leading-tight select-none flex-1 pr-2 ${animState === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
-                        {task.title}
+                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                        <span className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${animState === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
+                          {task.title}
+                        </span>
+                        {task.projectId && (
+                          <span className="text-[9px] uppercase tracking-wider opacity-60 truncate">
+                            {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                          </span>
+                        )}
                       </div>
                       <button 
                         onClick={(e) => {

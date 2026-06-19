@@ -337,7 +337,7 @@ function TodayPageContent() {
           {/* Body */}
           <div className="flex flex-1 overflow-hidden">
             {/* Any Time Today Panel */}
-            <div className={`${activeTab === 'anytime' ? 'flex' : 'hidden'} md:flex w-full md:w-64 border-r border-border-default flex-col p-6 bg-surface shrink-0 overflow-y-auto`}>
+            <div className={`${activeTab === 'anytime' ? 'flex' : 'hidden'} md:flex flex-1 md:flex-none md:w-64 border-r border-border-default flex-col p-6 bg-surface md:shrink-0 overflow-y-auto`}>
           <h3 className="text-lg font-medium text-primary mb-6 tracking-wide">Any Time Today</h3>
           
           <div className="space-y-4 mb-8">
@@ -397,6 +397,7 @@ function TodayPageContent() {
           <div className="flex-1 min-w-0">
             <DayView 
               tasks={scheduledTasks} 
+              projects={projects}
               dayPlans={plan.dayPlans} 
               onOpenPlanner={() => setIsPlannerOpen(true)} 
               animatingPlacements={animatingTasksStatus}
@@ -406,6 +407,7 @@ function TodayPageContent() {
           {isPlannerOpen && (
             <DayPlanner
               tasks={scheduledTasks}
+              projects={projects}
               dayPlans={plan.dayPlans}
               onPlaceBlock={handlePlaceBlock}
               onUnplaceBlock={handleUnplaceBlock}
