@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ReactFlow, Controls, Background, Edge, Node, MarkerType, Position, Handle } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Task } from "@/lib/types";
+import { useTheme } from "@/components/ThemeProvider";
 
 const TaskNode = ({ data, id }: any) => {
   return (
@@ -41,6 +42,8 @@ export function DependencyChart({
   dependencies: { taskId: string; predecessorId: string }[];
   onAddSubtask?: (predecessorId: string) => void;
 }) {
+  const { theme } = useTheme();
+  
   const { nodes, edges } = useMemo(() => {
     // Simple layout calculation:
     // We can do a topological sort and assign columns (x) based on depth,
@@ -117,17 +120,17 @@ export function DependencyChart({
           targetPosition: Position.Left,
           position: { x: x * X_SPACING, y: y * Y_SPACING },
           data: { label: task.title, onAddSubtask, style: {
-            background: task.status === 'done' ? '#f8fafc' : '#ffffff',
-            border: 'none',
+            background: task.status === 'done' ? 'var(--bg-done-subtle)' : 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
             borderRadius: '12px',
-            borderTop: task.status === 'done' ? '4px solid #22c55e' : (task.status === 'pending' ? '4px solid #3b82f6' : '4px solid #f59e0b'),
+            borderTop: task.status === 'done' ? '4px solid var(--status-done)' : (task.status === 'pending' ? '4px solid var(--accent)' : '4px solid var(--status-warning)'),
             fontSize: '13px',
             fontWeight: 600,
             padding: '16px 20px',
             minWidth: '160px',
             textAlign: 'center',
-            color: '#334155'
+            color: 'var(--text-primary)'
           }},
         });
       });
@@ -141,10 +144,10 @@ export function DependencyChart({
         target: d.taskId,
         type: 'smoothstep',
         animated: !isDone,
-        style: { stroke: isDone ? '#cbd5e1' : '#94a3b8', strokeWidth: 2 },
+        style: { stroke: isDone ? 'var(--status-done)' : 'var(--border-strong)', strokeWidth: 2 },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isDone ? '#cbd5e1' : '#94a3b8',
+          color: isDone ? 'var(--status-done)' : 'var(--border-strong)',
         },
       });
     });
@@ -157,9 +160,9 @@ export function DependencyChart({
   }
 
   return (
-    <div style={{ height: 500, width: "100%", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#f1f5f9" }}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
-        <Background color="#cbd5e1" gap={16} size={2} />
+    <div style={{ height: 500, width: "100%", border: "1px solid var(--border-default)", borderRadius: "12px", background: "var(--bg-surface-raised)" }}>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView colorMode={theme}>
+        <Background color="var(--border-strong)" gap={16} size={2} />
         <Controls />
       </ReactFlow>
     </div>
