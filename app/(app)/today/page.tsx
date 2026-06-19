@@ -10,6 +10,7 @@ import { DayView } from "@/components/DayView";
 import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
 import { TodaySkeleton } from "@/components/TodaySkeleton";
+import { useToast } from "@/hooks/useToast";
 
 export default function TodayPage() {
   return (
@@ -20,6 +21,7 @@ export default function TodayPage() {
 }
 
 function TodayPageContent() {
+  const { showToast } = useToast();
   const [plan, setPlan] = useState<TodayPlannerData | null>(null);
   const [bucketTasks, setBucketTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -37,9 +39,7 @@ function TodayPageContent() {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
-  const [swipingOutTaskIds, setSwipingOutTaskIds] = useState<Set<string>>(new Set());
-  const [animatingTasks, setAnimatingTasks] = useState<{task: Task, state: 'adding' | 'success' | 'error' | 'returning' | 'removing'}[]>([]);
-  const [animatingPlacements, setAnimatingPlacements] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
+  const [animatingTasksStatus, setAnimatingTasksStatus] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
 
   const handleDateChange = (newDate: number) => {
     if (newDate === selectedDate) return;
@@ -83,92 +83,88 @@ function TodayPageContent() {
   }, [load]);
 
   const scheduleFromBucket = async (task: Task) => {
-    // 1. Animate out of bucket (swipe left)
-    setSwipingOutTaskIds(prev => new Set(prev).add(task.id));
+    // 1. Optimistic move to "Any Time Today"
+    setBucketTasks(prev => prev.filter(t => t.id !== task.id));
+    setPlan(prev => prev ? { ...prev, tasks: [...prev.tasks, task] } : prev);
     
-    // Wait for bucket exit animation
-    await new Promise(r => setTimeout(r, 200));
-
-    setSwipingOutTaskIds(prev => {
-      const next = new Set(prev);
-      next.delete(task.id);
-      return next;
-    });
-    setBucketTasks((prev) => prev.filter((t) => t.id !== task.id));
-    
-    // 2. Animate into Any Time Today (swipe right)
-    setAnimatingTasks(prev => [...prev, { task, state: 'adding' }]);
+    // 2. Pulse loading state
+    setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'loading' }));
 
     try {
       const updated = await updateTask(task.id, {
         scheduled_date: selectedDate,
       });
       // 3. API success -> blink green
-      setAnimatingTasks(prev => prev.map(at => at.task.id === task.id ? { ...at, state: 'success' } : at));
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'success' }));
       
       setTimeout(() => {
-        setPlan((prev) => prev ? { ...prev, tasks: [...prev.tasks, updated] } : prev);
-        setAnimatingTasks(prev => prev.filter(at => at.task.id !== task.id));
+        setPlan(prev => prev ? { ...prev, tasks: prev.tasks.map(t => t.id === task.id ? updated : t) } : prev);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
       }, 500);
       
       listTasks({ bucket: true }).then(setBucketTasks);
     } catch (e) {
-      // 4. API error -> blink red
-      setAnimatingTasks(prev => prev.map(at => at.task.id === task.id ? { ...at, state: 'error' } : at));
+      showToast((e as Error).message, 'error');
+      // 4. API error -> blink red, then revert
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'error' }));
       
       setTimeout(() => {
-        // Animate out of Any Time Today (swipe out right)
-        setAnimatingTasks(prev => prev.map(at => at.task.id === task.id ? { ...at, state: 'returning' } : at));
-        setTimeout(() => {
-          setBucketTasks((prev) => [...prev, task]);
-          setAnimatingTasks(prev => prev.filter(at => at.task.id !== task.id));
-        }, 200);
+        setPlan(prev => prev ? { ...prev, tasks: prev.tasks.filter(t => t.id !== task.id) } : prev);
+        setBucketTasks(prev => [...prev, task]);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
       }, 500);
     }
   };
 
   const unscheduleToBucket = async (task: Task) => {
-    // 1. Set to removing state (pulse neutral)
-    setAnimatingTasks(prev => [...prev, { task, state: 'removing' }]);
+    // 1. Optimistic remove to bucket
+    setPlan(prev => prev ? { ...prev, tasks: prev.tasks.filter(t => t.id !== task.id) } : prev);
+    setBucketTasks(prev => [...prev, task]);
+
+    // 2. Pulse loading state
+    setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'loading' }));
 
     try {
       await updateTask(task.id, { scheduled_date: null });
       
-      // Re-fetch to see if DAG removed other tasks too
+      // Re-fetch in case DAG removed other things
       const [newPlan, newBucketTasks] = await Promise.all([
         getTodayPlan(selectedDate),
         listTasks({ bucket: true }),
       ]);
       
-      const oldPlanTaskIds = new Set(plan?.tasks.map(t => t.id) || []);
-      const newPlanTaskIds = new Set(newPlan.tasks.map(t => t.id));
-      const removedTasks = plan?.tasks.filter(t => oldPlanTaskIds.has(t.id) && !newPlanTaskIds.has(t.id)) || [];
-      if (!removedTasks.find(t => t.id === task.id)) {
-        removedTasks.push(task);
-      }
-
-      setAnimatingTasks(prev => prev.filter(at => at.task.id !== task.id));
-      
-      // 2. Blink green for all removed tasks (success)
-      const newAnimating = removedTasks.map(t => ({ task: t, state: 'success' as const }));
-      setAnimatingTasks(prev => [...prev, ...newAnimating]);
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'success' }));
       
       setTimeout(() => {
-        // 3. Swipe them all out (returning)
-        setAnimatingTasks(prev => prev.map(at => removedTasks.find(rt => rt.id === at.task.id) ? { ...at, state: 'returning' } : at));
-        
-        setTimeout(() => {
-          setPlan(newPlan);
-          setBucketTasks(newBucketTasks);
-          setAnimatingTasks(prev => prev.filter(at => !removedTasks.find(rt => rt.id === at.task.id)));
-        }, 200);
+        setPlan(newPlan);
+        setBucketTasks(newBucketTasks);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
       }, 500);
 
     } catch (e) {
-      // 4. API error -> blink red, back to normal
-      setAnimatingTasks(prev => prev.map(at => at.task.id === task.id ? { ...at, state: 'error' } : at));
+      showToast((e as Error).message, 'error');
+      // 4. API error -> blink red, revert
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'error' }));
       setTimeout(() => {
-        setAnimatingTasks(prev => prev.filter(at => at.task.id !== task.id));
+        setPlan(prev => prev ? { ...prev, tasks: [...prev.tasks, task] } : prev);
+        setBucketTasks(prev => prev.filter(t => t.id !== task.id));
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
       }, 500);
     }
   };
@@ -193,14 +189,14 @@ function TodayPageContent() {
       return { ...prev, dayPlans: newPlans };
     });
     
-    setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'loading' }));
+    setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'loading' }));
 
     try {
       await placeDayPlanBlock(taskId, plan.date, startTime);
       // 2. Success Blink
-      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'success' }));
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'success' }));
       setTimeout(() => {
-        setAnimatingPlacements(prev => {
+        setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
           return next;
@@ -208,10 +204,11 @@ function TodayPageContent() {
       }, 500);
     } catch (e) {
       // 3. Error Blink & Revert
-      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'error' }));
+      showToast("Failed to place block: " + (e as Error).message, 'error');
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'error' }));
       setTimeout(() => {
         setPlan(prev => prev ? { ...prev, dayPlans: prevDayPlans } : prev);
-        setAnimatingPlacements(prev => {
+        setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
           return next;
@@ -234,14 +231,14 @@ function TodayPageContent() {
       };
     });
     
-    setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'loading' }));
+    setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'loading' }));
 
     try {
       await removeDayPlanBlock(taskId);
       // 2. Success Blink
-      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'success' }));
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'success' }));
       setTimeout(() => {
-        setAnimatingPlacements(prev => {
+        setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
           return next;
@@ -249,10 +246,11 @@ function TodayPageContent() {
       }, 500);
     } catch (e) {
       // 3. Error Blink & Revert
-      setAnimatingPlacements(prev => ({ ...prev, [taskId]: 'error' }));
+      showToast("Failed to remove block: " + (e as Error).message, 'error');
+      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'error' }));
       setTimeout(() => {
         setPlan(prev => prev ? { ...prev, dayPlans: prevDayPlans } : prev);
-        setAnimatingPlacements(prev => {
+        setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
           return next;
@@ -275,7 +273,7 @@ function TodayPageContent() {
       });
       setPlan(prev => prev ? { ...prev, tasks: [...prev.tasks, newTask] } : prev);
     } catch (e) {
-      alert((e as Error).message);
+      showToast((e as Error).message, 'error');
     } finally {
       setIsCreatingTask(false);
     }
@@ -293,9 +291,6 @@ function TodayPageContent() {
   
   // All tasks in the original plan for "Any Time Today"
   const anyTimeTasksOrig = scheduledTasks.filter(t => !placedTaskIds.has(t.id));
-  
-  // Tasks currently animating that came FROM the bucket (not in the original plan yet)
-  const bucketAnimatingTasks = animatingTasks.filter(at => !anyTimeTasksOrig.find(t => t.id === at.task.id));
 
   const bucketTasksByProject = bucketTasks.reduce((acc, task) => {
     if (!acc[task.projectId]) acc[task.projectId] = [];
@@ -347,29 +342,22 @@ function TodayPageContent() {
           
           <div className="space-y-4 mb-8">
             {anyTimeTasksOrig.map(task => {
-              const animatingState = animatingTasks.find(at => at.task.id === task.id)?.state;
-              
-              if (animatingState) {
-                return (
-                  <div 
-                    key={`anim-${task.id}`} 
-                    className={`flex flex-col -mx-2 px-2 py-1 rounded transition-colors duration-300 ${
-                      animatingState === 'adding' ? 'animate-slide-left bg-surface-raised' :
-                      animatingState === 'returning' ? 'animate-slide-out-right bg-surface-raised' :
-                      animatingState === 'success' ? 'bg-done-subtle' :
-                      animatingState === 'error' ? 'bg-missed-subtle' : ''
-                    }`}
-                  >
-                    <span className={`text-sm font-medium leading-tight ${animatingState === 'adding' || animatingState === 'removing' || animatingState === 'returning' ? 'animate-pulse text-secondary' : 'text-primary'}`}>{task.title}</span>
-                    <span className="text-xs text-secondary mt-1">{task.estimateMin}m</span>
-                  </div>
-                );
-              }
-
+              const animState = animatingTasksStatus[task.id];
               return (
-                <div key={task.id} className="flex flex-col group relative p-2 -mx-2 hover:bg-surface-raised rounded transition-colors">
-                  <span className="text-sm font-medium text-primary leading-tight">{task.title}</span>
-                  <span className="text-xs text-secondary mt-1">{task.estimateMin}m</span>
+                <div 
+                  key={task.id} 
+                  className={`flex flex-col group relative p-2 -mx-2 hover:bg-surface-raised rounded transition-colors ${
+                    animState === 'success' ? 'bg-done-subtle text-done' :
+                    animState === 'error' ? 'bg-missed-subtle text-missed' :
+                    animState === 'loading' ? 'bg-accent-subtle/50 animate-pulse text-secondary' : ''
+                  }`}
+                >
+                  <span className={`text-sm font-medium leading-tight ${animState === 'loading' ? 'text-secondary' : 'text-primary'}`}>
+                    {task.title}
+                  </span>
+                  <span className={`text-xs mt-1 ${animState === 'loading' ? 'text-secondary' : 'text-secondary'}`}>
+                    {task.estimateMin}m
+                  </span>
                   <button 
                     onClick={() => unscheduleToBucket(task)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-tertiary hover:text-missed transition-colors"
@@ -382,22 +370,7 @@ function TodayPageContent() {
               );
             })}
             
-            {bucketAnimatingTasks.map(({ task, state }) => (
-              <div 
-                key={`anim-${task.id}`} 
-                className={`flex flex-col -mx-2 px-2 py-1 rounded transition-colors duration-300 ${
-                  state === 'adding' ? 'animate-slide-left bg-surface-raised' :
-                  state === 'returning' ? 'animate-slide-out-right bg-surface-raised' :
-                  state === 'success' ? 'bg-done-subtle' :
-                  state === 'error' ? 'bg-missed-subtle' : ''
-                }`}
-              >
-                <span className={`text-sm font-medium leading-tight ${state === 'adding' || state === 'removing' || state === 'returning' ? 'animate-pulse text-secondary' : 'text-primary'}`}>{task.title}</span>
-                <span className="text-xs text-secondary mt-1">{task.estimateMin}m</span>
-              </div>
-            ))}
-
-            {anyTimeTasksOrig.length === 0 && bucketAnimatingTasks.length === 0 && (
+            {anyTimeTasksOrig.length === 0 && (
               <p className="text-sm text-tertiary italic">No unplaced tasks</p>
             )}
           </div>
@@ -426,7 +399,7 @@ function TodayPageContent() {
               tasks={scheduledTasks} 
               dayPlans={plan.dayPlans} 
               onOpenPlanner={() => setIsPlannerOpen(true)} 
-              animatingPlacements={animatingPlacements}
+              animatingPlacements={animatingTasksStatus}
             />
           </div>
           
@@ -437,7 +410,7 @@ function TodayPageContent() {
               onPlaceBlock={handlePlaceBlock}
               onUnplaceBlock={handleUnplaceBlock}
               onClose={() => setIsPlannerOpen(false)}
-              animatingPlacements={animatingPlacements}
+              animatingPlacements={animatingTasksStatus}
             />
           )}
         </div>
@@ -461,7 +434,7 @@ function TodayPageContent() {
             projects={projects}
             onSchedule={scheduleFromBucket}
             onClose={() => setIsBucketOpen(false)}
-            swipingOutTaskIds={swipingOutTaskIds}
+            animatingTasksStatus={animatingTasksStatus}
           />
         )}
           </div>

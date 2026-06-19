@@ -183,6 +183,7 @@ export function TaskRow({
   onUnscheduled,
   showProject,
   projects,
+  animatingState,
 }: {
   task: Task;
   onUpdated: (t: Task) => void;
@@ -190,6 +191,7 @@ export function TaskRow({
   onUnscheduled?: (t: Task) => void;
   showProject?: boolean;
   projects?: Project[];
+  animatingState?: 'loading' | 'success' | 'error';
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -304,8 +306,13 @@ export function TaskRow({
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b border-border-default last:border-b-0 bg-surface hover:bg-surface-raised ${
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-default last:border-b-0 bg-surface hover:bg-surface-raised transition-colors ${
         isDone ? "opacity-60" : ""
+      } ${
+        animatingState === 'success' ? '!bg-done-subtle text-done' :
+        animatingState === 'error' ? '!bg-missed-subtle text-missed' :
+        animatingState === 'loading' ? '!bg-accent-subtle/50 animate-pulse text-secondary' :
+        ''
       }`}
     >
       {/* Checkbox */}

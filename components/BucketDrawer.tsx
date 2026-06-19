@@ -8,10 +8,10 @@ interface BucketDrawerProps {
   projects: Project[];
   onSchedule: (task: Task) => void;
   onClose: () => void;
-  swipingOutTaskIds?: Set<string>;
+  animatingTasksStatus?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClose, swipingOutTaskIds }: BucketDrawerProps) {
+export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClose, animatingTasksStatus = {} }: BucketDrawerProps) {
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
   const toggleProject = (projectId: string) => {
@@ -53,10 +53,15 @@ export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClo
               {!isCollapsed && (
                 <div className="flex flex-col bg-surface">
                   {tasks.map((task) => {
-                    const isSwipingOut = swipingOutTaskIds?.has(task.id);
+                    const animState = animatingTasksStatus[task.id];
                     return (
-                    <div key={task.id} className={`group relative flex flex-col p-3 border-b border-border-default last:border-0 hover:bg-surface-raised transition-colors ${isSwipingOut ? 'animate-slide-out-left' : ''}`}>
-                      <div className="flex justify-between items-start mb-1">
+                    <div key={task.id} className={`group relative flex flex-col p-3 border-b border-border-default last:border-0 hover:bg-surface-raised transition-colors ${
+                      animState === 'success' ? '!bg-done-subtle text-done' :
+                      animState === 'error' ? '!bg-missed-subtle text-missed' :
+                      animState === 'loading' ? '!bg-accent-subtle/50 animate-pulse text-secondary' :
+                      ''
+                    }`}>
+                      <div className={`flex justify-between items-start mb-1 ${animState === 'loading' ? 'text-secondary' : 'text-primary'}`}>
                         <span className="text-sm text-primary">{task.title}</span>
                         <span className="text-xs text-secondary">{task.estimateMin}m</span>
                       </div>

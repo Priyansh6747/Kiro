@@ -6,6 +6,7 @@ import type { Preference, RatioMode } from "@/lib/types";
 import { getPreferences, patchPreferences } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
 import { useTheme } from "@/components/ThemeProvider";
+import { useToast } from "@/hooks/useToast";
 
 function Field({
   label,
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
+  const { showToast } = useToast();
 
   // Individual field states
   const [timezone, setTimezone] = useState("UTC");
@@ -106,7 +108,7 @@ export default function SettingsPage() {
       savedFn(true);
       setTimeout(() => savedFn(false), 2000);
     } catch (e) {
-      alert((e as Error).message);
+      showToast((e as Error).message, "error");
     } finally {
       setFn(false);
     }

@@ -24,6 +24,7 @@ import {
   CreateProjectForm,
 } from "@/components/ui";
 import { DependencyChart } from "@/components/DependencyChart";
+import { useToast } from "@/hooks/useToast";
 
 // ── Project Card ──────────────────────────────────────────────────────────────
 
@@ -99,6 +100,10 @@ function ProjectWorkspace({
   const [showCapture, setShowCapture] = useState(false);
   const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
   const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const { showToast } = useToast();
+
   const [editName, setEditName] = useState(project.name);
   const [editImportance, setEditImportance] = useState(project.importance);
   const [editType, setEditType] = useState(project.type);
@@ -107,7 +112,6 @@ function ProjectWorkspace({
       ? new Date(project.deadlineAt * 1000).toISOString().split("T")[0]
       : ""
   );
-  const [savingEdit, setSavingEdit] = useState(false);
 
   // Dependency management state
   const [depTaskId, setDepTaskId] = useState("");
@@ -128,10 +132,11 @@ function ProjectWorkspace({
       setDependencies(deps);
     } catch (e) {
       setError((e as Error).message);
+      showToast((e as Error).message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [project.id]);
+  }, [project.id, showToast]);
 
   useEffect(() => {
     loadTasks();
@@ -144,7 +149,7 @@ function ProjectWorkspace({
       onProjectArchived(project.id);
       onBack();
     } catch (e) {
-      alert((e as Error).message);
+      showToast((e as Error).message, 'error');
     }
   };
 
@@ -210,8 +215,9 @@ function ProjectWorkspace({
       });
       onProjectUpdated(updated);
       setEditing(false);
+      showToast("Project updated", 'success');
     } catch (e) {
-      alert((e as Error).message);
+      showToast((e as Error).message, 'error');
     } finally {
       setSavingEdit(false);
     }
@@ -230,17 +236,12 @@ function ProjectWorkspace({
     }
   };
 
-  const pendingTasks = tasks.filter((t) => t.status === "pending");
-  const doneTasks = tasks.filter((t) => t.status === "done");
-
-  // Compute a simple timeline from task deadlines
   const tasksByDeadline = [...tasks]
     .filter((t) => t.deadlineAt)
     .sort((a, b) => (a.deadlineAt ?? 0) - (b.deadlineAt ?? 0));
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Header */}
       <div className="border-b border-border-default bg-surface px-4 py-3">
         <button
           onClick={onBack}
@@ -346,7 +347,6 @@ function ProjectWorkspace({
         )}
       </div>
 
-      {/* Timeline */}
       {tasksByDeadline.length > 0 && (
         <div className="border-b border-border-default bg-surface-raised px-4 py-3">
           <p className="text-xs font-semibold text-secondary uppercase mb-2">Timeline</p>
@@ -365,7 +365,6 @@ function ProjectWorkspace({
         </div>
       )}
 
-      {/* Chart View Toggle */}
       <div className="px-4 py-2 bg-surface-raised border-b border-border-default flex items-center justify-between">
         <p className="text-xs font-semibold text-secondary uppercase">Dependency Chart</p>
         <button onClick={() => setShowChart(!showChart)} className="text-xs text-accent hover:underline">
@@ -385,9 +384,7 @@ function ProjectWorkspace({
          </div>
       )}
 
-      {/* Main content: task list + detail */}
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* Task List */}
         <div className="flex-1 flex flex-col min-w-0 border-r border-border-default">
           <SectionHeader
             title={`Tasks (${tasks.length})`}
@@ -433,7 +430,6 @@ function ProjectWorkspace({
           )}
         </div>
 
-        {/* Task Detail Panel */}
         <div className="w-full md:w-72 shrink-0 bg-surface border-t border-border-default md:border-t-0">
           {selectedTask ? (
             <TaskDetailPanel
@@ -462,8 +458,6 @@ function ProjectWorkspace({
             handleTaskCreated(task);
             setShowCapture(false);
             setCapturePredecessorId(undefined);
-            // Optionally reload dependencies if needed, or we can just let it be loaded on next refresh
-            // But doing a full loadTasks() is safer to get the new edge
             loadTasks();
           }}
           onClose={() => {
@@ -493,10 +487,11 @@ function TaskDetailPanel({
   onDependencyAdded?: () => void;
   onDependencyRemoved?: () => void;
 }) {
-  const [notes, setNotes] = useState("");
   const [depPredId, setDepPredId] = useState("");
   const [addingDep, setAddingDep] = useState(false);
   const [depError, setDepError] = useState<string | null>(null);
+
+  const { showToast } = useToast();
 
   const otherTasks = allTasks.filter((t) => t.id !== task.id);
   const currentDeps = dependencies.filter((d) => d.taskId === task.id);
@@ -507,7 +502,7 @@ function TaskDetailPanel({
       await deleteDependency(task.id, predId);
       onDependencyRemoved?.();
     } catch (e) {
-      alert((e as Error).message);
+      showToast((e as Error).message, 'error');
     }
   };
 
@@ -553,7 +548,6 @@ function TaskDetailPanel({
         </div>
       </div>
 
-      {/* Status quick-change */}
       <div>
         <p className="text-xs font-semibold text-secondary uppercase mb-1">Change Status</p>
         <div className="flex flex-wrap gap-1">
@@ -566,7 +560,7 @@ function TaskDetailPanel({
                   const updated = await updateTask(task.id, { status: s });
                   onUpdated(updated);
                 } catch (e) {
-                  alert((e as Error).message);
+                  showToast((e as Error).message, 'error');
                 }
               }}
               className={`rounded px-2 py-1 text-xs border border-border-default ${
@@ -581,11 +575,9 @@ function TaskDetailPanel({
         </div>
       </div>
 
-      {/* Dependencies */}
       <div>
         <p className="text-xs font-semibold text-secondary uppercase mb-1">Dependencies</p>
         
-        {/* Existing dependencies list */}
         {currentDeps.length > 0 && (
           <div className="space-y-1 mb-3">
             {currentDeps.map((dep) => {
@@ -606,7 +598,6 @@ function TaskDetailPanel({
           </div>
         )}
 
-        {/* Add new dependency */}
         <div className="flex gap-1">
           <select
             className="flex-1 border border-border-default rounded px-2 py-1 text-xs"
@@ -647,6 +638,8 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  const { showToast } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
