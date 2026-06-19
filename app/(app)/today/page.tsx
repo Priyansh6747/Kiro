@@ -277,13 +277,13 @@ function TodayPageContent() {
   return (
     <div className="flex flex-col flex-1">
       {/* Date Header */}
-      <div className="border-b bg-white px-4 py-2 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-800">
+      <div className="border-b border-border-default bg-surface px-4 py-2 flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-primary">
           {selectedDate === todayUnixDay() ? "Today" : "Past Log"}
         </h1>
         <input 
           type="date"
-          className="text-sm border rounded px-2 py-1 text-gray-700"
+          className="text-sm border border-border-default rounded px-2 py-1 text-secondary"
           value={isoDate}
           max={maxDate}
           onChange={handleDateChange}
@@ -293,16 +293,16 @@ function TodayPageContent() {
       {/* Desktop: two-column */}
       <div className="flex flex-col md:flex-row flex-1 gap-0 min-h-0">
         {/* ── Left / Main column ── */}
-        <div className="flex-1 flex flex-col min-w-0 border-r">
+        <div className="flex-1 flex flex-col min-w-0 border-r border-border-default">
           {/* Morning Nudge */}
-          <div className="border-b bg-white">
+          <div className="border-b border-border-default bg-surface">
             <SectionHeader
               title="Morning Nudge"
               action={
                 <button
                   onClick={handleNudge}
                   disabled={nudgeLoading || selectedDate !== todayUnixDay()}
-                  className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                  className="text-xs text-accent hover:underline disabled:opacity-50"
                   title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
                 >
                   {nudgeLoading ? "Generating…" : "Generate"}
@@ -311,23 +311,23 @@ function TodayPageContent() {
             />
             <div className="px-4 py-3">
               {nudgeLoading && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-secondary">
                   <Spinner size="sm" /> Generating nudge…
                 </div>
               )}
               {nudgeError && <p className="text-xs text-red-600">{nudgeError}</p>}
               {nudge && !nudgeLoading && (
                 <div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{nudge.nudge}</p>
+                  <p className="text-sm text-secondary leading-relaxed">{nudge.nudge}</p>
                   {nudge.projects.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-tertiary mt-2">
                       Focus: {nudge.projects.map((p) => p.name).join(", ")}
                     </p>
                   )}
                 </div>
               )}
               {!nudge && !nudgeLoading && !nudgeError && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-tertiary">
                   Click Generate to get your morning nudge.
                 </p>
               )}
@@ -341,7 +341,7 @@ function TodayPageContent() {
               action={
                 <button
                   onClick={() => setShowCapture(true)}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-accent hover:underline"
                 >
                   + Add
                 </button>
@@ -379,16 +379,16 @@ function TodayPageContent() {
         {/* ── Right / Supporting column ── */}
         <div className="w-full md:w-72 flex flex-col shrink-0">
           {/* Capacity */}
-          <div className="border-b bg-white">
+          <div className="border-b border-border-default bg-surface">
             <SectionHeader title="Capacity" />
             <div className="px-4 py-3 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Available</span>
+                <span className="text-secondary">Available</span>
                 <span className="font-medium">{formatMinutes(plan.availableMin)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Planned</span>
-                <span className={`font-medium ${plan.overloaded ? "text-red-600" : "text-gray-800"}`}>
+                <span className="text-secondary">Planned</span>
+                <span className={`font-medium ${plan.overloaded ? "text-red-600" : "text-primary"}`}>
                   {formatMinutes(plan.totalEstimatedMin)}
                 </span>
               </div>
@@ -407,13 +407,13 @@ function TodayPageContent() {
           </div>
 
           {/* Day Actions */}
-          <div className="border-b bg-white">
+          <div className="border-b border-border-default bg-surface">
             <SectionHeader title="Day Actions" />
             <div className="px-4 py-3 space-y-2">
               <button
                 onClick={handleConfirm}
                 disabled={confirmLoading || selectedDate !== todayUnixDay()}
-                className="w-full rounded border border-blue-600 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                className="w-full rounded border border-blue-600 px-3 py-2 text-sm text-accent hover:bg-accent-subtle disabled:opacity-50"
                 title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
               >
                 {confirmLoading ? "Confirming…" : plan.dayLog ? "Re-confirm Day" : "Confirm Day"}
@@ -421,7 +421,7 @@ function TodayPageContent() {
               <button
                 onClick={handleEod}
                 disabled={eodLoading || selectedDate !== todayUnixDay()}
-                className="w-full rounded border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="w-full rounded border border-border-default px-3 py-2 text-sm text-secondary hover:bg-surface-raised disabled:opacity-50"
                 title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
               >
                 {eodLoading ? "Generating…" : "End-of-Day Summary"}
@@ -431,30 +431,30 @@ function TodayPageContent() {
 
           {/* EOD Summary Result */}
           {(eodLoading || eodSummary !== null || eodError !== null) && (
-            <div className="border-b p-4 bg-blue-50">
+            <div className="border-b border-border-default p-4 bg-accent-subtle">
               {eodLoading && (
-                <div className="flex items-center gap-2 text-sm text-blue-700">
+                <div className="flex items-center gap-2 text-sm text-accent">
                   <Spinner size="sm" /> Generating summary…
                 </div>
               )}
               {!eodLoading && eodError && <p className="text-xs text-red-600">{eodError}</p>}
               {!eodLoading && typeof eodSummary === "string" && eodSummary.trim() !== "" && (
-                <p className="text-sm text-gray-800 leading-relaxed">{eodSummary}</p>
+                <p className="text-sm text-primary leading-relaxed">{eodSummary}</p>
               )}
               {!eodLoading && typeof eodSummary === "string" && eodSummary.trim() === "" && (
-                <p className="text-sm text-gray-500 italic">No summary could be generated.</p>
+                <p className="text-sm text-secondary italic">No summary could be generated.</p>
               )}
             </div>
           )}
 
           {/* Inbox / Bucket */}
-          <div className="flex-1 flex flex-col bg-white border-b">
+          <div className="flex-1 flex flex-col bg-surface border-b border-border-default">
             <SectionHeader
               title={`Inbox (${bucketTasks.length})`}
               action={
                 <button
                   onClick={() => setShowCapture(true)}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-accent hover:underline"
                 >
                   + Add
                 </button>
@@ -470,15 +470,15 @@ function TodayPageContent() {
                   const isCollapsed = collapsedProjects[projectId];
                   
                   return (
-                    <div key={projectId} className="border-b last:border-b-0">
+                    <div key={projectId} className="border-b border-border-default last:border-b-0">
                       <div 
-                        className="px-4 py-2 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                        className="px-4 py-2 bg-surface-raised flex items-center justify-between cursor-pointer hover:bg-surface-raised transition-colors"
                         onClick={() => toggleProject(projectId)}
                       >
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                          {projectName} <span className="text-gray-400 font-normal">({tasks.length})</span>
+                        <span className="text-xs font-semibold text-secondary uppercase tracking-wide">
+                          {projectName} <span className="text-tertiary font-normal">({tasks.length})</span>
                         </span>
-                        <span className="text-gray-400 text-xs">
+                        <span className="text-tertiary text-xs">
                           {isCollapsed ? "▼" : "▲"}
                         </span>
                       </div>
@@ -486,7 +486,7 @@ function TodayPageContent() {
                       {!isCollapsed && (
                         <div className="flex flex-col">
                           {tasks.map((task) => (
-                            <div key={task.id} className="border-b last:border-b-0 border-gray-100">
+                            <div key={task.id} className="border-b border-border-default last:border-b-0 border border-border-default-gray-100">
                               <TaskRow
                                 task={task}
                                 projects={projects}
@@ -495,7 +495,7 @@ function TodayPageContent() {
                               <div className="px-4 pb-2">
                                 <button
                                   onClick={() => scheduleFromBucket(task)}
-                                  className="text-xs text-blue-600 hover:underline"
+                                  className="text-xs text-accent hover:underline"
                                 >
                                   → {selectedDate === todayUnixDay() ? "Schedule today" : "Schedule for this day"}
                                 </button>
@@ -516,7 +516,7 @@ function TodayPageContent() {
       {/* FAB */}
       <button
         onClick={() => setShowCapture(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 h-12 w-12 rounded-full bg-blue-600 text-white text-2xl shadow-lg flex items-center justify-center hover:bg-blue-700 z-40"
+        className="fixed bottom-20 right-4 md:bottom-6 h-12 w-12 rounded-full bg-accent text-white text-2xl shadow-lg flex items-center justify-center hover:bg-blue-700 z-40"
         aria-label="Quick capture"
       >
         +

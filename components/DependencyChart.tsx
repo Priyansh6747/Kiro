@@ -20,7 +20,7 @@ const TaskNode = ({ data, id }: any) => {
             e.stopPropagation();
             data.onAddSubtask(id);
           }}
-          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-400 border-2 border-white rounded-full cursor-pointer hover:bg-blue-600 hover:scale-150 transition-all z-10"
+          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-400 border border-border-default-2 border border-border-default-white rounded-full cursor-pointer hover:bg-accent hover:scale-150 transition-all z-10"
           title="Add dependent task"
         />
       )}
@@ -153,7 +153,7 @@ export function DependencyChart({
   }, [tasks, dependencies]);
 
   if (tasks.length === 0) {
-    return <p className="text-xs text-gray-400 p-4">No tasks to chart.</p>;
+    return <p className="text-xs text-tertiary p-4">No tasks to chart.</p>;
   }
 
   return (

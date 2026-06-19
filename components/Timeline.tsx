@@ -80,20 +80,20 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 border-t md:border-t-0 md:border-l relative overflow-hidden shrink-0 w-80">
+    <div className="flex flex-col h-full bg-surface-raised border-t border-border-default md:border-t-0 md:border border-border-default-l relative overflow-hidden shrink-0 w-80">
       {error && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-red-100 text-red-700 px-3 py-1 text-xs rounded shadow">
           {error}
         </div>
       )}
-      <div className="px-4 py-3 bg-white border-b shrink-0 flex justify-between items-center">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase">Day Planner</h2>
+      <div className="px-4 py-3 bg-surface border-b border-border-default shrink-0 flex justify-between items-center">
+        <h2 className="text-xs font-semibold text-secondary uppercase">Day Planner</h2>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Unplaced Tasks Sidebar */}
-        <div className="w-24 bg-white border-r p-2 overflow-y-auto space-y-2 shrink-0">
-          <p className="text-[10px] font-medium text-gray-400 uppercase mb-2">Unplaced</p>
+        <div className="w-24 bg-surface border-r border-border-default p-2 overflow-y-auto space-y-2 shrink-0">
+          <p className="text-[10px] font-medium text-tertiary uppercase mb-2">Unplaced</p>
           {tasks
             .filter((t) => !dayPlans.some((p) => p.taskId === t.id))
             .map((task) => (
@@ -101,10 +101,10 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
                 key={task.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, task)}
-                className="bg-blue-50 border border-blue-200 p-2 rounded text-[10px] cursor-move hover:bg-blue-100 transition-colors shadow-sm"
+                className="bg-accent-subtle border border border-border-default-blue-200 p-2 rounded text-[10px] cursor-move hover:bg-blue-100 transition-colors shadow-sm"
               >
                 <div className="font-medium truncate">{task.title}</div>
-                <div className="text-blue-600/70">{task.estimateMin}m</div>
+                <div className="text-accent/70">{task.estimateMin}m</div>
               </div>
             ))}
         </div>
@@ -112,7 +112,7 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
         {/* Timeline Area */}
         <div
           ref={containerRef}
-          className="flex-1 overflow-y-auto relative bg-white"
+          className="flex-1 overflow-y-auto relative bg-surface"
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
@@ -121,10 +121,10 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="absolute w-full border-b border-gray-100 flex items-start"
+                className="absolute w-full border-b border-border-default border border-border-default-gray-100 flex items-start"
                 style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               >
-                <span className="text-[9px] text-gray-400 font-medium w-10 text-right pr-2 pt-1">
+                <span className="text-[9px] text-tertiary font-medium w-10 text-right pr-2 pt-1">
                   {hour === 0 ? "12 AM" : hour < 12 ? `${hour} AM` : hour === 12 ? "12 PM" : `${hour - 12} PM`}
                 </span>
               </div>
@@ -145,13 +145,13 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
                   key={plan.taskId}
                   draggable
                   onDragStart={(e) => handleDragStart(e, task)}
-                  className="absolute left-10 right-2 bg-blue-100 border border-blue-300 rounded shadow-sm px-2 py-1 overflow-hidden cursor-move hover:shadow-md transition-shadow group"
+                  className="absolute left-10 right-2 bg-blue-100 border border border-border-default-blue-300 rounded shadow-sm px-2 py-1 overflow-hidden cursor-move hover:shadow-md transition-shadow group"
                   style={{ top, height }}
                 >
                   <div className="text-[10px] font-medium text-blue-900 truncate leading-tight">
                     {task.title}
                   </div>
-                  <div className="text-[9px] text-blue-700/80">
+                  <div className="text-[9px] text-accent/80">
                     {task.estimateMin}m
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export function Timeline({ tasks, dayPlans, onPlaceBlock }: TimelineProps) {
             {/* Drag Preview */}
             {draggingTask && previewTop !== null && (
               <div
-                className="absolute left-10 right-2 bg-blue-500/20 border-2 border-blue-500 border-dashed rounded pointer-events-none"
+                className="absolute left-10 right-2 bg-blue-500/20 border border-border-default-2 border border-border-default-blue-500 border border-border-default-dashed rounded pointer-events-none"
                 style={{
                   top: previewTop,
                   height: (draggingTask.estimateMin / 60) * HOUR_HEIGHT,

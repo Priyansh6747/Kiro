@@ -5,6 +5,7 @@ import { UserProfile } from "@clerk/nextjs";
 import type { Preference, RatioMode } from "@/lib/types";
 import { getPreferences, patchPreferences } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
+import { useTheme } from "@/components/ThemeProvider";
 
 function Field({
   label,
@@ -16,9 +17,9 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 py-4 border-b last:border-b-0">
-      <label className="text-sm font-medium text-gray-800">{label}</label>
-      {description && <p className="text-xs text-gray-500">{description}</p>}
+    <div className="flex flex-col gap-1.5 py-4 border-b border-border-default last:border-b-0">
+      <label className="text-sm font-medium text-primary">{label}</label>
+      {description && <p className="text-xs text-secondary">{description}</p>}
       {children}
     </div>
   );
@@ -40,7 +41,7 @@ function SaveButton({
       className={`rounded px-3 py-1.5 text-xs font-medium ${
         saved
           ? "bg-green-50 text-green-700 border border-green-200"
-          : "bg-blue-600 text-white hover:bg-blue-700"
+          : "bg-accent text-white hover:bg-blue-700"
       } disabled:opacity-50 flex items-center gap-1`}
     >
       {saving && <Spinner size="sm" />}
@@ -53,6 +54,7 @@ export default function SettingsPage() {
   const [prefs, setPrefs] = useState<Preference | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
 
   // Individual field states
   const [timezone, setTimezone] = useState("UTC");
@@ -120,16 +122,16 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="px-4 py-3 border-b bg-white">
-        <h1 className="font-semibold text-gray-800">Settings</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Configure how the system behaves</p>
+      <div className="px-4 py-3 border-b border-border-default bg-surface">
+        <h1 className="font-semibold text-primary">Settings</h1>
+        <p className="text-xs text-secondary mt-0.5">Configure how the system behaves</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Planning Settings */}
-        <div className="bg-white border-b">
-          <div className="px-4 py-3 border-b">
-            <p className="text-xs font-semibold text-gray-500 uppercase">Planning</p>
+        <div className="bg-surface border-b border-border-default">
+          <div className="px-4 py-3 border-b border-border-default">
+            <p className="text-xs font-semibold text-secondary uppercase">Planning</p>
           </div>
           <div className="px-4">
             <Field
@@ -139,7 +141,7 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   placeholder="e.g. America/New_York"
@@ -163,11 +165,11 @@ export default function SettingsPage() {
                   min={30}
                   max={1440}
                   step={15}
-                  className="w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-32 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={availableMin}
                   onChange={(e) => setAvailableMin(Number(e.target.value))}
                 />
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-secondary">
                   = {Math.floor(availableMin / 60)}h {availableMin % 60}m
                 </span>
                 <SaveButton
@@ -190,7 +192,7 @@ export default function SettingsPage() {
             >
               <div className="flex gap-2">
                 <select
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={ratioMode}
                   onChange={(e) => setRatioMode(e.target.value as RatioMode)}
                 >
@@ -205,7 +207,7 @@ export default function SettingsPage() {
                   }
                 />
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-tertiary">
                 {ratioMode === "cumulative"
                   ? "Tracks total tasks done / total assigned over time."
                   : "Tracks consecutive days of ≥50% completion."}
@@ -215,9 +217,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Notification Settings */}
-        <div className="bg-white border-b mt-4">
-          <div className="px-4 py-3 border-b">
-            <p className="text-xs font-semibold text-gray-500 uppercase">Notifications</p>
+        <div className="bg-surface border-b border-border-default mt-4">
+          <div className="px-4 py-3 border-b border-border-default">
+            <p className="text-xs font-semibold text-secondary uppercase">Notifications</p>
           </div>
           <div className="px-4">
             <Field
@@ -227,7 +229,7 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <input
                   type="time"
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={nudgeTime}
                   onChange={(e) => setNudgeTime(e.target.value)}
                 />
@@ -247,28 +249,52 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Appearance Settings */}
+        <div className="bg-surface border-b border-border-default mt-4">
+          <div className="px-4 py-3 border-b border-border-default">
+            <p className="text-xs font-semibold text-secondary uppercase">Appearance</p>
+          </div>
+          <div className="px-4">
+            <Field
+              label="Theme"
+              description="Choose between light and dark mode."
+            >
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface text-primary"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as "light" | "dark")}
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </div>
+            </Field>
+          </div>
+        </div>
+
         {/* Account Management */}
-        <div className="bg-white border-b mt-4">
-          <div className="px-4 py-3 border-b">
-            <p className="text-xs font-semibold text-gray-500 uppercase">Account Management</p>
+        <div className="bg-surface border-b border-border-default mt-4">
+          <div className="px-4 py-3 border-b border-border-default">
+            <p className="text-xs font-semibold text-secondary uppercase">Account Management</p>
           </div>
           <div className="px-4 py-4 space-y-3">
             {prefs && (
               <div className="text-sm space-y-2 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Internal User ID</span>
-                  <span className="text-gray-700 font-mono text-xs truncate max-w-[200px]">
+                  <span className="text-secondary">Internal User ID</span>
+                  <span className="text-secondary font-mono text-xs truncate max-w-[200px]">
                     {prefs.userId}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Ratio mode</span>
-                  <span className="text-gray-700">{prefs.ratioMode}</span>
+                  <span className="text-secondary">Ratio mode</span>
+                  <span className="text-secondary">{prefs.ratioMode}</span>
                 </div>
               </div>
             )}
             <div className="flex justify-center pt-4">
-              <UserProfile routing="hash" appearance={{ elements: { rootBox: "w-full shadow-none", cardBox: "shadow-none border border-gray-200" } }} />
+              <UserProfile routing="hash" appearance={{ elements: { rootBox: "w-full shadow-none", cardBox: "shadow-none border border-border-default" } }} />
             </div>
           </div>
         </div>

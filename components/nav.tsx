@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t bg-white z-50 flex md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 border-t border-border-default bg-surface z-50 flex md:hidden">
       {NAV_ITEMS.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
@@ -23,7 +23,7 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             className={`flex-1 flex flex-col items-center justify-center py-3 text-xs gap-1 ${
-              active ? "text-blue-600 font-semibold" : "text-gray-500"
+              active ? "text-accent font-semibold" : "text-secondary"
             }`}
           >
             <span className="text-lg leading-none">{item.icon}</span>
@@ -37,11 +37,12 @@ export function BottomNav() {
 
 export function Sidebar() {
   const pathname = usePathname();
+
   return (
-    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-white h-screen sticky top-0">
-      <div className="px-4 py-5 border-b">
-        <h1 className="text-lg font-bold tracking-tight">Kiro</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Daily execution</p>
+    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border-default bg-surface h-screen sticky top-0">
+      <div className="px-4 py-5 border-b border-border-default">
+        <h1 className="text-lg font-bold tracking-tight text-primary">Kiro</h1>
+        <p className="text-xs text-secondary mt-0.5">Daily execution</p>
       </div>
       <nav className="flex flex-col gap-1 p-3 flex-1">
         {NAV_ITEMS.map((item) => {
@@ -52,8 +53,8 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded text-sm ${
                 active
-                  ? "bg-blue-50 text-blue-700 font-semibold"
-                  : "text-gray-700 hover:bg-gray-100"
+                  ? "bg-accent-subtle text-accent font-semibold"
+                  : "text-secondary hover:bg-surface-raised"
               }`}
             >
               <span>{item.icon}</span>
@@ -90,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
         {children}

@@ -16,13 +16,13 @@ import { todayUnixDay } from "@/lib/types";
 
 export function Spinner({ size = "sm" }: { size?: "sm" | "md" | "lg" }) {
   const classes = {
-    sm: "h-4 w-4 border-2",
-    md: "h-6 w-6 border-2",
-    lg: "h-10 w-10 border-4",
+    sm: "h-4 w-4 border border-border-default-2",
+    md: "h-6 w-6 border border-border-default-2",
+    lg: "h-10 w-10 border border-border-default-4",
   }[size];
   return (
     <div
-      className={`animate-spin rounded-full border-gray-300 border-t-blue-600 ${classes}`}
+      className={`animate-spin rounded-full border border-border-default-gray-300 border-t border-border-default-blue-600 ${classes}`}
     />
   );
 }
@@ -31,7 +31,7 @@ export function Spinner({ size = "sm" }: { size?: "sm" | "md" | "lg" }) {
 
 export function LoadingScreen({ message = "Loading…" }: { message?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-gray-500">
+    <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-secondary">
       <Spinner size="lg" />
       <p className="text-sm">{message}</p>
     </div>
@@ -54,7 +54,7 @@ export function ErrorBanner({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="ml-2 rounded border border-red-300 px-2 py-1 text-xs hover:bg-red-100"
+          className="ml-2 rounded border border border-border-default-red-300 px-2 py-1 text-xs hover:bg-red-100"
         >
           Retry
         </button>
@@ -75,9 +75,9 @@ export function EmptyState({
   description?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-12 text-gray-400">
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-tertiary">
       <span className="text-3xl">{icon}</span>
-      <p className="text-sm font-medium text-gray-600">{title}</p>
+      <p className="text-sm font-medium text-secondary">{title}</p>
       {description && <p className="text-xs text-center max-w-xs">{description}</p>}
     </div>
   );
@@ -93,8 +93,8 @@ export function SectionHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b bg-white sticky top-0 z-10">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+    <div className="flex items-center justify-between px-4 py-2 border-b border-border-default bg-surface sticky top-0 z-10">
+      <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">
         {title}
       </h2>
       {action}
@@ -105,12 +105,12 @@ export function SectionHeader({
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  pending: "bg-gray-100 text-gray-600",
+  pending: "bg-surface-raised text-secondary",
   done: "bg-green-100 text-green-700",
   missed: "bg-red-100 text-red-700",
   carried: "bg-yellow-100 text-yellow-700",
-  adjusted: "bg-blue-100 text-blue-700",
-  deleted: "bg-gray-100 text-gray-400",
+  adjusted: "bg-blue-100 text-accent",
+  deleted: "bg-surface-raised text-tertiary",
 };
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
@@ -133,9 +133,9 @@ const TYPE_LABELS: Record<ProjectType, string> = {
 export function TypeBadge({ type }: { type: ProjectType }) {
   const colors: Record<ProjectType, string> = {
     critical: "bg-red-50 text-red-700",
-    recurring: "bg-blue-50 text-blue-700",
+    recurring: "bg-accent-subtle text-accent",
     habit: "bg-purple-50 text-purple-700",
-    nicetohave: "bg-gray-50 text-gray-600",
+    nicetohave: "bg-surface-raised text-secondary",
   };
   return (
     <span
@@ -261,10 +261,10 @@ export function TaskRow({
 
   if (editing) {
     return (
-      <div className="border rounded p-3 bg-white space-y-2">
+      <div className="border border-border-default rounded p-3 bg-surface space-y-2">
         <input
           autoFocus
-          className="w-full border rounded px-2 py-1 text-sm"
+          className="w-full border border-border-default rounded px-2 py-1 text-sm"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -273,11 +273,11 @@ export function TaskRow({
           }}
         />
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Est. (min)</label>
+          <label className="text-xs text-secondary">Est. (min)</label>
           <input
             type="number"
             min={1}
-            className="border rounded px-2 py-1 text-sm w-20"
+            className="border border-border-default rounded px-2 py-1 text-sm w-20"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
           />
@@ -287,13 +287,13 @@ export function TaskRow({
           <button
             disabled={saving}
             onClick={saveEdit}
-            className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="rounded border px-3 py-1 text-xs hover:bg-gray-50"
+            className="rounded border border-border-default px-3 py-1 text-xs hover:bg-surface-raised"
           >
             Cancel
           </button>
@@ -304,7 +304,7 @@ export function TaskRow({
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b last:border-b-0 bg-white hover:bg-gray-50 ${
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-default last:border-b-0 bg-surface hover:bg-surface-raised ${
         isDone ? "opacity-60" : ""
       }`}
     >
@@ -312,10 +312,10 @@ export function TaskRow({
       <button
         disabled={saving || task.scheduledDate === null}
         onClick={toggleDone}
-        className={`mt-0.5 h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center ${
+        className={`mt-0.5 h-4 w-4 shrink-0 rounded border border-border-default-2 flex items-center justify-center ${
           isDone
-            ? "border-green-500 bg-green-500 text-white"
-            : "border-gray-300"
+            ? "border border-border-default-green-500 bg-green-500 text-white"
+            : "border border-border-default-gray-300"
         } ${task.scheduledDate === null ? "opacity-50 cursor-not-allowed" : ""}`}
         title={task.scheduledDate === null ? "Schedule task to complete it" : ""}
       >
@@ -325,12 +325,12 @@ export function TaskRow({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p
-          className={`text-sm truncate ${isDone ? "line-through text-gray-400" : "text-gray-800"}`}
+          className={`text-sm truncate ${isDone ? "line-through text-tertiary" : "text-primary"}`}
         >
           {task.title}
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-xs text-gray-400">{formatMinutes(task.estimateMin)}</span>
+          <span className="text-xs text-tertiary">{formatMinutes(task.estimateMin)}</span>
           {task.status !== "pending" && task.status !== "done" && (
             <StatusBadge status={task.status} />
           )}
@@ -350,7 +350,7 @@ export function TaskRow({
       <div className="flex gap-1 shrink-0">
         <button
           onClick={() => setEditing(true)}
-          className="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-100"
+          className="rounded px-2 py-1 text-xs text-tertiary hover:bg-surface-raised"
         >
           Edit
         </button>
@@ -358,7 +358,7 @@ export function TaskRow({
           <button
             onClick={handleUnschedule}
             disabled={saving}
-            className="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-100"
+            className="rounded px-2 py-1 text-xs text-tertiary hover:bg-surface-raised"
           >
             To Inbox
           </button>
@@ -465,12 +465,12 @@ export function QuickCapture({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4">
-      <div className="bg-white rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">Quick Capture</h3>
+          <h3 className="font-semibold text-primary">Quick Capture</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-tertiary hover:text-secondary text-xl leading-none"
           >
             ×
           </button>
@@ -482,7 +482,7 @@ export function QuickCapture({
               <input
                 autoFocus
                 required={!importJson}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Task title…"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -493,7 +493,7 @@ export function QuickCapture({
           <div className="flex gap-2">
             <select
               required
-              className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >
@@ -509,7 +509,7 @@ export function QuickCapture({
                 type="number"
                 min={1}
                 max={480}
-                className="w-20 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-20 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="min"
                 value={estimate}
                 onChange={(e) => setEstimate(e.target.value)}
@@ -517,7 +517,7 @@ export function QuickCapture({
             )}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          <label className="flex items-center gap-2 text-sm text-secondary">
             <input
               type="checkbox"
               className="rounded"
@@ -529,11 +529,11 @@ export function QuickCapture({
 
           {!importJson && tasks && tasks.length > 0 && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
+              <label className="block text-xs text-secondary mb-1">
                 Depends On (optional)
               </label>
               <select
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={predecessorId}
                 onChange={(e) => setPredecessorId(e.target.value)}
               >
@@ -545,8 +545,8 @@ export function QuickCapture({
             </div>
           )}
 
-          <div className="border-t pt-3 mt-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+          <div className="border-t border-border-default pt-3 mt-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-secondary cursor-pointer">
               <input
                 type="checkbox"
                 checked={importJson}
@@ -554,29 +554,29 @@ export function QuickCapture({
                   setImportJson(e.target.checked);
                   setError(null);
                 }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border border-border-default-gray-300 text-accent focus:ring-blue-500"
               />
               Import Tasks from JSON
             </label>
           </div>
 
           {importJson && (
-            <div className="space-y-2 pt-2 border-t border-dashed border-gray-200">
+            <div className="space-y-2 pt-2 border-t border-border-default border border-border-default-dashed border border-border-default-gray-200">
               <div className="flex justify-between items-center">
-                <label className="block text-xs font-medium text-gray-500">
+                <label className="block text-xs font-medium text-secondary">
                   Tasks JSON
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowExample(!showExample)}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-accent hover:underline"
                 >
                   {showExample ? "Hide Structure Example" : "Show Structure Example"}
                 </button>
               </div>
 
               {showExample && (
-                <div className="bg-gray-50 border rounded-lg p-2.5 text-[10px] font-mono text-gray-600 overflow-x-auto max-h-40 leading-relaxed whitespace-pre">
+                <div className="bg-surface-raised border border-border-default rounded-lg p-2.5 text-[10px] font-mono text-secondary overflow-x-auto max-h-40 leading-relaxed whitespace-pre">
 {`[
   {
     "id": "task1",
@@ -613,10 +613,10 @@ export function QuickCapture({
                     };
                     reader.readAsText(file);
                   }}
-                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="w-full text-xs text-secondary file:mr-2 file:py-1 file:px-2 file:rounded-md file:border border-border-default-0 file:text-xs file:font-semibold file:bg-accent-subtle file:text-accent hover:file:bg-blue-100"
                 />
                 <textarea
-                  className="w-full border rounded-lg px-3 py-2 text-xs font-mono h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-border-default rounded-lg px-3 py-2 text-xs font-mono h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder='Paste JSON here (e.g. [{"title": "Task 1", "estimate_min": 30}])'
                   value={jsonText}
                   onChange={(e) => setJsonText(e.target.value)}
@@ -630,7 +630,7 @@ export function QuickCapture({
           <button
             type="submit"
             disabled={saving || (!importJson && !title.trim()) || (importJson && !jsonText.trim())}
-            className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-accent py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "Adding…" : "Add Task"}
           </button>
@@ -742,12 +742,12 @@ export function CreateProjectForm({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4">
-      <div className="bg-white rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5">
+      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">New Project</h3>
+          <h3 className="font-semibold text-primary">New Project</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-tertiary hover:text-secondary text-xl leading-none"
           >
             ×
           </button>
@@ -757,7 +757,7 @@ export function CreateProjectForm({
           <input
             autoFocus
             required
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Project name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -765,7 +765,7 @@ export function CreateProjectForm({
 
           <div className="flex gap-2">
             <select
-              className="flex-1 border rounded-lg px-3 py-2 text-sm"
+              className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm"
               value={type}
               onChange={(e) => setType(e.target.value as ProjectType)}
             >
@@ -776,7 +776,7 @@ export function CreateProjectForm({
             </select>
 
             <select
-              className="w-24 border rounded-lg px-3 py-2 text-sm"
+              className="w-24 border border-border-default rounded-lg px-3 py-2 text-sm"
               value={importance}
               onChange={(e) => setImportance(Number(e.target.value))}
             >
@@ -790,12 +790,12 @@ export function CreateProjectForm({
 
           {(type === "critical" || type === "nicetohave") && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
+              <label className="block text-xs text-secondary mb-1">
                 Deadline (optional)
               </label>
               <input
                 type="date"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-border-default rounded-lg px-3 py-2 text-sm"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
               />
@@ -804,7 +804,7 @@ export function CreateProjectForm({
 
           {type === "recurring" && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
+              <label className="block text-xs text-secondary mb-1">
                 Repeat on days:
               </label>
               <div className="flex gap-1">
@@ -813,10 +813,10 @@ export function CreateProjectForm({
                     key={day}
                     type="button"
                     onClick={() => toggleDay(day)}
-                    className={`flex-1 py-1 text-xs rounded border ${
+                    className={`flex-1 py-1 text-xs rounded border border-border-default ${
                       recurrenceDays.includes(day)
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-600 border-gray-300"
+                        ? "bg-accent text-white border border-border-default-blue-600"
+                        : "bg-surface text-secondary border border-border-default-gray-300"
                     }`}
                   >
                     {day.substring(0, 1)}
@@ -831,7 +831,7 @@ export function CreateProjectForm({
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-accent py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "Creating…" : "Create Project"}
           </button>

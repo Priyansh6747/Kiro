@@ -20,7 +20,7 @@ function RatioBar({ ratio }: { ratio: number }) {
   return (
     <div className="space-y-0.5">
       <ProgressBar value={ratio} max={1} color={color} />
-      <p className="text-xs text-gray-500 text-right">{pct}%</p>
+      <p className="text-xs text-secondary text-right">{pct}%</p>
     </div>
   );
 }
@@ -35,10 +35,10 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded border bg-white p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    <div className="rounded border border-border-default bg-surface p-4">
+      <p className="text-xs text-secondary uppercase tracking-wide">{label}</p>
+      <p className="text-2xl font-bold text-primary mt-1">{value}</p>
+      {sub && <p className="text-xs text-tertiary mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -142,8 +142,8 @@ export default function InsightsPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-        <h1 className="font-semibold text-gray-800">Insights</h1>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-default bg-surface">
+        <h1 className="font-semibold text-primary">Insights</h1>
         <div className="flex gap-1">
           {[7, 30, 90].map((d) => (
             <button
@@ -151,8 +151,8 @@ export default function InsightsPage() {
               onClick={() => setDays(d)}
               className={`rounded px-2 py-1 text-xs ${
                 days === d
-                  ? "bg-blue-600 text-white"
-                  : "border text-gray-600 hover:bg-gray-50"
+                  ? "bg-accent text-white"
+                  : "border border-border-default text-secondary hover:bg-surface-raised"
               }`}
             >
               {d}d
@@ -164,7 +164,7 @@ export default function InsightsPage() {
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Overview */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
+          <p className="text-xs font-semibold text-tertiary uppercase mb-3">
             Overview — last {days} days
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -189,17 +189,17 @@ export default function InsightsPage() {
 
         {/* Consistency */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
+          <p className="text-xs font-semibold text-tertiary uppercase mb-3">
             Consistency
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded border bg-white p-4 space-y-1">
-              <p className="text-xs text-gray-500">7-day rolling avg</p>
+            <div className="rounded border border-border-default bg-surface p-4 space-y-1">
+              <p className="text-xs text-secondary">7-day rolling avg</p>
               <p className="text-lg font-bold">{Math.round(rolling7 * 100)}%</p>
               <RatioBar ratio={rolling7} />
             </div>
-            <div className="rounded border bg-white p-4 space-y-1">
-              <p className="text-xs text-gray-500">{days}-day avg</p>
+            <div className="rounded border border-border-default bg-surface p-4 space-y-1">
+              <p className="text-xs text-secondary">{days}-day avg</p>
               <p className="text-lg font-bold">{Math.round(avgRatio * 100)}%</p>
               <RatioBar ratio={avgRatio} />
             </div>
@@ -208,7 +208,7 @@ export default function InsightsPage() {
 
         {/* Recent Days */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
+          <p className="text-xs font-semibold text-tertiary uppercase mb-3">
             Recent Days
           </p>
           {logs.length === 0 ? (
@@ -218,20 +218,20 @@ export default function InsightsPage() {
               description="Confirm your day to start tracking."
             />
           ) : (
-            <div className="rounded border bg-white overflow-hidden">
+            <div className="rounded border border-border-default bg-surface overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-surface-raised border-b border-border-default">
                   <tr>
-                    <th className="text-left px-3 py-2 text-gray-500 font-medium">Date</th>
-                    <th className="text-center px-3 py-2 text-gray-500 font-medium">Done</th>
-                    <th className="text-center px-3 py-2 text-gray-500 font-medium">Missed</th>
-                    <th className="text-right px-3 py-2 text-gray-500 font-medium">Ratio</th>
+                    <th className="text-left px-3 py-2 text-secondary font-medium">Date</th>
+                    <th className="text-center px-3 py-2 text-secondary font-medium">Done</th>
+                    <th className="text-center px-3 py-2 text-secondary font-medium">Missed</th>
+                    <th className="text-right px-3 py-2 text-secondary font-medium">Ratio</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedLogs.slice(0, 30).map((log) => (
-                    <tr key={log.id} className="border-t">
-                      <td className="px-3 py-2 text-gray-700">
+                    <tr key={log.id} className="border-t border-border-default">
+                      <td className="px-3 py-2 text-secondary">
                         {formatUnixDay(log.date)}
                       </td>
                       <td className="px-3 py-2 text-center text-green-600 font-medium">
@@ -265,12 +265,12 @@ export default function InsightsPage() {
 
         {/* Project Health */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
+          <p className="text-xs font-semibold text-tertiary uppercase mb-3">
             Project Health
           </p>
 
           {neglected.length === 0 && approaching.length === 0 ? (
-            <div className="rounded border bg-white p-4 text-sm text-gray-500 text-center">
+            <div className="rounded border border-border-default bg-surface p-4 text-sm text-secondary text-center">
               All projects look healthy 👍
             </div>
           ) : (

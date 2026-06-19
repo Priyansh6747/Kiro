@@ -43,11 +43,11 @@ function ProjectCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded border bg-white p-4 hover:shadow-sm transition-shadow space-y-3"
+      className="w-full text-left rounded border border-border-default bg-surface p-4 hover:shadow-sm transition-shadow space-y-3"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-gray-800 text-sm">{project.name}</p>
+          <p className="font-medium text-primary text-sm">{project.name}</p>
           {project.deadlineAt && (
             <p className="text-xs text-orange-500 mt-0.5">
               Due {formatTimestamp(project.deadlineAt)}
@@ -56,13 +56,13 @@ function ProjectCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           <TypeBadge type={project.type} />
-          <span className="text-xs text-gray-400">P{project.importance}</span>
+          <span className="text-xs text-tertiary">P{project.importance}</span>
         </div>
       </div>
 
       {taskCount > 0 && (
         <div className="space-y-1">
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-secondary">
             <span>{doneCount}/{taskCount} tasks</span>
             <span>{Math.round(pct * 100)}%</span>
           </div>
@@ -71,7 +71,7 @@ function ProjectCard({
       )}
 
       {taskCount === 0 && (
-        <p className="text-xs text-gray-400">No tasks yet</p>
+        <p className="text-xs text-tertiary">No tasks yet</p>
       )}
     </button>
   );
@@ -241,10 +241,10 @@ function ProjectWorkspace({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <div className="border-b bg-white px-4 py-3">
+      <div className="border-b border-border-default bg-surface px-4 py-3">
         <button
           onClick={onBack}
-          className="text-xs text-blue-600 hover:underline mb-2 block"
+          className="text-xs text-accent hover:underline mb-2 block"
         >
           ← Back to Projects
         </button>
@@ -254,13 +254,13 @@ function ProjectWorkspace({
             <input
               autoFocus
               required
-              className="w-full border rounded px-2 py-1 text-sm"
+              className="w-full border border-border-default rounded px-2 py-1 text-sm"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
             />
             <div className="flex gap-2 flex-wrap">
               <select
-                className="border rounded px-2 py-1 text-sm"
+                className="border border-border-default rounded px-2 py-1 text-sm"
                 value={editType}
                 onChange={(e) => setEditType(e.target.value as typeof editType)}
               >
@@ -270,7 +270,7 @@ function ProjectWorkspace({
                 <option value="nicetohave">Nice To Have</option>
               </select>
               <select
-                className="border rounded px-2 py-1 text-sm"
+                className="border border-border-default rounded px-2 py-1 text-sm"
                 value={editImportance}
                 onChange={(e) => setEditImportance(Number(e.target.value))}
               >
@@ -283,7 +283,7 @@ function ProjectWorkspace({
               {(editType === "critical" || editType === "nicetohave") && (
                 <input
                   type="date"
-                  className="border rounded px-2 py-1 text-sm"
+                  className="border border-border-default rounded px-2 py-1 text-sm"
                   value={editDeadline}
                   onChange={(e) => setEditDeadline(e.target.value)}
                 />
@@ -293,14 +293,14 @@ function ProjectWorkspace({
               <button
                 type="submit"
                 disabled={savingEdit}
-                className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
+                className="rounded bg-accent px-3 py-1 text-xs text-white hover:bg-blue-700"
               >
                 {savingEdit ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded border px-3 py-1 text-xs"
+                className="rounded border border-border-default px-3 py-1 text-xs"
               >
                 Cancel
               </button>
@@ -309,10 +309,10 @@ function ProjectWorkspace({
         ) : (
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-gray-800">{project.name}</h2>
+              <h2 className="font-semibold text-primary">{project.name}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <TypeBadge type={project.type} />
-                <span className="text-xs text-gray-400">P{project.importance}</span>
+                <span className="text-xs text-tertiary">P{project.importance}</span>
                 {project.deadlineAt && (
                   <span className="text-xs text-orange-500">
                     Due {formatTimestamp(project.deadlineAt)}
@@ -323,13 +323,13 @@ function ProjectWorkspace({
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={exportTasksToJson}
-                className="text-xs text-gray-500 hover:underline"
+                className="text-xs text-secondary hover:underline"
               >
                 Export
               </button>
               <button
                 onClick={() => setEditing(true)}
-                className="text-xs text-gray-500 hover:underline"
+                className="text-xs text-secondary hover:underline"
               >
                 Edit
               </button>
@@ -348,16 +348,16 @@ function ProjectWorkspace({
 
       {/* Timeline */}
       {tasksByDeadline.length > 0 && (
-        <div className="border-b bg-gray-50 px-4 py-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Timeline</p>
+        <div className="border-b border-border-default bg-surface-raised px-4 py-3">
+          <p className="text-xs font-semibold text-secondary uppercase mb-2">Timeline</p>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {tasksByDeadline.map((t) => (
               <div
                 key={t.id}
-                className="shrink-0 bg-white border rounded px-3 py-2 text-xs"
+                className="shrink-0 bg-surface border border-border-default rounded px-3 py-2 text-xs"
               >
-                <p className="font-medium text-gray-700 max-w-[120px] truncate">{t.title}</p>
-                <p className="text-gray-400">{formatTimestamp(t.deadlineAt)}</p>
+                <p className="font-medium text-secondary max-w-[120px] truncate">{t.title}</p>
+                <p className="text-tertiary">{formatTimestamp(t.deadlineAt)}</p>
                 <StatusBadge status={t.status} />
               </div>
             ))}
@@ -366,14 +366,14 @@ function ProjectWorkspace({
       )}
 
       {/* Chart View Toggle */}
-      <div className="px-4 py-2 bg-gray-50 border-b flex items-center justify-between">
-        <p className="text-xs font-semibold text-gray-500 uppercase">Dependency Chart</p>
-        <button onClick={() => setShowChart(!showChart)} className="text-xs text-blue-600 hover:underline">
+      <div className="px-4 py-2 bg-surface-raised border-b border-border-default flex items-center justify-between">
+        <p className="text-xs font-semibold text-secondary uppercase">Dependency Chart</p>
+        <button onClick={() => setShowChart(!showChart)} className="text-xs text-accent hover:underline">
           {showChart ? "Hide Chart" : "Show Chart"}
         </button>
       </div>
       {showChart && (
-         <div className="p-4 border-b bg-white relative">
+         <div className="p-4 border-b border-border-default bg-surface relative">
            <DependencyChart 
              tasks={tasks} 
              dependencies={dependencies} 
@@ -388,7 +388,7 @@ function ProjectWorkspace({
       {/* Main content: task list + detail */}
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Task List */}
-        <div className="flex-1 flex flex-col min-w-0 border-r">
+        <div className="flex-1 flex flex-col min-w-0 border-r border-border-default">
           <SectionHeader
             title={`Tasks (${tasks.length})`}
             action={
@@ -397,7 +397,7 @@ function ProjectWorkspace({
                   setCapturePredecessorId(undefined);
                   setShowCapture(true);
                 }}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-accent hover:underline"
               >
                 + Add
               </button>
@@ -419,7 +419,7 @@ function ProjectWorkspace({
               {tasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`cursor-pointer ${selectedTask?.id === task.id ? "bg-blue-50" : ""}`}
+                  className={`cursor-pointer ${selectedTask?.id === task.id ? "bg-accent-subtle" : ""}`}
                   onClick={() => setSelectedTask(task)}
                 >
                   <TaskRow
@@ -434,7 +434,7 @@ function ProjectWorkspace({
         </div>
 
         {/* Task Detail Panel */}
-        <div className="w-full md:w-72 shrink-0 bg-white border-t md:border-t-0">
+        <div className="w-full md:w-72 shrink-0 bg-surface border-t border-border-default md:border-t-0">
           {selectedTask ? (
             <TaskDetailPanel
               task={selectedTask}
@@ -445,7 +445,7 @@ function ProjectWorkspace({
               onDependencyRemoved={loadTasks}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-400 text-sm">
+            <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-tertiary text-sm">
               Select a task to view details
             </div>
           )}
@@ -530,32 +530,32 @@ function TaskDetailPanel({
   return (
     <div className="p-4 space-y-4 overflow-y-auto">
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Task</p>
-        <p className="text-sm font-medium text-gray-800">{task.title}</p>
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">Task</p>
+        <p className="text-sm font-medium text-primary">{task.title}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div>
-          <p className="text-gray-400 mb-0.5">Status</p>
+          <p className="text-tertiary mb-0.5">Status</p>
           <StatusBadge status={task.status} />
         </div>
         <div>
-          <p className="text-gray-400 mb-0.5">Estimate</p>
+          <p className="text-tertiary mb-0.5">Estimate</p>
           <p className="font-medium">{task.estimateMin}m</p>
         </div>
         <div>
-          <p className="text-gray-400 mb-0.5">Deadline</p>
+          <p className="text-tertiary mb-0.5">Deadline</p>
           <p className="font-medium">{formatTimestamp(task.deadlineAt)}</p>
         </div>
         <div>
-          <p className="text-gray-400 mb-0.5">Created</p>
+          <p className="text-tertiary mb-0.5">Created</p>
           <p className="font-medium">{formatTimestamp(task.createdAt)}</p>
         </div>
       </div>
 
       {/* Status quick-change */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Change Status</p>
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">Change Status</p>
         <div className="flex flex-wrap gap-1">
           {(["pending", "done", "missed"] as const).map((s) => (
             <button
@@ -569,10 +569,10 @@ function TaskDetailPanel({
                   alert((e as Error).message);
                 }
               }}
-              className={`rounded px-2 py-1 text-xs border ${
+              className={`rounded px-2 py-1 text-xs border border-border-default ${
                 task.status === s
-                  ? "bg-gray-100 text-gray-400"
-                  : "hover:bg-gray-50"
+                  ? "bg-surface-raised text-tertiary"
+                  : "hover:bg-surface-raised"
               }`}
             >
               {s}
@@ -583,7 +583,7 @@ function TaskDetailPanel({
 
       {/* Dependencies */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dependencies</p>
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">Dependencies</p>
         
         {/* Existing dependencies list */}
         {currentDeps.length > 0 && (
@@ -591,7 +591,7 @@ function TaskDetailPanel({
             {currentDeps.map((dep) => {
               const predTask = allTasks.find(t => t.id === dep.predecessorId);
               return (
-                <div key={dep.predecessorId} className="flex items-center justify-between bg-gray-50 border rounded px-2 py-1 text-xs">
+                <div key={dep.predecessorId} className="flex items-center justify-between bg-surface-raised border border-border-default rounded px-2 py-1 text-xs">
                   <span className="truncate flex-1 mr-2">{predTask?.title || "Unknown task"}</span>
                   <button
                     onClick={() => removeDep(dep.predecessorId)}
@@ -609,7 +609,7 @@ function TaskDetailPanel({
         {/* Add new dependency */}
         <div className="flex gap-1">
           <select
-            className="flex-1 border rounded px-2 py-1 text-xs"
+            className="flex-1 border border-border-default rounded px-2 py-1 text-xs"
             value={depPredId}
             onChange={(e) => setDepPredId(e.target.value)}
           >
@@ -625,7 +625,7 @@ function TaskDetailPanel({
           <button
             disabled={!depPredId || addingDep}
             onClick={addDep}
-            className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded bg-accent px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {addingDep ? "…" : "Add"}
           </button>
@@ -721,11 +721,11 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
-        <h1 className="font-semibold text-gray-800">Projects</h1>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-default bg-surface">
+        <h1 className="font-semibold text-primary">Projects</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+          className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
         >
           + New Project
         </button>
@@ -735,7 +735,7 @@ export default function ProjectsPage() {
         {/* Default / Todo project */}
         {defaultProject && (
           <section>
-            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Inbox / Todo</p>
+            <p className="text-xs font-semibold text-tertiary uppercase mb-2">Inbox / Todo</p>
             <ProjectCard
               project={defaultProject}
               taskCount={taskStats[defaultProject.id]?.total ?? 0}
@@ -750,7 +750,7 @@ export default function ProjectsPage() {
           if (!items || items.length === 0) return null;
           return (
             <section key={type}>
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
+              <p className="text-xs font-semibold text-tertiary uppercase mb-2">
                 {type === "nicetohave" ? "Nice To Have" : type.charAt(0).toUpperCase() + type.slice(1)}
               </p>
               <div className="space-y-3">
