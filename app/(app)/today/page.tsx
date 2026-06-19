@@ -134,7 +134,8 @@ function TodayPageContent() {
   if (!plan) return null;
 
   const scheduledTasks = plan.tasks;
-  
+  const totalPlannedMin = scheduledTasks.reduce((sum, t) => sum + (t.estimateMin || 30), 0);
+
   // Find tasks scheduled for today but NOT in dayPlans (Timeline)
   const placedTaskIds = new Set(plan.dayPlans.map(dp => dp.taskId));
   const anyTimeTasks = scheduledTasks.filter(t => !placedTaskIds.has(t.id));
@@ -147,7 +148,7 @@ function TodayPageContent() {
 
   return (
     <div className="flex flex-col flex-1 h-screen overflow-hidden bg-base">
-      <ArcDial selectedDate={selectedDate} onChange={handleDateChange} />
+      <ArcDial selectedDate={selectedDate} onChange={handleDateChange} totalPlannedMin={totalPlannedMin} />
       
       <div className="relative flex flex-1 overflow-hidden bg-surface">
         {/* Skeleton loader sits underneath, revealed as old content slides out, if network is slow */}
@@ -159,14 +160,16 @@ function TodayPageContent() {
         
         <div 
           key={displayedDate} 
-          className={`flex flex-1 overflow-hidden relative w-full h-full bg-surface z-10 ${
+          className={`flex flex-col flex-1 overflow-hidden relative w-full h-full bg-surface z-10 ${
             isExiting 
               ? (slideDirection === 'left' ? 'animate-slide-out-left' : 'animate-slide-out-right') 
               : `animate-slide-${slideDirection}`
           }`}
         >
-          {/* Any Time Today Panel */}
-          <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0 overflow-y-auto">
+          {/* Body */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Any Time Today Panel */}
+            <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0 overflow-y-auto">
           <h3 className="text-lg font-medium text-primary mb-6 tracking-wide">Any Time Today</h3>
           
           <div className="space-y-4 mb-8">
@@ -228,6 +231,7 @@ function TodayPageContent() {
             onClose={() => setIsBucketOpen(false)}
           />
         )}
+          </div>
         </div>
       </div>
     </div>

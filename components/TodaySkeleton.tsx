@@ -1,7 +1,9 @@
 export function TodaySkeleton() {
   return (
-    <div className="flex flex-1 overflow-hidden bg-base h-full w-full">
-      <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0">
+    <div className="flex flex-col flex-1 overflow-hidden bg-base h-full w-full">
+      {/* Body */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0">
         <div className="h-6 w-32 bg-border-default animate-pulse rounded mb-6"></div>
         <div className="space-y-4 mb-8">
           {[1, 2, 3].map(i => (
@@ -21,6 +23,7 @@ export function TodaySkeleton() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

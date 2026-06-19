@@ -6,9 +6,10 @@ import { todayUnixDay } from "@/lib/types";
 interface ArcDialProps {
   selectedDate: number;
   onChange: (date: number) => void;
+  totalPlannedMin?: number;
 }
 
-export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
+export function ArcDial({ selectedDate, onChange, totalPlannedMin = 0 }: ArcDialProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dates, setDates] = useState<number[]>([]);
   const itemWidth = 80; // width of each item slot
@@ -100,9 +101,21 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
 
   const selectedDateObj = new Date(selectedDate * 86400000);
 
+  const cap = 480;
+  const ratio = Math.min(totalPlannedMin / cap, 1);
+  const isOverload = totalPlannedMin > cap;
+
+  const formatTime = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  };
+
   return (
     <div 
-      className="w-full border-b pt-4 pb-2 relative overflow-hidden flex flex-col items-center transition-colors duration-300"
+      className="w-full border-b pt-4 relative overflow-hidden flex flex-col items-center transition-colors duration-300"
       style={{ 
         background: 'var(--bg-header, var(--color-surface))',
         borderColor: 'var(--border-header, var(--color-border-default))'
@@ -118,14 +131,36 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
       </div>
 
       <div 
-        className="w-full relative h-[100px] overflow-hidden"
+        className="w-full relative h-[124px] overflow-hidden"
       >
-        {/* The SVG Arc Background */}
+        {/* The SVG Arc Background with Progress */}
         <svg 
-          className="absolute top-8 left-0 w-full h-[60px] pointer-events-none transition-colors duration-300" 
-          viewBox="0 0 1000 60" 
+          className="absolute top-8 left-0 w-full h-[92px] pointer-events-none transition-colors duration-300" 
+          viewBox="0 0 1000 92" 
           preserveAspectRatio="none"
         >
+          <defs>
+            <clipPath id="arcProgressClip">
+              <rect x="0" y="0" height="92" width={`${ratio * 1000}`} className="transition-all duration-500" />
+            </clipPath>
+          </defs>
+
+          {/* Base capacity area */}
+          <path 
+            d="M 0 60 Q 500 -10 1000 60 L 1000 92 L 0 92 Z" 
+            style={{ fill: 'var(--bg-surface-raised)' }}
+            className="opacity-70"
+          />
+          
+          {/* Progress area */}
+          <path 
+            d="M 0 60 Q 500 -10 1000 60 L 1000 92 L 0 92 Z" 
+            style={{ fill: isOverload ? 'var(--status-warning)' : 'var(--accent)' }}
+            className="opacity-30 transition-all duration-500"
+            clipPath="url(#arcProgressClip)"
+          />
+
+          {/* Arc stroke line */}
           <path 
             d="M 0 60 Q 500 -10 1000 60" 
             fill="none" 
@@ -196,6 +231,24 @@ export function ArcDial({ selectedDate, onChange }: ArcDialProps) {
               </div>
             );
           })}
+        </div>
+        
+        {/* Progress Text */}
+        <div className="absolute bottom-2 left-6 z-10 pointer-events-none">
+          <span 
+            className="text-[10px] font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {formatTime(totalPlannedMin)} planned
+          </span>
+        </div>
+        <div className="absolute bottom-2 right-6 z-10 pointer-events-none">
+          <span 
+            className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: isOverload ? 'var(--status-warning)' : 'var(--accent)' }}
+          >
+            {isOverload ? 'Overload' : 'Chill'}
+          </span>
         </div>
       </div>
 
