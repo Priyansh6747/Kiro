@@ -8,6 +8,7 @@ import { LoadingScreen, ErrorBanner } from "@/components/ui";
 import { Timeline } from "@/components/Timeline";
 import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
+import { TodaySkeleton } from "@/components/TodaySkeleton";
 
 export default function TodayPage() {
   return (
@@ -148,16 +149,24 @@ function TodayPageContent() {
     <div className="flex flex-col flex-1 h-screen overflow-hidden bg-base">
       <ArcDial selectedDate={selectedDate} onChange={handleDateChange} />
       
-      <div 
-        key={displayedDate} 
-        className={`flex flex-1 overflow-hidden relative ${
-          isExiting 
-            ? (slideDirection === 'left' ? 'animate-slide-out-left' : 'animate-slide-out-right') 
-            : `animate-slide-${slideDirection}`
-        }`}
-      >
-        {/* Any Time Today Panel */}
-        <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0 overflow-y-auto">
+      <div className="relative flex flex-1 overflow-hidden bg-surface">
+        {/* Skeleton loader sits underneath, revealed as old content slides out, if network is slow */}
+        {isExiting && (
+          <div className="absolute inset-0 z-0">
+            <TodaySkeleton />
+          </div>
+        )}
+        
+        <div 
+          key={displayedDate} 
+          className={`flex flex-1 overflow-hidden relative w-full h-full bg-surface z-10 ${
+            isExiting 
+              ? (slideDirection === 'left' ? 'animate-slide-out-left' : 'animate-slide-out-right') 
+              : `animate-slide-${slideDirection}`
+          }`}
+        >
+          {/* Any Time Today Panel */}
+          <div className="w-64 border-r border-border-default flex flex-col p-6 bg-surface shrink-0 overflow-y-auto">
           <h3 className="text-lg font-medium text-primary mb-6 tracking-wide">Any Time Today</h3>
           
           <div className="space-y-4 mb-8">
@@ -219,6 +228,7 @@ function TodayPageContent() {
             onClose={() => setIsBucketOpen(false)}
           />
         )}
+        </div>
       </div>
     </div>
   );
