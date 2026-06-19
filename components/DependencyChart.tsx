@@ -161,7 +161,7 @@ export function DependencyChart({
 
   return (
     <div style={{ height: 500, width: "100%", border: "1px solid var(--border-default)", borderRadius: "12px", background: "var(--bg-surface-raised)" }}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView colorMode={theme}>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView colorMode={theme === 'paper' || theme === 'sage' ? 'light' : 'dark'}>
         <Background color="var(--border-strong)" gap={16} size={2} />
         <Controls />
       </ReactFlow>

@@ -35,34 +35,52 @@ export function BottomNav() {
   );
 }
 
+import { useUser } from "@clerk/nextjs";
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
 
   return (
-    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border-default bg-surface h-screen sticky top-0">
-      <div className="px-4 py-5 border-b border-border-default">
-        <h1 className="text-lg font-bold tracking-tight text-primary">Kiro</h1>
-        <p className="text-xs text-secondary mt-0.5">Daily execution</p>
+    <aside className="hidden md:flex flex-col w-48 lg:w-56 shrink-0 border-r border-border-default bg-surface h-screen sticky top-0 justify-between">
+      <div>
+        <div className="px-6 py-6">
+          <h1 className="text-xl font-mono tracking-tight text-primary">Kiro</h1>
+        </div>
+        <nav className="flex flex-col gap-3 px-6 mt-4">
+          {NAV_ITEMS.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`text-lg tracking-wide ${
+                  active
+                    ? "text-primary font-medium"
+                    : "text-secondary hover:text-primary transition-colors"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-      <nav className="flex flex-col gap-1 p-3 flex-1">
-        {NAV_ITEMS.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded text-sm ${
-                active
-                  ? "bg-accent-subtle text-accent font-semibold"
-                  : "text-secondary hover:bg-surface-raised"
-              }`}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+
+      {user && (
+        <div className="p-6 flex items-center gap-3 mt-auto">
+          <img 
+            src={user.imageUrl} 
+            alt="Profile" 
+            className="w-10 h-10 rounded-full border border-border-default"
+          />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-primary leading-tight">
+              {user.fullName || user.firstName || "User"}
+            </span>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
