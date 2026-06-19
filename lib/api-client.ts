@@ -20,8 +20,12 @@ async function request<T>(
 
 // ── Planner ───────────────────────────────────────────────────────────────────
 
-export const getTodayPlan = () =>
-  request<import("./types").TodayPlannerData>("/api/planner/today");
+export const getTodayPlan = (date?: number) => {
+  const sp = new URLSearchParams();
+  if (date != null) sp.set("date", String(date));
+  const query = sp.toString() ? `?${sp.toString()}` : "";
+  return request<import("./types").TodayPlannerData>(`/api/planner/today${query}`);
+};
 
 export const confirmDay = (availableMin?: number) =>
   request<import("./types").DayLog>("/api/planner/today/confirm", {

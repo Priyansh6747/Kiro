@@ -5,6 +5,8 @@
  * they go through functions exported from this module.
  */
 
+import { revalidateTag, cacheTag, cacheLife } from "next/cache";
+
 import {
   and,
   asc,
@@ -138,7 +140,7 @@ export async function getOrCreatePreferences(
     const code = errObj && "code" in errObj ? String(errObj.code) : "";
 
     let causeCode = "";
-    if (
+    if(
       errObj &&
       "cause" in errObj &&
       errObj.cause &&
@@ -626,7 +628,7 @@ export async function listDayLogs(
     .orderBy(desc(dayLogs.date));
 }
 
-export async function findDayLog(
+async function fetchDayLogFromDB(
   userId: string,
   date: number,
 ): Promise<DayLog | undefined> {
@@ -636,6 +638,29 @@ export async function findDayLog(
     .where(and(eq(dayLogs.userId, userId), eq(dayLogs.date, date)))
     .limit(1);
   return rows[0];
+}
+
+async function getCachedDayLog(
+  userId: string,
+  date: number,
+): Promise<DayLog | undefined> {
+  "use cache";
+  const today = Math.floor(Date.now() / 86400000);
+  // @ts-expect-error Types might not be fully generated yet
+  cacheLife(date < today - 1 ? "archive" : "yesterday");
+  cacheTag(`daylog-${userId}-${date}`);
+  return fetchDayLogFromDB(userId, date);
+}
+
+export async function findDayLog(
+  userId: string,
+  date: number,
+): Promise<DayLog | undefined> {
+  const today = Math.floor(Date.now() / 86400000);
+  if (date >= today) {
+    return fetchDayLogFromDB(userId, date);
+  }
+  return getCachedDayLog(userId, date);
 }
 
 /**
@@ -656,10 +681,12 @@ export async function upsertDayLog(
       })
       .where(and(eq(dayLogs.userId, data.userId), eq(dayLogs.date, data.date)))
       .returning();
+    revalidateTag(`daylog-${data.userId}-${data.date}`, "yesterday");
     return rows[0];
   }
 
   const rows = await db.insert(dayLogs).values(data).returning();
+  revalidateTag(`daylog-${data.userId}-${data.date}`, "yesterday");
   return rows[0];
 }
 
@@ -683,6 +710,7 @@ export async function updateDayLog(
     .set(data)
     .where(and(eq(dayLogs.userId, userId), eq(dayLogs.date, date)))
     .returning();
+  revalidateTag(`daylog-${userId}-${date}`, "yesterday");
   return rows[0];
 }
 

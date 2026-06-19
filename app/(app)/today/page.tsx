@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import type { Task, Project, TodayPlannerData, MorningNudgeData } from "@/lib/types";
 import { formatMinutes, todayUnixDay } from "@/lib/types";
 import {
@@ -26,6 +26,14 @@ import {
 import { Timeline } from "@/components/Timeline";
 
 export default function TodayPage() {
+  return (
+    <Suspense fallback={<LoadingScreen message="Loading today's plan…" />}>
+      <TodayPageContent />
+    </Suspense>
+  );
+}
+
+function TodayPageContent() {
   const [plan, setPlan] = useState<TodayPlannerData | null>(null);
   const [bucketTasks, setBucketTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,6 +48,7 @@ export default function TodayPage() {
   const [eodLoading, setEodLoading] = useState(false);
   const [eodError, setEodError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<number>(todayUnixDay());
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
   const toggleProject = (projectId: string) => {
@@ -54,7 +63,7 @@ export default function TodayPage() {
     setError(null);
     try {
       const [planData, bucket, projs] = await Promise.all([
-        getTodayPlan(),
+        getTodayPlan(selectedDate),
         listTasks({ bucket: true }),
         listProjects(),
       ]);
@@ -66,7 +75,7 @@ export default function TodayPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     load();
@@ -113,7 +122,7 @@ export default function TodayPage() {
   const scheduleFromBucket = async (task: Task) => {
     try {
       const updated = await updateTask(task.id, {
-        scheduled_date: todayUnixDay(),
+        scheduled_date: selectedDate,
       });
       // Move from bucket to scheduled
       setBucketTasks((prev) => prev.filter((t) => t.id !== task.id));
@@ -197,8 +206,35 @@ export default function TodayPage() {
     return acc;
   }, {} as Record<string, Task[]>);
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!val) return;
+    const [year, month, day] = val.split("-").map(Number);
+    const newDate = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+    if (newDate <= todayUnixDay()) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  const isoDate = new Date(selectedDate * 86400000).toISOString().split("T")[0];
+  const maxDate = new Date(todayUnixDay() * 86400000).toISOString().split("T")[0];
+
   return (
     <div className="flex flex-col flex-1">
+      {/* Date Header */}
+      <div className="border-b bg-white px-4 py-2 flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-gray-800">
+          {selectedDate === todayUnixDay() ? "Today" : "Past Log"}
+        </h1>
+        <input 
+          type="date"
+          className="text-sm border rounded px-2 py-1 text-gray-700"
+          value={isoDate}
+          max={maxDate}
+          onChange={handleDateChange}
+        />
+      </div>
+
       {/* Desktop: two-column */}
       <div className="flex flex-col md:flex-row flex-1 gap-0 min-h-0">
         {/* ── Left / Main column ── */}
@@ -210,8 +246,9 @@ export default function TodayPage() {
               action={
                 <button
                   onClick={handleNudge}
-                  disabled={nudgeLoading}
+                  disabled={nudgeLoading || selectedDate !== todayUnixDay()}
                   className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                  title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
                 >
                   {nudgeLoading ? "Generating…" : "Generate"}
                 </button>
@@ -245,7 +282,7 @@ export default function TodayPage() {
           {/* Today's Tasks */}
           <div className="flex-1 flex flex-col">
             <SectionHeader
-              title={`Today's Tasks (${doneCount}/${scheduledTasks.length})`}
+              title={`${selectedDate === todayUnixDay() ? "Today's" : "Past"} Tasks (${doneCount}/${scheduledTasks.length})`}
               action={
                 <button
                   onClick={() => setShowCapture(true)}
@@ -320,15 +357,17 @@ export default function TodayPage() {
             <div className="px-4 py-3 space-y-2">
               <button
                 onClick={handleConfirm}
-                disabled={confirmLoading}
+                disabled={confirmLoading || selectedDate !== todayUnixDay()}
                 className="w-full rounded border border-blue-600 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
               >
                 {confirmLoading ? "Confirming…" : plan.dayLog ? "Re-confirm Day" : "Confirm Day"}
               </button>
               <button
                 onClick={handleEod}
-                disabled={eodLoading}
+                disabled={eodLoading || selectedDate !== todayUnixDay()}
                 className="w-full rounded border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                title={selectedDate !== todayUnixDay() ? "Only available for today" : ""}
               >
                 {eodLoading ? "Generating…" : "End-of-Day Summary"}
               </button>
@@ -403,7 +442,7 @@ export default function TodayPage() {
                                   onClick={() => scheduleFromBucket(task)}
                                   className="text-xs text-blue-600 hover:underline"
                                 >
-                                  → Schedule today
+                                  → {selectedDate === todayUnixDay() ? "Schedule today" : "Schedule for this day"}
                                 </button>
                               </div>
                             </div>
@@ -431,7 +470,7 @@ export default function TodayPage() {
       {showCapture && (
         <QuickCapture
           projects={projects}
-          defaultScheduledDate={todayUnixDay()}
+          defaultScheduledDate={selectedDate}
           onCreated={(task) => {
             const tasksList = Array.isArray(task) ? task : [task];
             for (const t of tasksList) {

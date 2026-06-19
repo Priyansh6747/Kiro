@@ -29,13 +29,15 @@ function ruleMatchesToday(rule: string, dateObj: Date): boolean {
   return days.includes(todayStr);
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const prefs = await getOrCreatePreferences(userId);
 
-  const todayDate = todayUnixDay(prefs.timezone);
+  const { searchParams } = new URL(req.url);
+  const dateParam = searchParams.get("date");
+  const todayDate = dateParam ? parseInt(dateParam, 10) : todayUnixDay(prefs.timezone);
   const now = nowSec();
 
   // ── Auto-generate recurring instances for today ──────────────────────────
