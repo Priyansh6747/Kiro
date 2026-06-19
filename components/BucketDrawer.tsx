@@ -8,9 +8,10 @@ interface BucketDrawerProps {
   projects: Project[];
   onSchedule: (task: Task) => void;
   onClose: () => void;
+  swipingOutTaskIds?: Set<string>;
 }
 
-export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClose }: BucketDrawerProps) {
+export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClose, swipingOutTaskIds }: BucketDrawerProps) {
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
 
   const toggleProject = (projectId: string) => {
@@ -51,8 +52,10 @@ export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClo
               
               {!isCollapsed && (
                 <div className="flex flex-col bg-surface">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="group relative flex flex-col p-3 border-b border-border-default last:border-0 hover:bg-surface-raised transition-colors">
+                  {tasks.map((task) => {
+                    const isSwipingOut = swipingOutTaskIds?.has(task.id);
+                    return (
+                    <div key={task.id} className={`group relative flex flex-col p-3 border-b border-border-default last:border-0 hover:bg-surface-raised transition-colors ${isSwipingOut ? 'animate-slide-out-left' : ''}`}>
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-sm text-primary">{task.title}</span>
                         <span className="text-xs text-secondary">{task.estimateMin}m</span>
@@ -70,7 +73,7 @@ export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClo
                         <span className="ml-auto text-tertiary">Deadline</span>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>
