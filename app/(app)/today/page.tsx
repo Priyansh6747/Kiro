@@ -114,12 +114,17 @@ function TodayPageContent() {
       
       setTimeout(() => {
         setPlan(prev => prev ? { ...prev, tasks: prev.tasks.filter(t => t.id !== task.id) } : prev);
-        setBucketTasks(prev => [...prev, task]);
+        setBucketTasks(prev => {
+          // Only add back if it's not already there
+          if (prev.some(t => t.id === task.id)) return prev;
+          return [...prev, task];
+        });
         setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[task.id];
           return next;
         });
+        listTasks({ bucket: true }).then(setBucketTasks);
       }, 500);
     }
   };
@@ -165,6 +170,7 @@ function TodayPageContent() {
           delete next[task.id];
           return next;
         });
+        listTasks({ bucket: true }).then(setBucketTasks);
       }, 500);
     }
   };
@@ -245,14 +251,54 @@ function TodayPageContent() {
         });
       }, 500);
     } catch (e) {
-      // 3. Error Blink & Revert
       showToast("Failed to remove block: " + (e as Error).message, 'error');
+      // 3. Error Blink & Revert
       setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'error' }));
       setTimeout(() => {
         setPlan(prev => prev ? { ...prev, dayPlans: prevDayPlans } : prev);
         setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
+          return next;
+        });
+      }, 500);
+    }
+  };
+
+  const handleMarkDone = async (task: Task) => {
+    const isCompleted = task.status === 'done';
+    const newStatus = isCompleted ? 'pending' : 'done';
+    const previousTasks = [...(plan?.tasks || [])];
+    
+    // 1. Optimistic Update
+    setPlan(prev => prev ? {
+      ...prev,
+      tasks: prev.tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t)
+    } : prev);
+    
+    setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'loading' }));
+    
+    try {
+      const updated = await updateTask(task.id, { status: newStatus });
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'success' }));
+      
+      setTimeout(() => {
+        setPlan(prev => prev ? { ...prev, tasks: prev.tasks.map(t => t.id === task.id ? updated : t) } : prev);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
+      }, 500);
+    } catch (e) {
+      showToast("Failed to update task: " + (e as Error).message, 'error');
+      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'error' }));
+      
+      setTimeout(() => {
+        setPlan(prev => prev ? { ...prev, tasks: previousTasks } : prev);
+        setAnimatingTasksStatus(prev => {
+          const next = { ...prev };
+          delete next[task.id];
           return next;
         });
       }, 500);
@@ -343,6 +389,8 @@ function TodayPageContent() {
           <div className="space-y-4 mb-8">
             {anyTimeTasksOrig.map(task => {
               const animState = animatingTasksStatus[task.id];
+              const project = projects.find(p => p.id === task.projectId);
+              const isHabitOrRecurring = project?.type === 'habit' || project?.type === 'recurring';
               return (
                 <div 
                   key={task.id} 
@@ -352,20 +400,34 @@ function TodayPageContent() {
                     animState === 'loading' ? 'bg-accent-subtle/50 animate-pulse text-secondary' : ''
                   }`}
                 >
-                  <span className={`text-sm font-medium leading-tight ${animState === 'loading' ? 'text-secondary' : 'text-primary'}`}>
-                    {task.title}
-                  </span>
-                  <span className={`text-xs mt-1 ${animState === 'loading' ? 'text-secondary' : 'text-secondary'}`}>
-                    {task.estimateMin}m
-                  </span>
-                  <button 
-                    onClick={() => unscheduleToBucket(task)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-tertiary hover:text-missed transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-3 w-full">
+                    <button 
+                      onClick={() => handleMarkDone(task)} 
+                      className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                         task.status === 'done' ? 'border-done bg-done text-surface' : 'border-border-strong hover:border-done'
+                      }`}
+                    >
+                      {task.status === 'done' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                    </button>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className={`text-sm font-medium leading-tight truncate ${animState === 'loading' ? 'text-secondary' : 'text-primary'} ${task.status === 'done' ? 'text-secondary doodle-strikethrough' : ''}`}>
+                        {task.title}
+                      </span>
+                      <span className={`text-xs mt-1 ${animState === 'loading' ? 'text-secondary' : 'text-secondary'}`}>
+                        {task.estimateMin}m
+                      </span>
+                    </div>
+                  </div>
+                  {!isHabitOrRecurring && (
+                    <button 
+                      onClick={() => unscheduleToBucket(task)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-tertiary hover:text-missed transition-colors"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -400,6 +462,7 @@ function TodayPageContent() {
               projects={projects}
               dayPlans={plan.dayPlans} 
               onOpenPlanner={() => setIsPlannerOpen(true)} 
+              onMarkDone={handleMarkDone}
               animatingPlacements={animatingTasksStatus}
             />
           </div>
@@ -412,6 +475,7 @@ function TodayPageContent() {
               onPlaceBlock={handlePlaceBlock}
               onUnplaceBlock={handleUnplaceBlock}
               onClose={() => setIsPlannerOpen(false)}
+              onMarkDone={handleMarkDone}
               animatingPlacements={animatingTasksStatus}
             />
           )}

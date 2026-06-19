@@ -8,10 +8,11 @@ interface TimelineProps {
   onPlaceBlock: (taskId: string, startTime: number) => Promise<void>;
   onUnplaceBlock: (taskId: string) => Promise<void>;
   onClose: () => void;
+  onMarkDone: (task: Task) => void;
   animatingPlacements?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceBlock, onClose, animatingPlacements = {} }: TimelineProps) {
+export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceBlock, onClose, onMarkDone, animatingPlacements = {} }: TimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
   const [previewTop, setPreviewTop] = useState<number | null>(null);
@@ -214,20 +215,34 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
                       animState === 'success' ? 'bg-done-subtle border-done text-done' :
                       animState === 'error' ? 'bg-missed-subtle border-missed text-missed' :
                       animState === 'loading' ? 'bg-accent-subtle border-accent/50 animate-pulse' :
+                      task.status === 'done' ? 'bg-done-subtle border-done/30 text-secondary' :
                       'bg-accent-subtle border-accent/30 hover:border-accent text-primary'
                     }`}
                     style={{ top, height }}
                   >
                     <div className="flex justify-between items-start">
-                      <div className="flex flex-col flex-1 min-w-0 pr-2">
-                        <span className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${animState === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
-                          {task.title}
-                        </span>
-                        {task.projectId && (
-                          <span className="text-[9px] uppercase tracking-wider opacity-60 truncate">
-                            {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                      <div className="flex items-start gap-2 flex-1 min-w-0 pr-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMarkDone(task);
+                          }}
+                          className={`shrink-0 mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                             task.status === 'done' ? 'border-done bg-done text-surface' : 'border-border-strong hover:border-done'
+                          }`}
+                        >
+                          {task.status === 'done' && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                        </button>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${animState === 'loading' ? 'text-secondary' : 'text-inherit'} ${task.status === 'done' ? 'text-secondary doodle-strikethrough' : ''}`}>
+                            {task.title}
                           </span>
-                        )}
+                          {task.projectId && (
+                            <span className={`text-[9px] uppercase tracking-wider truncate ${task.status === 'done' ? 'opacity-40' : 'opacity-60'}`}>
+                              {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button 
                         onClick={(e) => {

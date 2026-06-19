@@ -6,10 +6,11 @@ interface DayViewProps {
   projects: Project[];
   dayPlans: DayPlan[];
   onOpenPlanner: () => void;
+  onMarkDone: (task: Task) => void;
   animatingPlacements?: Record<string, 'loading' | 'success' | 'error'>;
 }
 
-export function DayView({ tasks, projects, dayPlans, onOpenPlanner, animatingPlacements = {} }: DayViewProps) {
+export function DayView({ tasks, projects, dayPlans, onOpenPlanner, onMarkDone, animatingPlacements = {} }: DayViewProps) {
   // Sort day plans chronologically
   const sortedPlans = [...dayPlans].sort((a, b) => a.startTime - b.startTime);
 
@@ -95,17 +96,28 @@ export function DayView({ tasks, projects, dayPlans, onOpenPlanner, animatingPla
                         animatingPlacements[plan.taskId] === 'success' ? 'bg-done-subtle border-done text-done' :
                         animatingPlacements[plan.taskId] === 'error' ? 'bg-missed-subtle border-missed text-missed' :
                         animatingPlacements[plan.taskId] === 'loading' ? 'bg-accent-subtle border-accent/50 animate-pulse text-secondary' :
+                        task.status === 'done' ? 'bg-done-subtle border-done/30 text-secondary' :
                         'bg-surface-raised border-border-default hover:border-accent text-primary'
                       }`}>
-                        <div className="flex flex-col gap-2 flex-1 min-w-0">
-                          <span className={`text-sm md:text-base font-medium truncate block ${animatingPlacements[plan.taskId] === 'loading' ? 'text-secondary' : 'text-inherit'}`}>
-                            {task.title}
-                          </span>
-                          {task.projectId && (
-                            <span className="text-[10px] uppercase tracking-wider text-tertiary truncate">
-                              {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <button 
+                            onClick={() => onMarkDone(task)} 
+                            className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                               task.status === 'done' ? 'border-done bg-done text-surface' : 'border-border-strong hover:border-done'
+                            }`}
+                          >
+                            {task.status === 'done' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                          </button>
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <span className={`text-sm md:text-base font-medium truncate block ${animatingPlacements[plan.taskId] === 'loading' ? 'text-secondary' : 'text-inherit'} ${task.status === 'done' ? 'text-secondary doodle-strikethrough' : ''}`}>
+                              {task.title}
                             </span>
-                          )}
+                            {task.projectId && (
+                              <span className={`text-[10px] uppercase tracking-wider truncate ${task.status === 'done' ? 'text-secondary/60' : 'text-tertiary'}`}>
+                                {projects.find(p => p.id === task.projectId)?.name || "PROJECT"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {/* Duration */}
                         <div className="ml-4 shrink-0 text-xs font-mono text-tertiary">
