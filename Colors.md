@@ -1,15 +1,19 @@
 # Kiro — Color System
-*Design tokens v2*
+*Design tokens v4*
 
 ---
 
-## What changed in v2
+## What changed in v2 / v3 / v4
 
-Paper, Indigo, and Sage previously shared the same bone structure — same violet accent, same gray-scale typography ramp, same neutral surfaces with a different hue dropped in. They read as one theme recolored four times. Midnight is untouched. The other three now have distinct material identities:
+Paper, Indigo, and Sage previously shared the same bone structure — same violet accent, same gray-scale typography ramp, same neutral surfaces with a different hue dropped in. They read as one theme recolored four times. The other three now have distinct material identities:
 
 - **Paper** — rebuilt around true warm parchment and clay ink, no violet. Meant to feel like a worn notebook, not an app skin.
 - **Sage** — rebuilt around moss, bark, and lichen. Earthy and slightly imperfect, not "green Material Design."
-- **Nebula** — built as a clean, vibrant violet light mode: crisp white and soft gray backgrounds with a powerful, pure violet accent.
+- **Nebula** — rebuilt as a soft, comforting lilac light mode: muted dusty violet, warm undertones throughout, no gloss. Comfort over energy.
+
+**v5 completely overhauls Midnight and Nightshade.** 
+- **Midnight** abandons its old navy/teal "Resonare" roots. It is now completely rebuilt around the pure black/dark-green background (`#050606`), graphite-green cards, and a striking, glowing Emerald/Mint accent (`#3ABF92`). 
+- **Nightshade** drops the Dracula inspiration and fully embraces a premium deep charcoal base (`#101114`), matte graphite surfaces, and a vibrant Electric Indigo accent (`#5C32FA`) alongside saturated green/red/orange status colors.
 
 ---
 
@@ -17,72 +21,147 @@ Paper, Indigo, and Sage previously shared the same bone structure — same viole
 
 | Mode | Material reference |
 |---|---|
-| Midnight | Resonare (DJ marketplace) — deep navy, teal accent, terminal-adjacent contrast |
+| Midnight | AdaptoAI inspiration — near-pitch black, glowing emerald green accent, stealthy |
 | Paper | Worn paperback, tea-stained notebook paper, soft indoor lamp light |
 | Sage | Moss on stone, dried botanicals, unbleached linen, forest floor |
 | Nebula | Vital app inspiration, clean soft gray backgrounds with vibrant violet headers |
+| Nightshade | Premium Crypto Dashboard — matte charcoal, electric indigo accent, highly saturated status indicators |
 
 ---
 
-## Midnight Mode (Dark) — unchanged
+## Midnight Mode (Adapto Emerald)
 
-Derived from Resonare's deep navy (`#0B0F10`, `#121620`), teal accent (`#00FFC2`), and smoke white text (`#F2F2F2`). Focused, high-contrast, terminal-adjacent without being literal.
+Derived from the AdaptoAI aesthetic: extremely deep, near-pitch black (`#050606`), very dark green-tinted graphite cards (`#121514`), and a vibrant, glowing Emerald/Mint accent (`#3ABF92`). Focused, stealthy, and highly modern. 
 
 ### Background
 
 | Token | Hex | Usage |
 |---|---|---|
-| `bg-base` | `#0B0F18` | Page background — deepest navy, close to Resonare's midnight |
-| `bg-surface` | `#111827` | Cards, panels — one step up |
-| `bg-surface-raised` | `#1E293B` | Nested cards, sidebars, dropdowns |
-| `bg-accent-subtle` | `#0A2E24` | Teal accent fills — tags, selected states |
-| `bg-done-subtle` | `#0A2E24` | Completed task backgrounds |
-| `bg-missed-subtle` | `#2E1810` | Missed task backgrounds |
-| `bg-warning-subtle` | `#2A1E08` | Overload warning backgrounds |
+| `bg-base` | `#050606` | Page background — near pitch black with a faint green undertone |
+| `bg-surface` | `#121514` | Cards, panels — dark green-grey graphite |
+| `bg-surface-raised` | `#1C2220` | Nested cards, sidebars, dropdowns |
+| `bg-accent-subtle` | `#103527` | Emerald accent fills — tags, selected states |
+| `bg-done-subtle` | `#103527` | Completed task backgrounds |
+| `bg-missed-subtle` | `#361A1A` | Missed task backgrounds |
+| `bg-warning-subtle` | `#382A12` | Overload warning backgrounds |
+
+### Surface gloss (Midnight-only token, updated)
+
+| Token | Value | Usage |
+|---|---|---|
+| `surface-sheen` | `linear-gradient(160deg, rgba(58,191,146,0.08) 0%, rgba(58,191,146,0) 50%)` | Layer over `bg-surface` — casts a subtle emerald glow across dark cards, matching the AdaptoAI radiant aesthetic. |
 
 ### Accent (Primary Action)
 
-Teal — Resonare's `#00FFC2` pulled back to `#4DD9AC` to avoid neon harshness while retaining clarity signal.
+Glowing Emerald / Mint. Very high vibrancy against the near-black background.
 
 | Token | Hex | Usage |
 |---|---|---|
-| `accent` | `#4DD9AC` | Primary buttons, active nav, links |
-| `accent-hover` | `#3DC49A` | Hover state |
-| `accent-pressed` | `#2EAF88` | Pressed / active state |
-| `accent-subtle` | `#0A2E24` | Accent background fills |
-| `accent-border` | `#1D6B50` | Accent borders, focus rings |
+| `accent` | `#3ABF92` | Primary buttons, active nav, links |
+| `accent-hover` | `#31A87F` | Hover state |
+| `accent-pressed` | `#268C68` | Pressed / active state |
+| `accent-subtle` | `#103527` | Accent background fills |
+| `accent-border` | `#235A47` | Accent borders, focus rings |
 
 ### Typography
 
 | Token | Hex | Usage |
 |---|---|---|
-| `text-primary` | `#E8F0F7` | Headings, body — Resonare's smoke white, slightly cool |
-| `text-secondary` | `#94A3B8` | Labels, hints, meta |
-| `text-tertiary` | `#4B5563` | Placeholder, disabled |
-| `text-accent` | `#4DD9AC` | Links, interactive labels |
-| `text-done` | `#4DD9AC` | Completed task titles |
-| `text-missed` | `#F0997B` | Missed task titles — lightened coral for dark bg |
+| `text-primary` | `#FFFFFF` | Headings, body — pure white |
+| `text-secondary` | `#9AA6A1` | Labels, hints, meta — soft green-tinted grey |
+| `text-tertiary` | `#606E68` | Placeholder, disabled |
+| `text-accent` | `#3ABF92` | Links, interactive labels |
+| `text-done` | `#3ABF92` | Completed task titles |
+| `text-missed` | `#F27878` | Missed task titles |
 
 ### Border
 
 | Token | Hex | Usage |
 |---|---|---|
-| `border-subtle` | `#1A2744` | Default card edges — barely visible |
-| `border-default` | `#1E3A52` | Input borders, section dividers |
-| `border-strong` | `#2D5270` | Focused inputs, emphasized containers |
-| `border-accent` | `#1D6B50` | Accent-adjacent borders |
+| `border-subtle` | `#1C2220` | Default card edges |
+| `border-default` | `#262E2A` | Input borders, section dividers |
+| `border-strong` | `#333D38` | Focused inputs, emphasized containers |
+| `border-accent` | `#235A47` | Accent-adjacent borders |
 
 ### Status
 
 | Token | Hex | Role | Usage |
 |---|---|---|---|
-| `done` | `#4DD9AC` | Teal | Completed tasks, progress |
-| `done-text` | `#9FE1CB` | Light teal | Text on done backgrounds |
-| `missed` | `#F0997B` | Light coral | Missed / overdue — not too aggressive on dark |
-| `missed-text` | `#F5C4B3` | Pale coral | Text on missed backgrounds |
-| `warning` | `#EF9F27` | Amber | Overload, deadline risk |
-| `warning-text` | `#FAC775` | Light amber | Text on warning backgrounds |
-| `critical` | `#4DD9AC` | Teal | Critical project type badge |
+| `done` | `#3ABF92` | Emerald | Completed tasks, progress |
+| `done-text` | `#96EAD0` | Light Emerald | Text on done backgrounds |
+| `missed` | `#F27878` | Soft Red | Missed / overdue |
+| `missed-text` | `#FAD1D1` | Pale Red | Text on missed backgrounds |
+| `warning` | `#F5B258` | Gold | Overload, deadline risk |
+| `warning-text` | `#FDE2BF` | Light Gold | Text on warning backgrounds |
+| `critical` | `#3ABF92` | Emerald | Critical project type badge |
+
+---
+
+## Nightshade Mode (Charcoal & Electric Indigo)
+
+**Mood:** A premium crypto trading terminal. Deep charcoal backgrounds (`#101114`), matte graphite surfaces (`#1C1D22`), and an incredibly vibrant Electric Indigo accent (`#5C32FA`). Status colors are highly saturated (Emerald, Amber, Red) for immediate data recognition. No purple/Dracula undertones here—just clean, striking contrast.
+
+### Background
+
+| Token | Hex | Usage |
+|---|---|---|
+| `bg-base` | `#101114` | Page background — pure charcoal |
+| `bg-surface` | `#1C1D22` | Cards, panels — matte graphite |
+| `bg-surface-raised` | `#26272D` | Nested cards, sidebars, dropdowns |
+| `bg-accent-subtle` | `#1F1742` | Indigo accent fills — tags, selected states |
+| `bg-done-subtle` | `#133022` | Completed task backgrounds |
+| `bg-missed-subtle` | `#3A1A1A` | Missed task backgrounds |
+| `bg-warning-subtle` | `#3B2813` | Overload warning backgrounds |
+
+### Accent (Primary Action)
+
+Electric Indigo. Unmistakable, vibrant action color.
+
+| Token | Hex | Usage |
+|---|---|---|
+| `accent` | `#5C32FA` | Primary buttons, active nav, links |
+| `accent-hover` | `#4A28C8` | Hover state |
+| `accent-pressed` | `#371E96` | Pressed / active state |
+| `accent-subtle` | `#1F1742` | Accent background fills |
+| `accent-border` | `#7A5CFA` | Accent borders, focus rings |
+
+### Typography
+
+| Token | Hex | Usage |
+|---|---|---|
+| `text-primary` | `#FFFFFF` | Headings, body — pure white |
+| `text-secondary` | `#9294A0` | Labels, hints, meta — cool grey |
+| `text-tertiary` | `#585962` | Placeholder, disabled |
+| `text-accent` | `#7A5CFA` | Links, interactive labels |
+| `text-done` | `#1FC36B` | Completed task titles |
+| `text-missed` | `#F84B4B` | Missed task titles |
+
+### Border
+
+| Token | Hex | Usage |
+|---|---|---|
+| `border-subtle` | `#27282F` | Default card edges |
+| `border-default` | `#34353E` | Input borders, section dividers |
+| `border-strong` | `#474854` | Focused inputs, emphasized containers |
+| `border-accent` | `#5C32FA` | Accent-adjacent borders |
+
+### Status
+
+| Token | Hex | Role | Usage |
+|---|---|---|---|
+| `done` | `#1FC36B` | Emerald | Completed tasks, progress |
+| `done-text` | `#A4E8C2` | Light Green | Text on done backgrounds |
+| `missed` | `#F84B4B` | Red | Missed / overdue |
+| `missed-text` | `#FBB7B7` | Pale Red | Text on missed backgrounds |
+| `warning` | `#F6921E` | Amber | Overload, deadline risk |
+| `warning-text` | `#FCD19C` | Light Amber | Text on warning backgrounds |
+| `critical` | `#5C32FA` | Indigo | Critical project type badge |
+
+### Surface gloss (Nightshade-only token)
+
+| Token | Value | Usage |
+|---|---|---|
+| `surface-sheen` | `none` | Not used — Nightshade cards are pure, flat, matte graphite to match the trading-terminal aesthetic. |
 
 ---
 
@@ -311,24 +390,25 @@ These never change between modes.
 
 Each project type gets a distinct badge color, derived per-mode from that mode's own palette (not a shared gray-violet system). Light modes use subtle background + dark text; dark modes use subtle background + light text.
 
-| Type | Paper bg / text | Sage bg / text | Nebula bg / text | Midnight bg / text |
-|---|---|---|---|---|
-| `critical` | `#F3E4D7` / `#80442A` | `#DFE9D3` / `#3D6128` | `#EEE3F4` / `#6B5491` | `#1A1040` / `#AFA9EC` |
-| `recurring` | `#E9F0E1` / `#27401F` | `#DCEBD6` / `#243816` | `#E6F1E8` / `#2E4F38` | `#0A2E24` / `#5DCAA5` |
-| `habit` | `#FBEDD2` / `#5C4310` | `#F5E9C9` / `#4F3D0E` | `#FBF1E2` / `#6B4D1E` | `#2A1E08` / `#FAC775` |
-| `nicetohave` | `#EBE0D0` / `#7A6B58` | `#E2E4D2` / `#5F6E4F` | `#F0E8F2` / `#827697` | `#1A1F2E` / `#94A3B8` |
+| Type | Paper bg / text | Sage bg / text | Nebula bg / text | Midnight bg / text | Nightshade bg / text |
+|---|---|---|---|---|---|
+| `critical` | `#F3E4D7` / `#80442A` | `#DFE9D3` / `#3D6128` | `#EEE3F4` / `#6B5491` | `#1D1248` / `#B7AEEF` | `#332650` / `#BD93F9` |
+| `recurring` | `#E9F0E1` / `#27401F` | `#DCEBD6` / `#243816` | `#E6F1E8` / `#2E4F38` | `#0B3328` / `#63D2A8` | `#0E3D2A` / `#50FA7B` |
+| `habit` | `#FBEDD2` / `#5C4310` | `#F5E9C9` / `#4F3D0E` | `#FBF1E2` / `#6B4D1E` | `#2C2009` / `#FAC775` | `#3D300F` / `#FFB86C` |
+| `nicetohave` | `#EBE0D0` / `#7A6B58` | `#E2E4D2` / `#5F6E4F` | `#F0E8F2` / `#827697` | `#1C2940` / `#A3B7CE` | `#2D2844` / `#B8AAD9` |
 
 ---
 
 ## Usage Rules
 
 1. **Never use pure black (`#000`) or pure white (`#FFF`) as bg-base.** Every mode's warmth, calm, or energy depends on off-values.
-2. **No mode borrows another mode's accent hue.** Paper is terracotta, Sage is stem-green, Nebula is dusty violet, Midnight is teal. If two modes ever look swappable with a find-and-replace on accent color, that's a bug.
+2. **No mode borrows another mode's accent hue** — except Nightshade, which deliberately shares Midnight's teal accent so the two read as siblings; everything else about Nightshade (base, badges, status colors) is distinct. Paper is terracotta, Sage is stem-green, Nebula is dusty violet, Midnight and Nightshade share teal. If two modes ever look swappable beyond that one deliberate exception, that's a bug.
 3. **Text on colored backgrounds** always uses the dark (or light, on dark modes) stop from the same ramp — never generic gray or black.
 4. **Accent color is single-purpose** — only on primary interactive elements.
 5. **Status colors are semantic** — done/missed/warning are never used for non-status meaning.
-6. **Border width is always `0.5px`** except focus rings (`2px`) and featured card emphasis (`2px`).
-7. **Nebula avoids gloss, glow, or vibrance entirely** — comfort comes from softness, warmth, and restraint, not shine.
+6. **Border width is always `0.5px`** except focus rings (`2px`), featured card emphasis (`2px`), and Nightshade's borders, which run at standard `1px` as part of its higher-contrast brief.
+7. **Dark mode depth comes from border, background layering, and `surface-sheen`** — never drop shadows. Midnight, Nebula, and Nightshade each define `surface-sheen`: Midnight's is a faint teal tint, Nightshade's a faint purple tint, Nebula's is `none` (comfort comes from softness, not shine).
+8. **Midnight is the main dark theme and stays untouched by Nightshade's existence.** Nightshade is an additional option for people who want a louder, more saturated dark mode — not a replacement.
 
 ---
 
