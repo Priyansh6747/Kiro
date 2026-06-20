@@ -1,6 +1,7 @@
 "use client";
 
-import { RefObject, useState, useRef } from "react";
+import { RefObject, useState, useRef, useEffect } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Task } from "@/lib/types";
 import { StatusBadge } from "@/components/ui";
 import { formatDateShort, parseDateStr } from "./utils";
@@ -56,11 +57,110 @@ export function ScheduledTimelineColumn({
   onSelectTask: (t: Task) => void;
   todayRef: RefObject<HTMLDivElement | null>;
 }) {
-  const [windowOffsetDays, setWindowOffsetDays] = useState(-7);
+  const [windowOffsetDays, setWindowOffsetDays] = useState(-10);
   const isSliding = useRef(false);
+  const isAnimating = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [todayDirection, setTodayDirection] = useState<"up" | "down" | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (timelineMode === "continuous") {
+      isAnimating.current = true;
+      setTimeout(() => {
+        isAnimating.current = false;
+      }, 1000);
+    }
+  }, [timelineMode]);
+
+  useEffect(() => {
+    if (timelineMode !== "continuous") {
+      setTodayDirection(null);
+      return;
+    }
+
+    if (windowOffsetDays > 0) {
+      setTodayDirection("up");
+      return;
+    } else if (windowOffsetDays < -21) {
+      setTodayDirection("down");
+      return;
+    }
+
+    if (!todayRef.current || !scrollContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry.isIntersecting) {
+          const rect = entry.boundingClientRect;
+          const containerRect =
+            scrollContainerRef.current!.getBoundingClientRect();
+          if (rect.top < containerRect.top) {
+            setTodayDirection("up");
+          } else {
+            setTodayDirection("down");
+          }
+        } else {
+          setTodayDirection(null);
+        }
+      },
+      { root: scrollContainerRef.current, threshold: 0 },
+    );
+
+    observer.observe(todayRef.current);
+    return () => observer.disconnect();
+  }, [windowOffsetDays, timelineMode, todayRef]);
+
+  const scrollToToday = () => {
+    const direction = todayDirection;
+    isAnimating.current = true;
+    // 1. Create a default window with current date precisely in center
+    setWindowOffsetDays(-10);
+
+    // 2. Wait for DOM to update with the new window
+    setTimeout(() => {
+      if (!scrollContainerRef.current || !todayRef.current) {
+        isAnimating.current = false;
+        return;
+      }
+
+      const container = scrollContainerRef.current;
+
+      // If we were looking UP to today, simulate scrolling UP by instantly jumping to the bottom
+      if (direction === "up") {
+        container.scrollTop = container.scrollHeight;
+      }
+      // If we were looking DOWN to today, simulate scrolling DOWN by instantly jumping to the top
+      else if (direction === "down") {
+        container.scrollTop = 0;
+      }
+
+      // Give the browser a tick to register the instant jump before animating
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          todayRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+
+          // Re-enable scrolling after smooth animation completes
+          setTimeout(() => {
+            isAnimating.current = false;
+          }, 800);
+        });
+      });
+    }, 50);
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (timelineMode !== "continuous" || isSliding.current) return;
+    if (
+      timelineMode !== "continuous" ||
+      isSliding.current ||
+      isAnimating.current
+    )
+      return;
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const threshold = 600;
 
@@ -273,12 +373,31 @@ export function ScheduledTimelineColumn({
           </button>
         </div>
       </div>
-      <div 
-        className="overflow-y-auto bg-surface relative"
-        style={{ height: 'calc(100vh - 120px)' }}
-        onScroll={handleScroll}
-      >
-        <div className="relative z-10">{renderTimeline()}</div>
+      <div className="relative" style={{ height: "calc(100vh - 120px)" }}>
+        <div
+          ref={scrollContainerRef}
+          className="h-full overflow-y-auto bg-surface relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          onScroll={handleScroll}
+        >
+          <div className="relative z-10">{renderTimeline()}</div>
+        </div>
+
+        {todayDirection === "up" && (
+          <button
+            onClick={scrollToToday}
+            className="absolute top-4 left-1/2 -translate-x-1/2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:bg-accent/90 transition-all z-50 animate-bounce"
+          >
+            <ChevronUp size={20} />
+          </button>
+        )}
+        {todayDirection === "down" && (
+          <button
+            onClick={scrollToToday}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:bg-accent/90 transition-all z-50 animate-bounce"
+          >
+            <ChevronDown size={20} />
+          </button>
+        )}
       </div>
     </div>
   );
