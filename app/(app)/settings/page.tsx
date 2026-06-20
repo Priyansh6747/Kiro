@@ -7,21 +7,28 @@ import { getPreferences, patchPreferences } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/useToast";
+import { Sun, Moon, Sparkles, Leaf, Contrast } from "lucide-react";
 
 function Field({
   label,
   description,
   children,
+  fullWidthContent = false,
 }: {
   label: string;
   description?: string;
   children: React.ReactNode;
+  fullWidthContent?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 py-4 border-b border-border-default last:border-b-0">
-      <label className="text-sm font-medium text-primary">{label}</label>
-      {description && <p className="text-xs text-secondary">{description}</p>}
-      {children}
+    <div className={`flex flex-col md:flex-row md:items-start justify-between gap-6 py-6 border-b border-border-subtle last:border-0 transition-colors`}>
+      <div className={`${fullWidthContent ? 'md:w-1/3' : 'flex-1'} shrink-0 space-y-1.5`}>
+        <label className="text-sm font-semibold text-primary">{label}</label>
+        {description && <p className="text-sm text-secondary max-w-md leading-relaxed">{description}</p>}
+      </div>
+      <div className={`shrink-0 w-full ${fullWidthContent ? 'md:flex-1' : 'md:w-80'}`}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -39,15 +46,29 @@ function SaveButton({
     <button
       onClick={onClick}
       disabled={saving}
-      className={`rounded px-3 py-1.5 text-xs font-medium ${
+      className={`rounded-lg px-4 py-2 text-sm font-medium transition-all shadow-sm ${
         saved
-          ? "bg-green-50 text-green-700 border border-green-200"
-          : "bg-accent text-white hover:bg-blue-700"
-      } disabled:opacity-50 flex items-center gap-1`}
+          ? "bg-green-50 text-green-700 border border-green-200 ring-2 ring-green-100"
+          : "bg-accent text-white hover:bg-accent-hover hover:shadow focus:ring-2 focus:ring-accent-subtle"
+      } disabled:opacity-50 flex items-center justify-center gap-2`}
     >
       {saving && <Spinner size="sm" />}
       {saved ? "Saved ✓" : saving ? "Saving…" : "Save"}
     </button>
+  );
+}
+
+function SectionCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-surface border border-border-default rounded-2xl shadow-sm overflow-hidden mb-8 transition-shadow hover:shadow-md">
+      <div className="px-6 py-5 border-b border-border-subtle bg-surface-raised flex flex-col gap-1">
+        <h2 className="text-base font-semibold text-primary">{title}</h2>
+        {description && <p className="text-sm text-secondary">{description}</p>}
+      </div>
+      <div className="px-6">
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -117,84 +138,85 @@ export default function SettingsPage() {
   if (loading) return <LoadingScreen message="Loading settings…" />;
   if (error)
     return (
-      <div className="p-4">
+      <div className="p-8 max-w-4xl mx-auto w-full">
         <ErrorBanner message={error} onRetry={load} />
       </div>
     );
 
   return (
-    <div className="flex flex-col flex-1">
-      <div className="px-4 py-3 border-b border-border-default bg-surface">
-        <h1 className="font-semibold text-primary">Settings</h1>
-        <p className="text-xs text-secondary mt-0.5">Configure how the system behaves</p>
-      </div>
+    <div className="flex flex-col flex-1 bg-base min-h-0 overflow-y-auto">
+      <div className="max-w-4xl mx-auto w-full p-6 md:p-10">
+        
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Settings</h1>
+          <p className="text-base text-secondary mt-2">Manage your preferences, appearance, and account settings.</p>
+        </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Planning Settings */}
-        <div className="bg-surface border-b border-border-default">
-          <div className="px-4 py-3 border-b border-border-default">
-            <p className="text-xs font-semibold text-secondary uppercase">Planning</p>
-          </div>
-          <div className="px-4">
-            <Field
-              label="Timezone"
-              description="Used to calculate today's date for scheduling."
-            >
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  placeholder="e.g. America/New_York"
-                  list="timezones"
-                />
-                <SaveButton
-                  saving={savingTz}
-                  saved={savedTz}
-                  onClick={() => save({ timezone }, setSavingTz, setSavedTz)}
-                />
-              </div>
-            </Field>
+        <SectionCard 
+          title="Planning Preferences" 
+          description="Control how your daily tasks and availability are calculated."
+        >
+          <Field
+            label="Timezone"
+            description="Used to calculate today's date for scheduling and streaks."
+          >
+            <div className="flex gap-3">
+              <input
+                type="text"
+                className="flex-1 bg-surface-raised border border-border-default rounded-lg px-4 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                placeholder="e.g. America/New_York"
+                list="timezones"
+              />
+              <SaveButton
+                saving={savingTz}
+                saved={savedTz}
+                onClick={() => save({ timezone }, setSavingTz, setSavedTz)}
+              />
+            </div>
+          </Field>
 
-            <Field
-              label="Default Available Minutes"
-              description="How many minutes you have available per day by default."
-            >
-              <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  min={30}
-                  max={1440}
-                  step={15}
-                  className="w-32 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={availableMin}
-                  onChange={(e) => setAvailableMin(Number(e.target.value))}
-                />
-                <span className="text-xs text-secondary">
-                  = {Math.floor(availableMin / 60)}h {availableMin % 60}m
-                </span>
-                <SaveButton
-                  saving={savingAvail}
-                  saved={savedAvail}
-                  onClick={() =>
-                    save(
-                      { default_available_min: availableMin },
-                      setSavingAvail,
-                      setSavedAvail,
-                    )
-                  }
-                />
-              </div>
-            </Field>
+          <Field
+            label="Default Available Minutes"
+            description="How much total time you have available per day for tasks by default."
+          >
+            <div className="flex gap-3 items-center">
+              <input
+                type="number"
+                min={30}
+                max={1440}
+                step={15}
+                className="w-24 bg-surface-raised border border-border-default rounded-lg px-4 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all text-center"
+                value={availableMin}
+                onChange={(e) => setAvailableMin(Number(e.target.value))}
+              />
+              <span className="text-sm font-medium text-secondary min-w-[80px]">
+                {Math.floor(availableMin / 60)}h {availableMin % 60}m
+              </span>
+              <div className="flex-1" />
+              <SaveButton
+                saving={savingAvail}
+                saved={savedAvail}
+                onClick={() =>
+                  save(
+                    { default_available_min: availableMin },
+                    setSavingAvail,
+                    setSavedAvail,
+                  )
+                }
+              />
+            </div>
+          </Field>
 
-            <Field
-              label="Ratio Mode"
-              description="How your daily completion ratio is calculated."
-            >
-              <div className="flex gap-2">
+          <Field
+            label="Ratio Mode"
+            description="How your daily completion performance ratio is calculated."
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
                 <select
-                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 bg-surface-raised border border-border-default rounded-lg px-4 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all cursor-pointer"
                   value={ratioMode}
                   onChange={(e) => setRatioMode(e.target.value as RatioMode)}
                 >
@@ -209,102 +231,147 @@ export default function SettingsPage() {
                   }
                 />
               </div>
-              <p className="text-xs text-tertiary">
+              <p className="text-xs text-tertiary bg-surface-raised px-3 py-2 rounded-md border border-border-subtle">
                 {ratioMode === "cumulative"
-                  ? "Tracks total tasks done / total assigned over time."
-                  : "Tracks consecutive days of ≥50% completion."}
+                  ? "Cumulative tracks total completed tasks against total assigned over time."
+                  : "Streak tracks your consecutive days of achieving at least 50% completion."}
               </p>
-            </Field>
-          </div>
-        </div>
+            </div>
+          </Field>
+        </SectionCard>
 
-        {/* Notification Settings */}
-        <div className="bg-surface border-b border-border-default mt-4">
-          <div className="px-4 py-3 border-b border-border-default">
-            <p className="text-xs font-semibold text-secondary uppercase">Notifications</p>
-          </div>
-          <div className="px-4">
-            <Field
-              label="Morning Reminder Time"
-              description="When to send your morning nudge (HH:MM, 24h)."
-            >
-              <div className="flex gap-2">
-                <input
-                  type="time"
-                  className="border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={nudgeTime}
-                  onChange={(e) => setNudgeTime(e.target.value)}
-                />
-                <SaveButton
-                  saving={savingNudge}
-                  saved={savedNudge}
-                  onClick={() =>
-                    save(
-                      { morning_nudge_time: nudgeTime },
-                      setSavingNudge,
-                      setSavedNudge,
-                    )
-                  }
-                />
-              </div>
-            </Field>
-          </div>
-        </div>
+        <SectionCard 
+          title="Notifications" 
+          description="Manage when you receive alerts and reminders."
+        >
+          <Field
+            label="Morning Reminder Time"
+            description="The time you'll receive your daily morning nudge to plan your day."
+          >
+            <div className="flex gap-3">
+              <input
+                type="time"
+                className="flex-1 bg-surface-raised border border-border-default rounded-lg px-4 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all cursor-pointer"
+                value={nudgeTime}
+                onChange={(e) => setNudgeTime(e.target.value)}
+              />
+              <SaveButton
+                saving={savingNudge}
+                saved={savedNudge}
+                onClick={() =>
+                  save(
+                    { morning_nudge_time: nudgeTime },
+                    setSavingNudge,
+                    setSavedNudge,
+                  )
+                }
+              />
+            </div>
+          </Field>
+        </SectionCard>
 
-        {/* Appearance Settings */}
-        <div className="bg-surface border-b border-border-default mt-4">
-          <div className="px-4 py-3 border-b border-border-default">
-            <p className="text-xs font-semibold text-secondary uppercase">Appearance</p>
-          </div>
-          <div className="px-4">
-            <Field
-              label="Theme"
-              description="Choose between light and dark mode."
-            >
-              <div className="flex gap-2">
-                <select
-                  className="flex-1 border border-border-default rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-surface text-primary"
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value as "paper" | "midnight" | "nebula" | "sage" | "nightshade")}
-                >
-                  <option value="paper">Paper (Light)</option>
-                  <option value="midnight">Midnight (Dark)</option>
-                  <option value="nightshade">Nightshade (High Contrast)</option>
-                  <option value="nebula">Nebula (Soft Lilac)</option>
-                  <option value="sage">Sage (Nature)</option>
-                </select>
-              </div>
-            </Field>
-          </div>
-        </div>
+        <SectionCard 
+          title="Appearance" 
+          description="Customize the look and feel of your workspace."
+        >
+          <Field
+            label="Color Theme"
+            description="Choose a theme that suits your style. Themes affect all charts, tasks, and backgrounds."
+            fullWidthContent
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
+              {[
+                { 
+                  id: "paper", label: "Paper", Icon: Sun, desc: "Light & Clean",
+                  preview: { base: "#F6EFE4", surface: "#FFFCF6", primary: "#3A2E22", accent: "#B0623E", border: "#DDCCB4" }
+                },
+                { 
+                  id: "midnight", label: "Midnight", Icon: Moon, desc: "Dark & Emerald",
+                  preview: { base: "#050606", surface: "#121514", primary: "#FFFFFF", accent: "#3ABF92", border: "#262E2A" }
+                },
+                { 
+                  id: "nightshade", label: "Nightshade", Icon: Contrast, desc: "High Contrast Dark",
+                  preview: { base: "#101114", surface: "#1C1D22", primary: "#FFFFFF", accent: "#5C32FA", border: "#34353E" }
+                },
+                { 
+                  id: "nebula", label: "Nebula", Icon: Sparkles, desc: "Soft Lilac Light",
+                  preview: { base: "#FAF7FB", surface: "#FFFFFF", primary: "#352E40", accent: "#9579C2", border: "#E5D9EA" }
+                },
+                { 
+                  id: "sage", label: "Sage", Icon: Leaf, desc: "Organic Earthy Greens",
+                  preview: { base: "#F0F1E6", surface: "#FBFCF6", primary: "#283420", accent: "#5B8C3E", border: "#CDD2B5" }
+                },
+              ].map((t) => {
+                const active = theme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTheme(t.id as any)}
+                    className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all w-full ${
+                      active
+                        ? "border-accent bg-accent/10 ring-2 ring-accent/30"
+                        : "border-border-default bg-surface hover:border-border-strong hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <t.Icon className={`w-4 h-4 ${active ? "text-accent" : "text-secondary"}`} />
+                      <span className={`text-sm font-semibold ${active ? "text-primary" : "text-secondary"}`}>{t.label}</span>
+                    </div>
+                    <span className="text-xs text-tertiary">{t.desc}</span>
+                    
+                    {/* Theme Preview Box */}
+                    <div style={{ backgroundColor: t.preview.base, borderColor: t.preview.border }} className="mt-4 w-full h-10 rounded-lg border flex items-center px-3 gap-2 overflow-hidden shadow-inner">
+                      <div style={{ backgroundColor: t.preview.surface, borderColor: t.preview.border }} className="w-5 h-5 rounded-md shadow-sm border" />
+                      <div style={{ backgroundColor: t.preview.primary }} className="w-8 h-2 rounded-full opacity-80" />
+                      <div className="flex-1" />
+                      <div style={{ backgroundColor: t.preview.accent }} className="w-4 h-4 rounded-full" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        </SectionCard>
 
-        {/* Account Management */}
-        <div className="bg-surface border-b border-border-default mt-4">
-          <div className="px-4 py-3 border-b border-border-default">
-            <p className="text-xs font-semibold text-secondary uppercase">Account Management</p>
+        <SectionCard 
+          title="Account Information" 
+          description="Manage your profile and authentication."
+        >
+          <div className="flex flex-col items-center py-6">
+            <UserProfile 
+              routing="hash" 
+              appearance={{ 
+                elements: { 
+                  rootBox: "w-full shadow-none", 
+                  cardBox: "shadow-none border border-border-default rounded-xl bg-surface",
+                  navbar: "hidden", // Simplify if wanted, or leave to allow full management
+                } 
+              }} 
+            />
           </div>
-          <div className="px-4 py-4 space-y-3">
-            {prefs && (
-              <div className="text-sm space-y-2 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-secondary">Internal User ID</span>
-                  <span className="text-secondary font-mono text-xs truncate max-w-[200px]">
+          
+          {prefs && (
+            <div className="border-t border-border-subtle pt-6 mt-2">
+              <h3 className="text-sm font-semibold text-primary mb-4">Developer Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-surface-raised rounded-lg p-3 border border-border-default flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary uppercase tracking-wider">Internal User ID</span>
+                  <span className="text-sm text-primary font-mono truncate" title={prefs.userId}>
                     {prefs.userId}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-secondary">Ratio mode</span>
-                  <span className="text-secondary">{prefs.ratioMode}</span>
+                <div className="bg-surface-raised rounded-lg p-3 border border-border-default flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary uppercase tracking-wider">Active Ratio Mode</span>
+                  <span className="text-sm text-primary capitalize font-medium">
+                    {prefs.ratioMode}
+                  </span>
                 </div>
               </div>
-            )}
-            <div className="flex justify-center pt-4">
-              <UserProfile routing="hash" appearance={{ elements: { rootBox: "w-full shadow-none", cardBox: "shadow-none border border-border-default" } }} />
             </div>
-          </div>
-        </div>
+          )}
+        </SectionCard>
 
-        <div className="h-8" />
+        <div className="h-12" />
       </div>
     </div>
   );

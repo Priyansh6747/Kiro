@@ -5,12 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
+import { Zap, CheckSquare, FolderKanban, BarChart2, Settings } from "lucide-react";
+
 const NAV_ITEMS = [
-  { href: "/today", label: "Today", icon: "⚡" },
-  { href: "/todo", label: "Todo", icon: "📋" },
-  { href: "/projects", label: "Projects", icon: "📁" },
-  { href: "/insights", label: "Insights", icon: "📊" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/today", label: "Today", Icon: Zap },
+  { href: "/todo", label: "Todo", Icon: CheckSquare },
+  { href: "/projects", label: "Projects", Icon: FolderKanban },
+  { href: "/insights", label: "Insights", Icon: BarChart2 },
+  { href: "/settings", label: "Settings", Icon: Settings },
 ];
 
 export function BottomNav() {
@@ -24,10 +26,10 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             className={`flex-1 flex flex-col items-center justify-center py-3 text-xs gap-1 ${
-              active ? "text-accent font-semibold" : "text-secondary"
+              active ? "text-accent font-semibold" : "text-secondary hover:text-primary transition-colors"
             }`}
           >
-            <span className="text-lg leading-none">{item.icon}</span>
+            <item.Icon className="w-5 h-5" />
             <span>{item.label}</span>
           </Link>
         );
@@ -55,12 +57,13 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-lg tracking-wide ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium tracking-wide transition-all ${
                   active
-                    ? "text-primary font-medium"
-                    : "text-secondary hover:text-primary transition-colors"
+                    ? "bg-accent/10 text-accent"
+                    : "text-secondary hover:text-primary hover:bg-surface-raised"
                 }`}
               >
+                <item.Icon className={`w-5 h-5 ${active ? "text-accent" : "text-tertiary"}`} />
                 {item.label}
               </Link>
             );
