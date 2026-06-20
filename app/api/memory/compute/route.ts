@@ -10,7 +10,11 @@
  *   "crons": [{ "path": "/api/memory/compute", "schedule": "0 2 * * *" }]
  */
 
-import { insertMemoryBaseline, listDistinctUserIds, listNormalDayLogs } from "@/lib/storage";
+import {
+  insertMemoryBaseline,
+  listDistinctUserIds,
+  listNormalDayLogs,
+} from "@/lib/storage";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
@@ -20,7 +24,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   // ── Authentication: cron secret ───────────────────────────────────────────
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
-    return Response.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+    return Response.json(
+      { error: "CRON_SECRET not configured" },
+      { status: 500 },
+    );
   }
 
   const provided = request.headers.get("x-cron-secret");
@@ -30,9 +37,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── Compute baselines for all users ──────────────────────────────────────
   const allUserIds = await listDistinctUserIds();
-  const todayDate  = todayUnixDay(); // UTC (cron context)
-  const cutoff     = todayDate - 14;
-  const now        = nowSec();
+  const todayDate = todayUnixDay(); // UTC (cron context)
+  const cutoff = todayDate - 14;
+  const now = nowSec();
 
   let processed = 0;
 
@@ -43,10 +50,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (last14.length < MIN_DATA_POINTS) continue;
 
     const avgCompleted = avg(last14.map((l) => l.tasksCompleted));
-    const avgAssigned  = avg(last14.map((l) => l.tasksAssigned));
-    const avgRatio     = avg(last14.map((l) => l.ratio));
+    const avgAssigned = avg(last14.map((l) => l.tasksAssigned));
+    const avgRatio = avg(last14.map((l) => l.ratio));
 
-    const todayLog         = last14.find((l) => l.date === todayDate);
+    const todayLog = last14.find((l) => l.date === todayDate);
     const baselineDeviation = todayLog ? todayLog.ratio - avgRatio : 0.0;
 
     await insertMemoryBaseline({

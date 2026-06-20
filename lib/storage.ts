@@ -141,7 +141,7 @@ export async function getOrCreatePreferences(
     const code = errObj && "code" in errObj ? String(errObj.code) : "";
 
     let causeCode = "";
-    if(
+    if (
       errObj &&
       "cause" in errObj &&
       errObj.cause &&
@@ -235,7 +235,9 @@ export async function createProject(data: NewProject): Promise<Project> {
 
 export async function updateProject(
   id: string,
-  data: Partial<Pick<Project, "name" | "importance" | "type" | "deadlineAt" | "cadence">>,
+  data: Partial<
+    Pick<Project, "name" | "importance" | "type" | "deadlineAt" | "cadence">
+  >,
 ): Promise<Project | undefined> {
   const rows = await db
     .update(projects)
@@ -302,7 +304,10 @@ export async function listTasks(filter: ListTasksFilter): Promise<Task[]> {
 
     const blockedTaskIds = new Set<string>();
     for (const d of deps) {
-      if (d.predecessorStatus !== "done" && d.predecessorDate !== filter.todayDate) {
+      if (
+        d.predecessorStatus !== "done" &&
+        d.predecessorDate !== filter.todayDate
+      ) {
         blockedTaskIds.add(d.taskId);
       }
     }
@@ -479,7 +484,9 @@ export async function listRecurringTemplateTasks(
       ),
     );
 
-  return rows.filter((r) => r.taskRecurrenceRule !== null) as RecurringTemplate[];
+  return rows.filter(
+    (r) => r.taskRecurrenceRule !== null,
+  ) as RecurringTemplate[];
 }
 
 /**
@@ -580,38 +587,47 @@ export async function insertTaskDependency(
     .onConflictDoNothing();
 }
 
-export async function pullUnresolvedPredecessors(startTaskId: string, scheduledDate: number, userId: string) {
+export async function pullUnresolvedPredecessors(
+  startTaskId: string,
+  scheduledDate: number,
+  userId: string,
+) {
   let currentTasks = [startTaskId];
   const seen = new Set<string>();
 
   while (currentTasks.length > 0) {
-    const deps = await db.select({ predecessorId: taskDependencies.predecessorId })
+    const deps = await db
+      .select({ predecessorId: taskDependencies.predecessorId })
       .from(taskDependencies)
       .where(inArray(taskDependencies.taskId, currentTasks));
-    
-    const predIds = deps.map(d => d.predecessorId).filter(id => !seen.has(id));
+
+    const predIds = deps
+      .map((d) => d.predecessorId)
+      .filter((id) => !seen.has(id));
     if (predIds.length === 0) break;
-    
+
     for (const id of predIds) seen.add(id);
 
-    const pendingPreds = await db.select({ id: tasks.id })
+    const pendingPreds = await db
+      .select({ id: tasks.id })
       .from(tasks)
       .where(
-         and(
-           inArray(tasks.id, predIds),
-           eq(tasks.userId, userId),
-           ne(tasks.status, "done"),
-           ne(tasks.status, "deleted")
-         )
+        and(
+          inArray(tasks.id, predIds),
+          eq(tasks.userId, userId),
+          ne(tasks.status, "done"),
+          ne(tasks.status, "deleted"),
+        ),
       );
 
-    const pendingIds = pendingPreds.map(p => p.id);
+    const pendingIds = pendingPreds.map((p) => p.id);
     if (pendingIds.length === 0) break;
 
-    await db.update(tasks)
+    await db
+      .update(tasks)
       .set({ scheduledDate, updatedAt: nowSec() })
       .where(inArray(tasks.id, pendingIds));
-    
+
     currentTasks = pendingIds;
   }
 }
@@ -670,9 +686,17 @@ export async function listTaskDependenciesForTasks(
 ): Promise<{ taskId: string; predecessorId: string }[]> {
   if (taskIds.length === 0) return [];
   return db
-    .select({ taskId: taskDependencies.taskId, predecessorId: taskDependencies.predecessorId })
+    .select({
+      taskId: taskDependencies.taskId,
+      predecessorId: taskDependencies.predecessorId,
+    })
     .from(taskDependencies)
-    .where(or(inArray(taskDependencies.taskId, taskIds), inArray(taskDependencies.predecessorId, taskIds)));
+    .where(
+      or(
+        inArray(taskDependencies.taskId, taskIds),
+        inArray(taskDependencies.predecessorId, taskIds),
+      ),
+    );
 }
 
 async function fetchDayLogFromDB(
@@ -761,13 +785,18 @@ export async function updateDayLog(
   return rows[0];
 }
 
-export async function syncDayLogStats(userId: string, date: number): Promise<void> {
+export async function syncDayLogStats(
+  userId: string,
+  date: number,
+): Promise<void> {
   const log = await findDayLog(userId, date);
   if (!log) return;
 
   const tasksForDay = await listTasks({ userId, date });
-  const completed = tasksForDay.filter(t => t.status === "done").length;
-  const missed = tasksForDay.filter(t => t.status === "missed" || t.status === "carried").length;
+  const completed = tasksForDay.filter((t) => t.status === "done").length;
+  const missed = tasksForDay.filter(
+    (t) => t.status === "missed" || t.status === "carried",
+  ).length;
   // ratio is against tasksAssigned which was locked in at the time of confirmDay
   const ratio = log.tasksAssigned > 0 ? completed / log.tasksAssigned : 0.0;
 
@@ -775,7 +804,7 @@ export async function syncDayLogStats(userId: string, date: number): Promise<voi
     tasksCompleted: completed,
     tasksMissed: missed,
     ratio: Math.min(ratio, 1.0),
-    updatedAt: Math.floor(Date.now() / 1000)
+    updatedAt: Math.floor(Date.now() / 1000),
   });
 }
 
@@ -947,7 +976,7 @@ export async function checkOverlap(
   planDate: number,
   startTime: number,
   estimateMin: number,
-  excludeTaskId?: string
+  excludeTaskId?: string,
 ): Promise<boolean> {
   const blocks = await db
     .select({
@@ -961,8 +990,8 @@ export async function checkOverlap(
       and(
         eq(dayPlan.userId, userId),
         eq(dayPlan.planDate, planDate),
-        excludeTaskId ? ne(dayPlan.taskId, excludeTaskId) : undefined
-      )
+        excludeTaskId ? ne(dayPlan.taskId, excludeTaskId) : undefined,
+      ),
     );
 
   const newEnd = startTime + estimateMin * 60;
@@ -977,7 +1006,7 @@ export async function placeDayPlanBlock(
   userId: string,
   taskId: string,
   planDate: number,
-  startTime: number
+  startTime: number,
 ): Promise<void> {
   const task = await findTaskById(taskId, userId);
   if (!task) throw new Error("Task not found");
@@ -987,7 +1016,7 @@ export async function placeDayPlanBlock(
     planDate,
     startTime,
     task.estimateMin,
-    taskId
+    taskId,
   );
 
   if (hasOverlap) throw new OverlapConflictError();
@@ -1010,7 +1039,7 @@ export async function placeDayPlanBlock(
 
 export async function listDayPlansForDate(
   userId: string,
-  planDate: number
+  planDate: number,
 ): Promise<DayPlan[]> {
   return db
     .select()
@@ -1019,7 +1048,10 @@ export async function listDayPlansForDate(
     .orderBy(asc(dayPlan.startTime));
 }
 
-export async function removeDayPlanBlock(userId: string, taskId: string): Promise<void> {
+export async function removeDayPlanBlock(
+  userId: string,
+  taskId: string,
+): Promise<void> {
   await db
     .delete(dayPlan)
     .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)));

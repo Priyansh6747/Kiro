@@ -34,11 +34,18 @@ export async function POST(
 
   const { predecessor_id } = body as { predecessor_id?: unknown };
   if (!predecessor_id || typeof predecessor_id !== "string") {
-    return Response.json({ error: "predecessor_id is required" }, { status: 400 });
+    return Response.json(
+      { error: "predecessor_id is required" },
+      { status: 400 },
+    );
   }
 
   const predecessor = await findTaskById(predecessor_id, userId);
-  if (!predecessor) return Response.json({ error: "Predecessor task not found" }, { status: 404 });
+  if (!predecessor)
+    return Response.json(
+      { error: "Predecessor task not found" },
+      { status: 404 },
+    );
 
   // Dependencies must be intra-project
   if (task.projectId !== predecessor.projectId) {
@@ -52,7 +59,10 @@ export async function POST(
   // Check if `id` is already an ancestor of `predecessor_id` in task_closure.
   const cyclic = await isCyclicDependency(id, predecessor_id);
   if (cyclic) {
-    return Response.json({ error: "Circular dependency detected" }, { status: 422 });
+    return Response.json(
+      { error: "Circular dependency detected" },
+      { status: 422 },
+    );
   }
 
   // Insert (idempotent via ON CONFLICT DO NOTHING)

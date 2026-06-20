@@ -38,7 +38,9 @@ export async function GET(req: Request): Promise<Response> {
 
   const { searchParams } = new URL(req.url);
   const dateParam = searchParams.get("date");
-  const todayDate = dateParam ? parseInt(dateParam, 10) : todayUnixDay(prefs.timezone);
+  const todayDate = dateParam
+    ? parseInt(dateParam, 10)
+    : todayUnixDay(prefs.timezone);
   const now = nowSec();
 
   // ── Auto-generate recurring instances for today ──────────────────────────
@@ -90,8 +92,8 @@ export async function GET(req: Request): Promise<Response> {
 
   const dayLog = await findDayLog(userId, todayDate);
   const dayPlans = await listDayPlansForDate(userId, todayDate);
-  
-  const taskIds = scheduledTasks.map(t => t.id);
+
+  const taskIds = scheduledTasks.map((t) => t.id);
   const taskDependencies = await listTaskDependenciesForTasks(taskIds);
 
   return Response.json({

@@ -33,7 +33,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     // We no longer toggle since there are multiple themes, this can just be omitted or cycle.
     // For now we'll just leave it or make it cycle.
-    const themes: Theme[] = ["paper", "midnight", "nebula", "sage", "nightshade"];
+    const themes: Theme[] = [
+      "paper",
+      "midnight",
+      "nebula",
+      "sage",
+      "nightshade",
+    ];
     const nextTheme = themes[(themes.indexOf(theme) + 1) % themes.length];
     setTheme(nextTheme);
   };

@@ -38,9 +38,9 @@ export function localDateToUnixDay(date: Date, timezone = "UTC"): number {
     day: "2-digit",
   }).formatToParts(date);
 
-  const year  = Number(parts.find((p) => p.type === "year")!.value);
+  const year = Number(parts.find((p) => p.type === "year")!.value);
   const month = Number(parts.find((p) => p.type === "month")!.value) - 1;
-  const day   = Number(parts.find((p) => p.type === "day")!.value);
+  const day = Number(parts.find((p) => p.type === "day")!.value);
 
   return Math.floor(Date.UTC(year, month, day) / 86_400_000);
 }

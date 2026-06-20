@@ -15,7 +15,14 @@ import {
 import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
 
-const VALID_STATUSES = ["pending", "done", "missed", "carried", "adjusted", "deleted"] as const;
+const VALID_STATUSES = [
+  "pending",
+  "done",
+  "missed",
+  "carried",
+  "adjusted",
+  "deleted",
+] as const;
 type TaskStatus = (typeof VALID_STATUSES)[number];
 
 // ── PATCH ─────────────────────────────────────────────────────────────────────
@@ -45,7 +52,10 @@ export async function PATCH(
   if ("title" in body) {
     const title = body.title;
     if (!title || typeof title !== "string" || title.trim() === "") {
-      return Response.json({ error: "title must be a non-empty string" }, { status: 400 });
+      return Response.json(
+        { error: "title must be a non-empty string" },
+        { status: 400 },
+      );
     }
     updates.title = title.trim();
   }
@@ -54,7 +64,10 @@ export async function PATCH(
   if ("estimate_min" in body) {
     const estimateMin = Number(body.estimate_min);
     if (!Number.isInteger(estimateMin) || estimateMin <= 0) {
-      return Response.json({ error: "estimate_min must be a positive integer" }, { status: 400 });
+      return Response.json(
+        { error: "estimate_min must be a positive integer" },
+        { status: 400 },
+      );
     }
     updates.estimateMin = estimateMin;
   }
@@ -72,18 +85,24 @@ export async function PATCH(
     // Mark completed_at on first transition to "done"
     if (body.status === "done") {
       // Enforce dependencies: check if all predecessors are "done"
-      const { listTaskDependenciesForProject, listTasks } = await import("@/lib/storage");
+      const { listTaskDependenciesForProject, listTasks } = await import(
+        "@/lib/storage"
+      );
       const deps = await listTaskDependenciesForProject(task.projectId);
-      const myPredecessors = deps.filter(d => d.taskId === id).map(d => d.predecessorId);
-      
+      const myPredecessors = deps
+        .filter((d) => d.taskId === id)
+        .map((d) => d.predecessorId);
+
       if (myPredecessors.length > 0) {
         const allTasks = await listTasks({ userId, projectId: task.projectId });
-        const predTasks = allTasks.filter(t => myPredecessors.includes(t.id));
-        const notDone = predTasks.filter(t => t.status !== "done");
-        
+        const predTasks = allTasks.filter((t) => myPredecessors.includes(t.id));
+        const notDone = predTasks.filter((t) => t.status !== "done");
+
         if (notDone.length > 0) {
           return Response.json(
-            { error: `Cannot complete task. Dependencies not satisfied: ${notDone.map(t => t.title).join(", ")}` },
+            {
+              error: `Cannot complete task. Dependencies not satisfied: ${notDone.map((t) => t.title).join(", ")}`,
+            },
             { status: 422 },
           );
         }
@@ -104,47 +123,51 @@ export async function PATCH(
   if ("scheduled_date" in body) {
     if (body.scheduled_date === null) {
       updates.scheduledDate = null;
-      
+
       // Unschedule all dependent tasks recursively
       const { db } = await import("@/lib/db/client");
       const { tasks, taskDependencies } = await import("@/lib/db/models");
       const { inArray } = await import("drizzle-orm");
-      
+
       let currentLevelIds = [id];
-      
+
       while (currentLevelIds.length > 0) {
         const depsRows = await db
           .select({ taskId: taskDependencies.taskId })
           .from(taskDependencies)
           .where(inArray(taskDependencies.predecessorId, currentLevelIds));
-          
-        const nextLevelIds = depsRows.map(r => r.taskId);
+
+        const nextLevelIds = depsRows.map((r) => r.taskId);
         if (nextLevelIds.length === 0) break;
-        
+
         const allNextSuccessors = await db
           .select({ id: tasks.id, date: tasks.scheduledDate })
           .from(tasks)
           .where(inArray(tasks.id, nextLevelIds));
-          
+
         for (const s of allNextSuccessors) {
           if (s.date !== null) {
             allSuccessorsToUnschedule.push(s as { id: string; date: number });
           }
         }
-        
-        currentLevelIds = allNextSuccessors.map(s => s.id);
+
+        currentLevelIds = allNextSuccessors.map((s) => s.id);
       }
 
       if (allSuccessorsToUnschedule.length > 0) {
-        const successorIds = allSuccessorsToUnschedule.map(s => s.id);
-        await db.update(tasks)
+        const successorIds = allSuccessorsToUnschedule.map((s) => s.id);
+        await db
+          .update(tasks)
           .set({ scheduledDate: null, updatedAt: nowSec() })
           .where(inArray(tasks.id, successorIds));
       }
     } else {
       const scheduledDate = Number(body.scheduled_date);
       if (Number.isNaN(scheduledDate)) {
-        return Response.json({ error: "scheduled_date must be a unix day integer" }, { status: 400 });
+        return Response.json(
+          { error: "scheduled_date must be a unix day integer" },
+          { status: 400 },
+        );
       }
       updates.scheduledDate = scheduledDate;
     }
@@ -157,7 +180,10 @@ export async function PATCH(
     } else {
       const deadlineAt = Number(body.deadline_at);
       if (Number.isNaN(deadlineAt)) {
-        return Response.json({ error: "deadline_at must be a unix timestamp" }, { status: 400 });
+        return Response.json(
+          { error: "deadline_at must be a unix timestamp" },
+          { status: 400 },
+        );
       }
 
       // Validate against project deadline
@@ -178,8 +204,11 @@ export async function PATCH(
 
   // Sync day log if task is scheduled for a date
   const oldDate = task.scheduledDate;
-  const newDate = updates.scheduledDate !== undefined ? updates.scheduledDate : task.scheduledDate;
-  
+  const newDate =
+    updates.scheduledDate !== undefined
+      ? updates.scheduledDate
+      : task.scheduledDate;
+
   const datesToSync = new Set<number>();
   if (oldDate !== null) datesToSync.add(oldDate);
   if (newDate !== null) datesToSync.add(newDate);
@@ -187,7 +216,7 @@ export async function PATCH(
   for (const succ of allSuccessorsToUnschedule) {
     if (succ.date !== null) datesToSync.add(succ.date);
   }
-  
+
   for (const d of datesToSync) {
     await syncDayLogStats(userId, d);
   }
@@ -210,7 +239,10 @@ export async function DELETE(
   if (!task) return Response.json({ error: "Task not found" }, { status: 404 });
 
   if (!task.isDefault) {
-    return Response.json({ error: "Only Todo tasks can be deleted" }, { status: 422 });
+    return Response.json(
+      { error: "Only Todo tasks can be deleted" },
+      { status: 422 },
+    );
   }
 
   await softDeleteTask(id);

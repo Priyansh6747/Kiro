@@ -79,7 +79,9 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center gap-2 py-12 text-tertiary">
       <span className="text-3xl">{icon}</span>
       <p className="text-sm font-medium text-secondary">{title}</p>
-      {description && <p className="text-xs text-center max-w-xs">{description}</p>}
+      {description && (
+        <p className="text-xs text-center max-w-xs">{description}</p>
+      )}
     </div>
   );
 }
@@ -193,7 +195,7 @@ export function TaskRow({
   onUnscheduled?: (t: Task) => void;
   showProject?: boolean;
   projects?: Project[];
-  animatingState?: 'loading' | 'success' | 'error';
+  animatingState?: "loading" | "success" | "error";
   onDeleteRequested?: (t: Task) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -242,7 +244,13 @@ export function TaskRow({
       onDeleteRequested(task);
       return;
     }
-    if (!(await confirm("Delete Task", `Are you sure you want to delete "${task.title}"?`))) return;
+    if (
+      !(await confirm(
+        "Delete Task",
+        `Are you sure you want to delete "${task.title}"?`,
+      ))
+    )
+      return;
     setSaving(true);
     try {
       await deleteTask(task.id);
@@ -317,10 +325,13 @@ export function TaskRow({
       className={`flex items-start gap-3 px-4 py-3 border-b border-border-default last:border-b-0 bg-surface hover:bg-surface-raised transition-colors ${
         isDone ? "opacity-60" : ""
       } ${
-        animatingState === 'success' ? '!bg-done-subtle text-done' :
-        animatingState === 'error' ? '!bg-missed-subtle text-missed' :
-        animatingState === 'loading' ? '!bg-accent-subtle/50 animate-pulse text-secondary' :
-        ''
+        animatingState === "success"
+          ? "!bg-done-subtle text-done"
+          : animatingState === "error"
+            ? "!bg-missed-subtle text-missed"
+            : animatingState === "loading"
+              ? "!bg-accent-subtle/50 animate-pulse text-secondary"
+              : ""
       }`}
     >
       {/* Checkbox */}
@@ -332,7 +343,9 @@ export function TaskRow({
             ? "border border-border-default-green-500 bg-green-500 text-white"
             : "border border-border-default-gray-300"
         } ${task.scheduledDate === null ? "opacity-50 cursor-not-allowed" : ""}`}
-        title={task.scheduledDate === null ? "Schedule task to complete it" : ""}
+        title={
+          task.scheduledDate === null ? "Schedule task to complete it" : ""
+        }
       >
         {isDone && <span className="text-[10px] leading-none">✓</span>}
       </button>
@@ -345,7 +358,9 @@ export function TaskRow({
           {task.title}
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-xs text-tertiary">{formatMinutes(task.estimateMin)}</span>
+          <span className="text-xs text-tertiary">
+            {formatMinutes(task.estimateMin)}
+          </span>
           {task.status !== "pending" && task.status !== "done" && (
             <StatusBadge status={task.status} />
           )}
@@ -420,16 +435,18 @@ export function QuickCapture({
   const [scheduleToday, setScheduleToday] = useState(
     defaultScheduledDate !== undefined ? defaultScheduledDate !== null : false,
   );
-  
+
   const getAutoPredecessor = (pId: string) => {
-    const proj = projects.find(p => p.id === pId);
+    const proj = projects.find((p) => p.id === pId);
     if (!proj || proj.isDefault) return "";
-    const pTasks = (tasks || []).filter(t => t.projectId === pId);
+    const pTasks = (tasks || []).filter((t) => t.projectId === pId);
     return pTasks.length > 0 ? pTasks[pTasks.length - 1].id : "";
   };
 
   const [predecessorId, setPredecessorId] = useState<string>(
-    defaultPredecessorId !== undefined ? defaultPredecessorId : getAutoPredecessor(defaultProjectId ?? projects[0]?.id ?? "")
+    defaultPredecessorId !== undefined
+      ? defaultPredecessorId
+      : getAutoPredecessor(defaultProjectId ?? projects[0]?.id ?? ""),
   );
 
   useEffect(() => {
@@ -460,12 +477,16 @@ export function QuickCapture({
           }
           validateTasksData(tasksData);
         } catch (err) {
-          throw new Error(`JSON validation error: ${err instanceof Error ? err.message : String(err)}`);
+          throw new Error(
+            `JSON validation error: ${err instanceof Error ? err.message : String(err)}`,
+          );
         }
       }
 
       if (importJson) {
-        const schedDate = scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null;
+        const schedDate = scheduleToday
+          ? (defaultScheduledDate ?? todayUnixDay())
+          : null;
         const res = await ingestTasks({
           project_id: projectId,
           tasks: tasksData,
@@ -477,7 +498,9 @@ export function QuickCapture({
           project_id: projectId,
           title: title.trim(),
           estimate_min: Number(estimate) || 30,
-          scheduled_date: scheduleToday ? (defaultScheduledDate ?? todayUnixDay()) : null,
+          scheduled_date: scheduleToday
+            ? (defaultScheduledDate ?? todayUnixDay())
+            : null,
           predecessor_id: predecessorId || undefined,
         });
         onCreated(task);
@@ -564,9 +587,13 @@ export function QuickCapture({
                 onChange={(e) => setPredecessorId(e.target.value)}
               >
                 <option value="">None</option>
-                {tasks.filter(t => t.projectId === projectId).map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
+                {tasks
+                  .filter((t) => t.projectId === projectId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
               </select>
             </div>
           )}
@@ -597,13 +624,15 @@ export function QuickCapture({
                   onClick={() => setShowExample(!showExample)}
                   className="text-xs text-accent hover:underline"
                 >
-                  {showExample ? "Hide Structure Example" : "Show Structure Example"}
+                  {showExample
+                    ? "Hide Structure Example"
+                    : "Show Structure Example"}
                 </button>
               </div>
 
               {showExample && (
                 <div className="bg-surface-raised border border-border-default rounded-lg p-2.5 text-[10px] font-mono text-secondary overflow-x-auto max-h-40 leading-relaxed whitespace-pre">
-{`[
+                  {`[
   {
     "id": "task1",
     "title": "Design Database Schema",
@@ -655,7 +684,11 @@ export function QuickCapture({
 
           <button
             type="submit"
-            disabled={saving || (!importJson && !title.trim()) || (importJson && !jsonText.trim())}
+            disabled={
+              saving ||
+              (!importJson && !title.trim()) ||
+              (importJson && !jsonText.trim())
+            }
             className="w-full rounded-lg bg-accent py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? "Adding…" : "Add Task"}
@@ -673,14 +706,25 @@ function validateTasksData(list: any[]): void {
     if (!item || typeof item !== "object") {
       throw new Error("Each task in the array must be an object");
     }
-    if (!item.title || typeof item.title !== "string" || item.title.trim() === "") {
+    if (
+      !item.title ||
+      typeof item.title !== "string" ||
+      item.title.trim() === ""
+    ) {
       throw new Error("Each task must have a non-empty string title");
     }
-    if (item.estimate_min !== undefined && (typeof item.estimate_min !== "number" || item.estimate_min <= 0)) {
-      throw new Error(`Task "${item.title}" estimate_min must be a positive number`);
+    if (
+      item.estimate_min !== undefined &&
+      (typeof item.estimate_min !== "number" || item.estimate_min <= 0)
+    ) {
+      throw new Error(
+        `Task "${item.title}" estimate_min must be a positive number`,
+      );
     }
     if (item.deadline && Number.isNaN(new Date(item.deadline).getTime())) {
-      throw new Error(`Task "${item.title}" has an invalid deadline format (use YYYY-MM-DD)`);
+      throw new Error(
+        `Task "${item.title}" has an invalid deadline format (use YYYY-MM-DD)`,
+      );
     }
     if (item.subtasks) {
       if (!Array.isArray(item.subtasks)) {
@@ -728,9 +772,10 @@ export function CreateProjectForm({
         cadence = "custom"; // Or weekly if it's every day, but custom works for selected days
       }
 
-      const deadline_at = (type !== "habit" && type !== "recurring" && deadline)
-        ? Math.floor(new Date(deadline).getTime() / 1000)
-        : null;
+      const deadline_at =
+        type !== "habit" && type !== "recurring" && deadline
+          ? Math.floor(new Date(deadline).getTime() / 1000)
+          : null;
 
       const project = await createProject({
         name: name.trim(),
@@ -834,20 +879,22 @@ export function CreateProjectForm({
                 Repeat on days:
               </label>
               <div className="flex gap-1">
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    className={`flex-1 py-1 text-xs rounded border border-border-default ${
-                      recurrenceDays.includes(day)
-                        ? "bg-accent text-white border border-border-default-blue-600"
-                        : "bg-surface text-secondary border border-border-default-gray-300"
-                    }`}
-                  >
-                    {day.substring(0, 1)}
-                  </button>
-                ))}
+                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
+                  (day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={`flex-1 py-1 text-xs rounded border border-border-default ${
+                        recurrenceDays.includes(day)
+                          ? "bg-accent text-white border border-border-default-blue-600"
+                          : "bg-surface text-secondary border border-border-default-gray-300"
+                      }`}
+                    >
+                      {day.substring(0, 1)}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
           )}

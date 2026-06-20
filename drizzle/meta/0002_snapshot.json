@@ -109,10 +109,7 @@
       "indexes": {
         "idx_day_logs_user_date": {
           "name": "idx_day_logs_user_date",
-          "columns": [
-            "user_id",
-            "date"
-          ],
+          "columns": ["user_id", "date"],
           "isUnique": false
         }
       },
@@ -121,12 +118,8 @@
           "name": "day_logs_user_id_users_id_fk",
           "tableFrom": "day_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -184,10 +177,7 @@
       "indexes": {
         "idx_day_plan_user_date": {
           "name": "idx_day_plan_user_date",
-          "columns": [
-            "user_id",
-            "plan_date"
-          ],
+          "columns": ["user_id", "plan_date"],
           "isUnique": false
         }
       },
@@ -196,12 +186,8 @@
           "name": "day_plan_user_id_users_id_fk",
           "tableFrom": "day_plan",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -209,22 +195,15 @@
           "name": "day_plan_task_id_tasks_id_fk",
           "tableFrom": "day_plan",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "day_plan_user_id_task_id_pk": {
-          "columns": [
-            "user_id",
-            "task_id"
-          ],
+          "columns": ["user_id", "task_id"],
           "name": "day_plan_user_id_task_id_pk"
         }
       },
@@ -294,10 +273,7 @@
       "indexes": {
         "idx_memory_user_computed": {
           "name": "idx_memory_user_computed",
-          "columns": [
-            "user_id",
-            "computed_at"
-          ],
+          "columns": ["user_id", "computed_at"],
           "isUnique": false
         }
       },
@@ -306,12 +282,8 @@
           "name": "memory_baseline_user_id_users_id_fk",
           "tableFrom": "memory_baseline",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -390,12 +362,8 @@
           "name": "preferences_user_id_users_id_fk",
           "tableFrom": "preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -483,11 +451,7 @@
       "indexes": {
         "idx_projects_user_type": {
           "name": "idx_projects_user_type",
-          "columns": [
-            "user_id",
-            "type",
-            "archived_at"
-          ],
+          "columns": ["user_id", "type", "archived_at"],
           "isUnique": false
         }
       },
@@ -496,12 +460,8 @@
           "name": "projects_user_id_users_id_fk",
           "tableFrom": "projects",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -538,9 +498,7 @@
       "indexes": {
         "idx_closure_descendant": {
           "name": "idx_closure_descendant",
-          "columns": [
-            "descendant_id"
-          ],
+          "columns": ["descendant_id"],
           "isUnique": false
         }
       },
@@ -549,12 +507,8 @@
           "name": "task_closure_ancestor_id_tasks_id_fk",
           "tableFrom": "task_closure",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "ancestor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ancestor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -562,22 +516,15 @@
           "name": "task_closure_descendant_id_tasks_id_fk",
           "tableFrom": "task_closure",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "descendant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["descendant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "task_closure_ancestor_id_descendant_id_pk": {
-          "columns": [
-            "ancestor_id",
-            "descendant_id"
-          ],
+          "columns": ["ancestor_id", "descendant_id"],
           "name": "task_closure_ancestor_id_descendant_id_pk"
         }
       },
@@ -612,9 +559,7 @@
       "indexes": {
         "idx_dependencies_task": {
           "name": "idx_dependencies_task",
-          "columns": [
-            "task_id"
-          ],
+          "columns": ["task_id"],
           "isUnique": false
         }
       },
@@ -623,12 +568,8 @@
           "name": "task_dependencies_task_id_tasks_id_fk",
           "tableFrom": "task_dependencies",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -636,22 +577,15 @@
           "name": "task_dependencies_predecessor_id_tasks_id_fk",
           "tableFrom": "task_dependencies",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "predecessor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["predecessor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "task_dependencies_task_id_predecessor_id_pk": {
-          "columns": [
-            "task_id",
-            "predecessor_id"
-          ],
+          "columns": ["task_id", "predecessor_id"],
           "name": "task_dependencies_task_id_predecessor_id_pk"
         }
       },
@@ -779,25 +713,17 @@
       "indexes": {
         "idx_tasks_user_scheduled": {
           "name": "idx_tasks_user_scheduled",
-          "columns": [
-            "user_id",
-            "scheduled_date"
-          ],
+          "columns": ["user_id", "scheduled_date"],
           "isUnique": false
         },
         "idx_tasks_project_status": {
           "name": "idx_tasks_project_status",
-          "columns": [
-            "project_id",
-            "status"
-          ],
+          "columns": ["project_id", "status"],
           "isUnique": false
         },
         "idx_tasks_parent": {
           "name": "idx_tasks_parent",
-          "columns": [
-            "parent_id"
-          ],
+          "columns": ["parent_id"],
           "isUnique": false
         }
       },
@@ -806,12 +732,8 @@
           "name": "tasks_user_id_users_id_fk",
           "tableFrom": "tasks",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -819,12 +741,8 @@
           "name": "tasks_project_id_projects_id_fk",
           "tableFrom": "tasks",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -832,12 +750,8 @@
           "name": "tasks_parent_id_tasks_id_fk",
           "tableFrom": "tasks",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -845,12 +759,8 @@
           "name": "tasks_carried_from_id_tasks_id_fk",
           "tableFrom": "tasks",
           "tableTo": "tasks",
-          "columnsFrom": [
-            "carried_from_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["carried_from_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -915,16 +825,12 @@
       "indexes": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         },
         "users_username_unique": {
           "name": "users_username_unique",
-          "columns": [
-            "username"
-          ],
+          "columns": ["username"],
           "isUnique": true
         }
       },

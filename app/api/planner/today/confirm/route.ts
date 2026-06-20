@@ -30,7 +30,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   let availableMin = prefs.defaultAvailableMin;
   if (body.available_min !== undefined && body.available_min !== null) {
     availableMin = Number(body.available_min);
-    if (!Number.isInteger(availableMin) || availableMin <= 0 || availableMin > 1440) {
+    if (
+      !Number.isInteger(availableMin) ||
+      availableMin <= 0 ||
+      availableMin > 1440
+    ) {
       return Response.json(
         { error: "available_min must be a positive integer ≤ 1440" },
         { status: 400 },
@@ -39,11 +43,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const scheduledTasks = await listTasks({ userId, date: todayDate });
-  const tasksAssigned  = scheduledTasks.length;
-  const tasksCompleted = scheduledTasks.filter(t => t.status === "done").length;
-  const tasksMissed = scheduledTasks.filter(t => t.status === "missed" || t.status === "carried").length;
+  const tasksAssigned = scheduledTasks.length;
+  const tasksCompleted = scheduledTasks.filter(
+    (t) => t.status === "done",
+  ).length;
+  const tasksMissed = scheduledTasks.filter(
+    (t) => t.status === "missed" || t.status === "carried",
+  ).length;
   const ratio = tasksAssigned > 0 ? tasksCompleted / tasksAssigned : 0.0;
-  const now            = nowSec();
+  const now = nowSec();
 
   const dayLog = await upsertDayLog({
     id: crypto.randomUUID(),

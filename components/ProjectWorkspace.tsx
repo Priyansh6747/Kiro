@@ -42,12 +42,20 @@ export function ProjectWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
-  const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
-  const [dependencies, setDependencies] = useState<{taskId: string, predecessorId: string}[]>([]);
-  const [taskToDeleteWithDeps, setTaskToDeleteWithDeps] = useState<Task | null>(null);
+  const [capturePredecessorId, setCapturePredecessorId] = useState<
+    string | undefined
+  >();
+  const [dependencies, setDependencies] = useState<
+    { taskId: string; predecessorId: string }[]
+  >([]);
+  const [taskToDeleteWithDeps, setTaskToDeleteWithDeps] = useState<Task | null>(
+    null,
+  );
   const [transferTargetId, setTransferTargetId] = useState<string>("none");
   const [isDeletingTask, setIsDeletingTask] = useState(false);
-  const [animatingTasksStatus, setAnimatingTasksStatus] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
+  const [animatingTasksStatus, setAnimatingTasksStatus] = useState<
+    Record<string, "loading" | "success" | "error">
+  >({});
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -60,7 +68,7 @@ export function ProjectWorkspace({
   const [editDeadline, setEditDeadline] = useState(
     project.deadlineAt
       ? new Date(project.deadlineAt * 1000).toISOString().split("T")[0]
-      : ""
+      : "",
   );
 
   const [showChart, setShowChart] = useState(false);
@@ -72,13 +80,13 @@ export function ProjectWorkspace({
       const { getProjectDependencies } = await import("@/lib/api-client");
       const [data, deps] = await Promise.all([
         listTasks({ project_id: project.id }),
-        getProjectDependencies(project.id)
+        getProjectDependencies(project.id),
       ]);
       setTasks(data);
       setDependencies(deps);
     } catch (e) {
       setError((e as Error).message);
-      showToast((e as Error).message, 'error');
+      showToast((e as Error).message, "error");
     } finally {
       setLoading(false);
     }
@@ -89,31 +97,38 @@ export function ProjectWorkspace({
   }, [loadTasks]);
 
   const handleArchive = async () => {
-    if (!await confirm("Archive project", `Archive project "${project.name}"?`)) return;
+    if (
+      !(await confirm("Archive project", `Archive project "${project.name}"?`))
+    )
+      return;
     try {
       await archiveProject(project.id);
       onProjectArchived(project.id);
       if (onBack) onBack();
     } catch (e) {
-      showToast((e as Error).message, 'error');
+      showToast((e as Error).message, "error");
     }
   };
 
   const exportTasksToJson = () => {
     const taskMap = new Map<string, any>();
-    tasks.forEach(t => {
+    tasks.forEach((t) => {
       taskMap.set(t.id, {
         id: t.id,
         title: t.title,
         estimate_min: t.estimateMin,
-        deadline: t.deadlineAt ? new Date(t.deadlineAt * 1000).toISOString().split('T')[0] : undefined,
+        deadline: t.deadlineAt
+          ? new Date(t.deadlineAt * 1000).toISOString().split("T")[0]
+          : undefined,
         subtasks: [],
-        depends_on: dependencies.filter(d => d.taskId === t.id).map(d => d.predecessorId)
+        depends_on: dependencies
+          .filter((d) => d.taskId === t.id)
+          .map((d) => d.predecessorId),
       });
     });
 
     const roots: any[] = [];
-    tasks.forEach(t => {
+    tasks.forEach((t) => {
       if (t.parentId && taskMap.has(t.parentId)) {
         taskMap.get(t.parentId).subtasks.push(taskMap.get(t.id));
       } else {
@@ -133,7 +148,7 @@ export function ProjectWorkspace({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `project_${project.name.replace(/\s+/g, '_')}_tasks.json`;
+    a.download = `project_${project.name.replace(/\s+/g, "_")}_tasks.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -155,15 +170,16 @@ export function ProjectWorkspace({
         importance: editImportance,
         type: editType,
         cadence,
-        deadline_at: (editType !== "habit" && editType !== "recurring" && editDeadline)
-          ? Math.floor(new Date(editDeadline).getTime() / 1000)
-          : null,
+        deadline_at:
+          editType !== "habit" && editType !== "recurring" && editDeadline
+            ? Math.floor(new Date(editDeadline).getTime() / 1000)
+            : null,
       });
       onProjectUpdated(updated);
       setEditing(false);
-      showToast("Project updated", 'success');
+      showToast("Project updated", "success");
     } catch (e) {
-      showToast((e as Error).message, 'error');
+      showToast((e as Error).message, "error");
     } finally {
       setSavingEdit(false);
     }
@@ -183,12 +199,20 @@ export function ProjectWorkspace({
   };
 
   const handleDeleteTaskRequest = async (task: Task) => {
-    const dependentTasks = dependencies.filter(d => d.predecessorId === task.id);
+    const dependentTasks = dependencies.filter(
+      (d) => d.predecessorId === task.id,
+    );
     if (dependentTasks.length > 0) {
       setTaskToDeleteWithDeps(task);
       setTransferTargetId("none");
     } else {
-      if (!(await confirm("Delete Task", `Are you sure you want to delete "${task.title}"?`))) return;
+      if (
+        !(await confirm(
+          "Delete Task",
+          `Are you sure you want to delete "${task.title}"?`,
+        ))
+      )
+        return;
       executeTaskDelete(task.id);
     }
   };
@@ -196,44 +220,55 @@ export function ProjectWorkspace({
   const executeTaskDelete = async (taskId: string, transferToId?: string) => {
     setIsDeletingTask(true);
     setTaskToDeleteWithDeps(null);
-    setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'loading' }));
+    setAnimatingTasksStatus((prev) => ({ ...prev, [taskId]: "loading" }));
 
     try {
       if (transferToId && transferToId !== "none") {
-        const dependentTasks = dependencies.filter(d => d.predecessorId === taskId);
+        const dependentTasks = dependencies.filter(
+          (d) => d.predecessorId === taskId,
+        );
         for (const dep of dependentTasks) {
-          await import("@/lib/api-client").then(m => m.addDependency(dep.taskId, transferToId));
-          await import("@/lib/api-client").then(m => m.deleteDependency(dep.taskId, taskId));
+          await import("@/lib/api-client").then((m) =>
+            m.addDependency(dep.taskId, transferToId),
+          );
+          await import("@/lib/api-client").then((m) =>
+            m.deleteDependency(dep.taskId, taskId),
+          );
         }
       } else {
-        const dependentTasks = dependencies.filter(d => d.predecessorId === taskId);
+        const dependentTasks = dependencies.filter(
+          (d) => d.predecessorId === taskId,
+        );
         for (const dep of dependentTasks) {
-          await import("@/lib/api-client").then(m => m.deleteDependency(dep.taskId, taskId));
+          await import("@/lib/api-client").then((m) =>
+            m.deleteDependency(dep.taskId, taskId),
+          );
         }
       }
-      
-      await import("@/lib/api-client").then(m => m.deleteTask(taskId));
-      
-      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'success' }));
+
+      await import("@/lib/api-client").then((m) => m.deleteTask(taskId));
+
+      setAnimatingTasksStatus((prev) => ({ ...prev, [taskId]: "success" }));
       showToast("Task deleted", "success");
-      
+
       setTimeout(() => {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
-        setSelectedTask(prev => prev?.id === taskId ? null : prev);
-        setAnimatingTasksStatus(prev => {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        setSelectedTask((prev) => (prev?.id === taskId ? null : prev));
+        setAnimatingTasksStatus((prev) => {
           const next = { ...prev };
           delete next[taskId];
           return next;
         });
       }, 500);
-      
-      import("@/lib/api-client").then(m => m.getProjectDependencies(project.id).then(setDependencies));
-      
+
+      import("@/lib/api-client").then((m) =>
+        m.getProjectDependencies(project.id).then(setDependencies),
+      );
     } catch (e) {
       showToast("Failed to delete task: " + (e as Error).message, "error");
-      setAnimatingTasksStatus(prev => ({ ...prev, [taskId]: 'error' }));
+      setAnimatingTasksStatus((prev) => ({ ...prev, [taskId]: "error" }));
       setTimeout(() => {
-        setAnimatingTasksStatus(prev => {
+        setAnimatingTasksStatus((prev) => {
           const next = { ...prev };
           delete next[taskId];
           return next;
@@ -324,7 +359,9 @@ export function ProjectWorkspace({
               <h2 className="font-semibold text-primary">{project.name}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <TypeBadge type={project.type} />
-                <span className="text-xs text-tertiary">P{project.importance}</span>
+                <span className="text-xs text-tertiary">
+                  P{project.importance}
+                </span>
                 {project.deadlineAt && (
                   <span className="text-xs text-orange-500">
                     Due {formatTimestamp(project.deadlineAt)}
@@ -360,14 +397,18 @@ export function ProjectWorkspace({
 
       {tasksByDeadline.length > 0 && (
         <div className="border-b border-border-default bg-surface-raised px-4 py-3">
-          <p className="text-xs font-semibold text-secondary uppercase mb-2">Timeline</p>
+          <p className="text-xs font-semibold text-secondary uppercase mb-2">
+            Timeline
+          </p>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {tasksByDeadline.map((t) => (
               <div
                 key={t.id}
                 className="shrink-0 bg-surface border border-border-default rounded px-3 py-2 text-xs"
               >
-                <p className="font-medium text-secondary max-w-[120px] truncate">{t.title}</p>
+                <p className="font-medium text-secondary max-w-[120px] truncate">
+                  {t.title}
+                </p>
                 <p className="text-tertiary">{formatTimestamp(t.deadlineAt)}</p>
                 <StatusBadge status={t.status} />
               </div>
@@ -377,10 +418,12 @@ export function ProjectWorkspace({
       )}
 
       <div className="px-4 py-2 bg-surface-raised border-b border-border-default flex items-center justify-between">
-        <p className="text-xs font-semibold text-secondary uppercase">Dependency Chart</p>
+        <p className="text-xs font-semibold text-secondary uppercase">
+          Dependency Chart
+        </p>
         <div className="flex gap-4">
           {showChart && (
-            <button 
+            <button
               onClick={() => {
                 setCapturePredecessorId(undefined);
                 setShowCapture(true);
@@ -390,28 +433,31 @@ export function ProjectWorkspace({
               + Add Task
             </button>
           )}
-          <button onClick={() => setShowChart(!showChart)} className="text-xs text-secondary hover:underline">
+          <button
+            onClick={() => setShowChart(!showChart)}
+            className="text-xs text-secondary hover:underline"
+          >
             {showChart ? "Hide Chart" : "Show Chart"}
           </button>
         </div>
       </div>
       {showChart && (
-         <div className="p-4 border-b border-border-default bg-surface relative">
-           <DependencyChart 
-             tasks={tasks} 
-             dependencies={dependencies} 
-             onAddDependency={async (taskId, predecessorId) => {
-               try {
-                 const { addDependency } = await import("@/lib/api-client");
-                 await addDependency(taskId, predecessorId);
-                 loadTasks();
-                 showToast("Dependency added", "success");
-               } catch (e) {
-                 showToast((e as Error).message, 'error');
-               }
-             }}
-           />
-         </div>
+        <div className="p-4 border-b border-border-default bg-surface relative">
+          <DependencyChart
+            tasks={tasks}
+            dependencies={dependencies}
+            onAddDependency={async (taskId, predecessorId) => {
+              try {
+                const { addDependency } = await import("@/lib/api-client");
+                await addDependency(taskId, predecessorId);
+                loadTasks();
+                showToast("Dependency added", "success");
+              } catch (e) {
+                showToast((e as Error).message, "error");
+              }
+            }}
+          />
+        </div>
       )}
 
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
@@ -434,7 +480,9 @@ export function ProjectWorkspace({
           {loading ? (
             <LoadingScreen />
           ) : error ? (
-            <div className="p-4"><ErrorBanner message={error} onRetry={loadTasks} /></div>
+            <div className="p-4">
+              <ErrorBanner message={error} onRetry={loadTasks} />
+            </div>
           ) : tasks.length === 0 ? (
             <EmptyState
               icon="📋"
@@ -484,24 +532,32 @@ export function ProjectWorkspace({
       {taskToDeleteWithDeps && (
         <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-surface border border-border-default rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-medium text-primary mb-2">Transfer Dependencies</h3>
+            <h3 className="text-lg font-medium text-primary mb-2">
+              Transfer Dependencies
+            </h3>
             <p className="text-sm text-secondary mb-4">
-              Other tasks depend on &quot;{taskToDeleteWithDeps.title}&quot;. What should happen to those dependencies?
+              Other tasks depend on &quot;{taskToDeleteWithDeps.title}&quot;.
+              What should happen to those dependencies?
             </p>
-            
+
             <select
               className="w-full bg-surface-raised border border-border-default rounded-lg px-3 py-2 text-sm text-primary mb-6 focus:outline-none focus:ring-2 focus:ring-accent"
               value={transferTargetId}
               onChange={(e) => setTransferTargetId(e.target.value)}
             >
               <option value="none">Remove Dependencies</option>
-              {tasks.filter(t => t.id !== taskToDeleteWithDeps.id && t.status !== 'deleted').map(t => (
-                <option key={t.id} value={t.id}>
-                  Transfer to: {t.title}
-                </option>
-              ))}
+              {tasks
+                .filter(
+                  (t) =>
+                    t.id !== taskToDeleteWithDeps.id && t.status !== "deleted",
+                )
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Transfer to: {t.title}
+                  </option>
+                ))}
             </select>
-            
+
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setTaskToDeleteWithDeps(null)}
@@ -511,7 +567,9 @@ export function ProjectWorkspace({
                 Cancel
               </button>
               <button
-                onClick={() => executeTaskDelete(taskToDeleteWithDeps.id, transferTargetId)}
+                onClick={() =>
+                  executeTaskDelete(taskToDeleteWithDeps.id, transferTargetId)
+                }
                 disabled={isDeletingTask}
                 className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
               >
@@ -571,14 +629,14 @@ function TaskDetailPanel({
 
   const otherTasks = allTasks.filter((t) => t.id !== task.id);
   const currentDeps = dependencies.filter((d) => d.taskId === task.id);
-  
+
   const removeDep = async (predId: string) => {
     try {
       const { deleteDependency } = await import("@/lib/api-client");
       await deleteDependency(task.id, predId);
       onDependencyRemoved?.();
     } catch (e) {
-      showToast((e as Error).message, 'error');
+      showToast((e as Error).message, "error");
     }
   };
 
@@ -601,7 +659,9 @@ function TaskDetailPanel({
   return (
     <div className="p-4 space-y-4 overflow-y-auto">
       <div>
-        <p className="text-xs font-semibold text-secondary uppercase mb-1">Task</p>
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">
+          Task
+        </p>
         <p className="text-sm font-medium text-primary">{task.title}</p>
       </div>
 
@@ -625,7 +685,9 @@ function TaskDetailPanel({
       </div>
 
       <div>
-        <p className="text-xs font-semibold text-secondary uppercase mb-1">Change Status</p>
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">
+          Change Status
+        </p>
         <div className="flex flex-wrap gap-1">
           {(["pending", "done", "missed"] as const).map((s) => (
             <button
@@ -636,7 +698,7 @@ function TaskDetailPanel({
                   const updated = await updateTask(task.id, { status: s });
                   onUpdated(updated);
                 } catch (e) {
-                  showToast((e as Error).message, 'error');
+                  showToast((e as Error).message, "error");
                 }
               }}
               className={`rounded px-2 py-1 text-xs border border-border-default ${
@@ -652,15 +714,22 @@ function TaskDetailPanel({
       </div>
 
       <div>
-        <p className="text-xs font-semibold text-secondary uppercase mb-1">Dependencies</p>
-        
+        <p className="text-xs font-semibold text-secondary uppercase mb-1">
+          Dependencies
+        </p>
+
         {currentDeps.length > 0 && (
           <div className="space-y-1 mb-3">
             {currentDeps.map((dep) => {
-              const predTask = allTasks.find(t => t.id === dep.predecessorId);
+              const predTask = allTasks.find((t) => t.id === dep.predecessorId);
               return (
-                <div key={dep.predecessorId} className="flex items-center justify-between bg-surface-raised border border-border-default rounded px-2 py-1 text-xs">
-                  <span className="truncate flex-1 mr-2">{predTask?.title || "Unknown task"}</span>
+                <div
+                  key={dep.predecessorId}
+                  className="flex items-center justify-between bg-surface-raised border border-border-default rounded px-2 py-1 text-xs"
+                >
+                  <span className="truncate flex-1 mr-2">
+                    {predTask?.title || "Unknown task"}
+                  </span>
                   <button
                     onClick={() => removeDep(dep.predecessorId)}
                     className="text-red-400 hover:text-red-600 font-bold px-1"
@@ -682,12 +751,12 @@ function TaskDetailPanel({
           >
             <option value="">Select predecessor…</option>
             {otherTasks
-              .filter(t => !currentDeps.some(d => d.predecessorId === t.id))
+              .filter((t) => !currentDeps.some((d) => d.predecessorId === t.id))
               .map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.title}
                 </option>
-            ))}
+              ))}
           </select>
           <button
             disabled={!depPredId || addingDep}
@@ -704,4 +773,3 @@ function TaskDetailPanel({
 }
 
 // ── Main Projects Page ────────────────────────────────────────────────────────
-

@@ -5,7 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-import { Zap, CheckSquare, FolderKanban, BarChart2, Settings } from "lucide-react";
+import {
+  Zap,
+  CheckSquare,
+  FolderKanban,
+  BarChart2,
+  Settings,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/today", label: "Today", Icon: Zap },
@@ -26,7 +32,9 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             className={`flex-1 flex flex-col items-center justify-center py-3 text-xs gap-1 ${
-              active ? "text-accent font-semibold" : "text-secondary hover:text-primary transition-colors"
+              active
+                ? "text-accent font-semibold"
+                : "text-secondary hover:text-primary transition-colors"
             }`}
           >
             <item.Icon className="w-5 h-5" />
@@ -48,7 +56,9 @@ export function Sidebar() {
     <aside className="hidden md:flex flex-col w-48 lg:w-56 shrink-0 border-r border-border-default bg-surface h-screen sticky top-0 justify-between">
       <div>
         <div className="px-6 py-6">
-          <h1 className="text-xl font-mono tracking-tight text-primary">Kiro</h1>
+          <h1 className="text-xl font-mono tracking-tight text-primary">
+            Kiro
+          </h1>
         </div>
         <nav className="flex flex-col gap-3 px-6 mt-4">
           {NAV_ITEMS.map((item) => {
@@ -63,7 +73,9 @@ export function Sidebar() {
                     : "text-secondary hover:text-primary hover:bg-surface-raised"
                 }`}
               >
-                <item.Icon className={`w-5 h-5 ${active ? "text-accent" : "text-tertiary"}`} />
+                <item.Icon
+                  className={`w-5 h-5 ${active ? "text-accent" : "text-tertiary"}`}
+                />
                 {item.label}
               </Link>
             );
@@ -73,9 +85,9 @@ export function Sidebar() {
 
       {user && (
         <div className="p-6 flex items-center gap-3 mt-auto">
-          <img 
-            src={user.imageUrl} 
-            alt="Profile" 
+          <img
+            src={user.imageUrl}
+            alt="Profile"
             className="w-10 h-10 rounded-full border border-border-default"
           />
           <div className="flex flex-col">
@@ -99,7 +111,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         const prefs = await getPreferences();
         if (active && prefs && prefs.timezone !== localTz) {
-          console.log(`[Timezone Sync] Updating timezone from ${prefs.timezone} to ${localTz}`);
+          console.log(
+            `[Timezone Sync] Updating timezone from ${prefs.timezone} to ${localTz}`,
+          );
           await patchPreferences({ timezone: localTz });
         }
       } catch (err) {

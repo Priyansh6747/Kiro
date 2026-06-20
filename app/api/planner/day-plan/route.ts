@@ -1,6 +1,6 @@
 /**
  * POST /api/planner/day-plan
- * 
+ *
  * Upsert a task into the day plan.
  */
 
@@ -26,17 +26,26 @@ export async function POST(request: NextRequest): Promise<Response> {
   };
 
   if (typeof task_id !== "string") {
-    return Response.json({ error: "task_id is required and must be a string" }, { status: 400 });
+    return Response.json(
+      { error: "task_id is required and must be a string" },
+      { status: 400 },
+    );
   }
 
   const planDate = Number(plan_date);
   const startTime = Number(start_time);
 
   if (Number.isNaN(planDate)) {
-    return Response.json({ error: "plan_date must be a number" }, { status: 400 });
+    return Response.json(
+      { error: "plan_date must be a number" },
+      { status: 400 },
+    );
   }
   if (Number.isNaN(startTime)) {
-    return Response.json({ error: "start_time must be a number" }, { status: 400 });
+    return Response.json(
+      { error: "start_time must be a number" },
+      { status: 400 },
+    );
   }
 
   try {

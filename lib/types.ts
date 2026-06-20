@@ -1,6 +1,12 @@
 // ── Domain types matching the DB schema ──────────────────────────────────────
 
-export type TaskStatus = "pending" | "done" | "missed" | "carried" | "adjusted" | "deleted";
+export type TaskStatus =
+  | "pending"
+  | "done"
+  | "missed"
+  | "carried"
+  | "adjusted"
+  | "deleted";
 export type ProjectType = "critical" | "recurring" | "habit" | "nicetohave";
 export type RatioMode = "cumulative" | "streak";
 export type DayType = "normal" | "adjusted" | "break";
@@ -18,7 +24,7 @@ export interface Task {
   estimateMin: number;
   status: TaskStatus;
   scheduledDate: number | null; // unix day (null = bucket or recurring template)
-  deadlineAt: number | null;    // unix timestamp
+  deadlineAt: number | null; // unix timestamp
   completedAt: number | null;
   deletedAt: number | null;
   /** Recurrence rule: null = one-off, "daily", "weekly", or "MON,THU" etc. */
@@ -145,7 +151,9 @@ export function formatTimestamp(ts: number | null): string {
 /** Return the current unix day integer in the browser's local timezone. */
 export function todayUnixDay(): number {
   const now = new Date();
-  return Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+  return Math.floor(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000,
+  );
 }
 
 /** How many minutes as "Xh Ym" or "Ym". */
