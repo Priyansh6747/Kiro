@@ -89,6 +89,7 @@ export interface TodayPlannerData {
   overloaded: boolean;
   dayLog: DayLog | null;
   dayPlans: DayPlan[];
+  taskDependencies: { taskId: string; predecessorId: string }[];
 }
 
 export interface MorningNudgeData {

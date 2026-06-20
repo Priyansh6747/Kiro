@@ -14,6 +14,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
   or,
@@ -626,6 +627,16 @@ export async function listDayLogs(
       ),
     )
     .orderBy(desc(dayLogs.date));
+}
+
+export async function listTaskDependenciesForTasks(
+  taskIds: string[],
+): Promise<{ taskId: string; predecessorId: string }[]> {
+  if (taskIds.length === 0) return [];
+  return db
+    .select({ taskId: taskDependencies.taskId, predecessorId: taskDependencies.predecessorId })
+    .from(taskDependencies)
+    .where(or(inArray(taskDependencies.taskId, taskIds), inArray(taskDependencies.predecessorId, taskIds)));
 }
 
 async function fetchDayLogFromDB(

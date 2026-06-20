@@ -15,6 +15,7 @@ import {
   createTask,
   insertTaskClosureSelf,
   listDayPlansForDate,
+  listTaskDependenciesForTasks,
 } from "@/lib/storage";
 import { todayUnixDay, nowSec } from "@/lib/utils";
 
@@ -89,6 +90,9 @@ export async function GET(req: Request): Promise<Response> {
 
   const dayLog = await findDayLog(userId, todayDate);
   const dayPlans = await listDayPlansForDate(userId, todayDate);
+  
+  const taskIds = scheduledTasks.map(t => t.id);
+  const taskDependencies = await listTaskDependenciesForTasks(taskIds);
 
   return Response.json({
     data: {
@@ -99,6 +103,7 @@ export async function GET(req: Request): Promise<Response> {
       overloaded,
       dayLog: dayLog ?? null,
       dayPlans,
+      taskDependencies,
     },
   });
 }

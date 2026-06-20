@@ -40,6 +40,12 @@ function TodayPageContent() {
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
   const [animatingTasksStatus, setAnimatingTasksStatus] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
+  
+  const [dependencyModal, setDependencyModal] = useState<{
+    task: Task;
+    successors: Task[];
+    onConfirm: () => void;
+  } | null>(null);
 
   const handleDateChange = (newDate: number) => {
     if (newDate === selectedDate) return;
@@ -129,48 +135,93 @@ function TodayPageContent() {
     }
   };
 
-  const unscheduleToBucket = async (task: Task) => {
-    // 1. Optimistic remove to bucket
-    setPlan(prev => prev ? { ...prev, tasks: prev.tasks.filter(t => t.id !== task.id) } : prev);
-    setBucketTasks(prev => [...prev, task]);
+  const computeAllSuccessors = (taskId: string, deps: {taskId: string, predecessorId: string}[], allTasks: Task[]) => {
+    const toUnschedule = new Set<string>();
+    let currentLevel = [taskId];
+    while (currentLevel.length > 0) {
+      const nextLevel: string[] = [];
+      for (const id of currentLevel) {
+        const children = deps.filter(d => d.predecessorId === id).map(d => d.taskId);
+        for (const child of children) {
+          if (!toUnschedule.has(child)) {
+            toUnschedule.add(child);
+            nextLevel.push(child);
+          }
+        }
+      }
+      currentLevel = nextLevel;
+    }
+    return Array.from(toUnschedule).map(id => allTasks.find(t => t.id === id)).filter(Boolean) as Task[];
+  };
 
-    // 2. Pulse loading state
-    setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'loading' }));
+  const unscheduleToBucket = (task: Task) => {
+    if (!plan) return;
+    const successors = computeAllSuccessors(task.id, plan.taskDependencies || [], plan.tasks);
+    if (successors.length > 0) {
+      setDependencyModal({
+        task,
+        successors,
+        onConfirm: () => {
+          setDependencyModal(null);
+          doUnscheduleToBucket(task, successors);
+        }
+      });
+    } else {
+      doUnscheduleToBucket(task, []);
+    }
+  };
+
+  const doUnscheduleToBucket = async (task: Task, successors: Task[]) => {
+    const allToUnschedule = [task, ...successors];
+
+    // 1. Loading sequential
+    for (const t of allToUnschedule) {
+      setAnimatingTasksStatus(prev => ({ ...prev, [t.id]: 'loading' }));
+      await new Promise(r => setTimeout(r, 200));
+    }
 
     try {
       await updateTask(task.id, { scheduled_date: null });
       
-      // Re-fetch in case DAG removed other things
       const [newPlan, newBucketTasks] = await Promise.all([
         getTodayPlan(selectedDate),
         listTasks({ bucket: true }),
       ]);
       
-      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'success' }));
+      // 2. Success sequential
+      for (const t of allToUnschedule) {
+        setAnimatingTasksStatus(prev => ({ ...prev, [t.id]: 'success' }));
+        await new Promise(r => setTimeout(r, 200));
+      }
+      
+      if (successors.length > 0) {
+        showToast(`Task and ${successors.length} dependenc${successors.length > 1 ? 'ies' : 'y'} removed successfully`, 'success');
+      } else {
+        showToast("Task returned to bucket", 'success');
+      }
       
       setTimeout(() => {
         setPlan(newPlan);
         setBucketTasks(newBucketTasks);
         setAnimatingTasksStatus(prev => {
           const next = { ...prev };
-          delete next[task.id];
+          allToUnschedule.forEach(t => delete next[t.id]);
           return next;
         });
       }, 500);
 
     } catch (e) {
       showToast((e as Error).message, 'error');
-      // 4. API error -> blink red, revert
-      setAnimatingTasksStatus(prev => ({ ...prev, [task.id]: 'error' }));
+      for (const t of allToUnschedule) {
+        setAnimatingTasksStatus(prev => ({ ...prev, [t.id]: 'error' }));
+        await new Promise(r => setTimeout(r, 100));
+      }
       setTimeout(() => {
-        setPlan(prev => prev ? { ...prev, tasks: [...prev.tasks, task] } : prev);
-        setBucketTasks(prev => prev.filter(t => t.id !== task.id));
         setAnimatingTasksStatus(prev => {
           const next = { ...prev };
-          delete next[task.id];
+          allToUnschedule.forEach(t => delete next[t.id]);
           return next;
         });
-        listTasks({ bucket: true }).then(setBucketTasks);
       }, 500);
     }
   };
@@ -486,6 +537,41 @@ function TodayPageContent() {
               onMarkDone={handleMarkDone}
               animatingPlacements={animatingTasksStatus}
             />
+          )}
+
+          {dependencyModal && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-base/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface rounded-2xl shadow-xl border border-border-default max-w-md w-full overflow-hidden">
+                <div className="p-6">
+                  <h3 className="text-lg font-medium text-primary mb-2">Remove Dependencies?</h3>
+                  <p className="text-sm text-secondary mb-4">
+                    Unscheduling <strong>{dependencyModal.task.title}</strong> will also return the following dependent tasks to the bucket:
+                  </p>
+                  <ul className="text-sm text-secondary mb-6 max-h-40 overflow-y-auto space-y-2">
+                    {dependencyModal.successors.map(s => (
+                      <li key={s.id} className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent/50"></span>
+                        {s.title}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      onClick={() => setDependencyModal(null)}
+                      className="px-4 py-2 text-sm font-medium text-secondary hover:text-primary transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={dependencyModal.onConfirm}
+                      className="px-4 py-2 text-sm font-medium bg-missed/10 text-missed hover:bg-missed/20 rounded-lg transition-colors"
+                    >
+                      Remove All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

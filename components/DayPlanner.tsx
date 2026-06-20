@@ -27,6 +27,11 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
     e.dataTransfer.effectAllowed = "move";
   };
 
+  const handleDragEnd = () => {
+    setDraggingTask(null);
+    setPreviewTop(null);
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!containerRef.current || !draggingTask) return;
@@ -47,6 +52,20 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
       return;
     }
     await commitPlacement(task, previewTop);
+  };
+
+  const handleSidebarDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleSidebarDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData("text/plain");
+    if (dayPlans.some((p) => p.taskId === taskId)) {
+      await onUnplaceBlock(taskId);
+    }
+    setDraggingTask(null);
+    setPreviewTop(null);
   };
 
   // Mobile Touch Handlers
@@ -128,7 +147,11 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Unplaced Tasks Sidebar (Top row on mobile, left sidebar on desktop) */}
-          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border-default flex flex-col p-4 md:p-6 bg-surface-raised shrink-0">
+          <div 
+            className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border-default flex flex-col p-4 md:p-6 bg-surface-raised shrink-0"
+            onDragOver={handleSidebarDragOver}
+            onDrop={handleSidebarDrop}
+          >
             <div className="flex items-baseline justify-between mb-2 md:mb-4">
               <p className="text-xs font-semibold text-secondary uppercase tracking-wider">Unplaced Tasks</p>
               <span className="text-xs text-tertiary md:hidden">Drag to schedule</span>
@@ -144,6 +167,7 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
                     key={task.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
                     onTouchStart={(e) => handleTouchStart(e, task)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -208,6 +232,7 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
                     key={plan.taskId}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
                     onTouchStart={(e) => handleTouchStart(e, task)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
