@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Task, Project } from "@/lib/types";
 
 interface BucketDrawerProps {
@@ -52,38 +52,108 @@ export function BucketDrawer({ bucketTasksByProject, projects, onSchedule, onClo
               
               {!isCollapsed && (
                 <div className="flex flex-col bg-surface">
-                  {tasks.map((task) => {
-                    const animState = animatingTasksStatus[task.id];
-                    return (
-                    <div key={task.id} className={`group relative flex flex-col p-3 border-b border-border-default last:border-0 hover:bg-surface-raised transition-colors ${
-                      animState === 'success' ? '!bg-done-subtle text-done' :
-                      animState === 'error' ? '!bg-missed-subtle text-missed' :
-                      animState === 'loading' ? '!bg-accent-subtle/50 animate-pulse text-secondary' :
-                      ''
-                    }`}>
-                      <div className={`flex justify-between items-start mb-1 ${animState === 'loading' ? 'text-secondary' : 'text-primary'}`}>
-                        <span className="text-sm text-primary">{task.title}</span>
-                        <span className="text-xs text-secondary">{task.estimateMin}m</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-secondary">
-                        <button 
-                          onClick={() => onSchedule(task)}
-                          className="flex items-center gap-1 text-accent hover:underline"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M19 12H5M12 19l-7-7 7-7"/>
-                          </svg>
-                          Swipe to add
-                        </button>
-                        <span className="ml-auto text-tertiary">Deadline</span>
-                      </div>
-                    </div>
-                  )})}
+                  {tasks.map((task) => (
+                    <SwipeableTask
+                      key={task.id}
+                      task={task}
+                      animState={animatingTasksStatus[task.id]}
+                      onSchedule={onSchedule}
+                    />
+                  ))}
                 </div>
               )}
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function SwipeableTask({
+  task,
+  animState,
+  onSchedule
+}: {
+  task: Task;
+  animState?: 'loading' | 'success' | 'error';
+  onSchedule: (t: Task) => void;
+}) {
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startX = useRef(0);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    startX.current = e.clientX;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const diff = e.clientX - startX.current;
+    // only allow swipe left
+    if (diff < 0 && diff > -150) {
+      setDragX(diff);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    if (dragX < -60) {
+      onSchedule(task);
+    }
+    setDragX(0);
+  };
+
+  return (
+    <div className="relative overflow-hidden border-b border-border-default last:border-0">
+      {/* Background action hint */}
+      <div 
+        className="absolute inset-y-0 right-0 bg-accent text-white flex items-center justify-end px-4 w-full" 
+        style={{ opacity: Math.min(Math.abs(dragX) / 60, 1) }}
+      >
+         <span className="mr-2 text-sm font-semibold">Schedule</span>
+         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+           <path d="M19 12H5M12 19l-7-7 7-7"/>
+         </svg>
+      </div>
+
+      <div
+        className={`group flex flex-col p-3 bg-surface hover:bg-surface-raised transition-colors cursor-grab active:cursor-grabbing select-none touch-none ${
+          animState === 'success' ? '!bg-done-subtle text-done' :
+          animState === 'error' ? '!bg-missed-subtle text-missed' :
+          animState === 'loading' ? '!bg-accent-subtle/50 animate-pulse text-secondary' :
+          ''
+        } ${!isDragging ? 'transition-transform duration-200' : ''}`}
+        style={{ transform: `translateX(${dragX}px)`, touchAction: 'pan-y' }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <div className={`flex justify-between items-start mb-1 ${animState === 'loading' ? 'text-secondary' : 'text-primary'}`}>
+          <span className="text-sm text-primary">{task.title}</span>
+          <span className="text-xs text-secondary">{task.estimateMin}m</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-secondary">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onSchedule(task);
+            }}
+            className="flex items-center gap-1 text-tertiary hover:text-accent hover:underline pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Swipe to add
+          </button>
+          <span className="ml-auto text-tertiary">Deadline</span>
+        </div>
       </div>
     </div>
   );

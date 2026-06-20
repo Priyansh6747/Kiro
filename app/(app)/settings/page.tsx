@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserProfile } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import type { Preference, RatioMode } from "@/lib/types";
 import { getPreferences, patchPreferences } from "@/lib/api-client";
 import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
@@ -73,6 +73,8 @@ function SectionCard({ title, description, children }: { title: string; descript
 }
 
 export default function SettingsPage() {
+  const { user } = useUser();
+  const clerk = useClerk();
   const [prefs, setPrefs] = useState<Preference | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -334,41 +336,45 @@ export default function SettingsPage() {
         </SectionCard>
 
         <SectionCard 
-          title="Account Information" 
-          description="Manage your profile and authentication."
+          title="Account" 
+          description="Manage your active session."
         >
-          <div className="flex flex-col items-center py-6">
-            <UserProfile 
-              routing="hash" 
-              appearance={{ 
-                elements: { 
-                  rootBox: "w-full shadow-none", 
-                  cardBox: "shadow-none border border-border-default rounded-xl bg-surface",
-                  navbar: "hidden", // Simplify if wanted, or leave to allow full management
-                } 
-              }} 
-            />
-          </div>
-          
-          {prefs && (
-            <div className="border-t border-border-subtle pt-6 mt-2">
-              <h3 className="text-sm font-semibold text-primary mb-4">Developer Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-surface-raised rounded-lg p-3 border border-border-default flex flex-col gap-1">
-                  <span className="text-xs font-medium text-secondary uppercase tracking-wider">Internal User ID</span>
-                  <span className="text-sm text-primary font-mono truncate" title={prefs.userId}>
-                    {prefs.userId}
+          <div className="flex items-center justify-between py-2">
+            {user ? (
+              <div className="flex items-center gap-4">
+                <img 
+                  src={user.imageUrl} 
+                  alt="Profile" 
+                  className="w-12 h-12 rounded-full border border-border-default shadow-sm"
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-primary">
+                    {user.fullName || user.firstName || "User"}
                   </span>
-                </div>
-                <div className="bg-surface-raised rounded-lg p-3 border border-border-default flex flex-col gap-1">
-                  <span className="text-xs font-medium text-secondary uppercase tracking-wider">Active Ratio Mode</span>
-                  <span className="text-sm text-primary capitalize font-medium">
-                    {prefs.ratioMode}
+                  <span className="text-xs text-secondary">
+                    {user.primaryEmailAddress?.emailAddress}
                   </span>
                 </div>
               </div>
+            ) : (
+              <div className="text-sm text-secondary">Loading profile...</div>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => clerk.openUserProfile()}
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-raised hover:text-primary hover:border-border-strong border border-border-default rounded-lg transition-all focus:ring-2 focus:ring-accent/30"
+              >
+                Manage Account
+              </button>
+              <button
+                onClick={() => clerk.signOut()}
+                className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all focus:ring-2 focus:ring-red-200"
+              >
+                Sign Out
+              </button>
             </div>
-          )}
+          </div>
         </SectionCard>
 
         <div className="h-12" />
