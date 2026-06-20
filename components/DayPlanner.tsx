@@ -36,7 +36,7 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
     e.preventDefault();
     if (!containerRef.current || !draggingTask) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const y = e.clientY - rect.top;
+    const y = e.clientY - rect.top + containerRef.current.scrollTop;
     const minutes = (y / HOUR_HEIGHT) * 60;
     const snappedMinutes = Math.round(minutes / 15) * 15;
     setPreviewTop((snappedMinutes / 60) * HOUR_HEIGHT);
@@ -78,7 +78,7 @@ export function DayPlanner({ tasks, projects, dayPlans, onPlaceBlock, onUnplaceB
     if (!containerRef.current || !draggingTask) return;
     const touch = e.touches[0];
     const rect = containerRef.current.getBoundingClientRect();
-    let y = touch.clientY - rect.top;
+    let y = touch.clientY - rect.top + containerRef.current.scrollTop;
     
     // Clamp y
     y = Math.max(0, Math.min(y, hours.length * HOUR_HEIGHT));

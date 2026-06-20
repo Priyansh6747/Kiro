@@ -113,6 +113,10 @@ function TodayPageContent() {
       }, 500);
       
       listTasks({ bucket: true }).then(setBucketTasks);
+      // Fetch updated dependencies to ensure the 'Remove Dependencies' modal works correctly
+      getTodayPlan(selectedDate).then(planData => {
+        setPlan(prev => prev ? { ...prev, taskDependencies: planData.taskDependencies } : prev);
+      });
     } catch (e) {
       showToast((e as Error).message, 'error');
       // 4. API error -> blink red, then revert
