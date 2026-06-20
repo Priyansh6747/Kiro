@@ -7,6 +7,7 @@ import { useEffect } from "react";
 
 const NAV_ITEMS = [
   { href: "/today", label: "Today", icon: "⚡" },
+  { href: "/todo", label: "Todo", icon: "📋" },
   { href: "/projects", label: "Projects", icon: "📁" },
   { href: "/insights", label: "Insights", icon: "📊" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
