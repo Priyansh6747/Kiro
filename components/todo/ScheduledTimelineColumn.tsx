@@ -1,6 +1,6 @@
 "use client";
 
-import { RefObject, useState, useRef, useEffect } from "react";
+import { RefObject, useState, useRef, useEffect, useLayoutEffect } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Task } from "@/lib/types";
 import { StatusBadge } from "@/components/ui";
@@ -154,6 +154,23 @@ export function ScheduledTimelineColumn({
     }, 50);
   };
 
+  const scrollAnchorRef = useRef<{ offsetDays: number; rectTop: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (scrollAnchorRef.current && scrollContainerRef.current && timelineMode === "continuous") {
+      const container = scrollContainerRef.current;
+      const { offsetDays, rectTop } = scrollAnchorRef.current;
+      
+      const el = container.querySelector(`.timeline-day-item[data-date-offset="${offsetDays}"]`);
+      if (el) {
+        const containerRect = container.getBoundingClientRect();
+        const currentRectTop = el.getBoundingClientRect().top - containerRect.top;
+        container.scrollTop += (currentRectTop - rectTop);
+      }
+      scrollAnchorRef.current = null;
+    }
+  }, [windowOffsetDays, timelineMode]);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (
       timelineMode !== "continuous" ||
@@ -161,21 +178,46 @@ export function ScheduledTimelineColumn({
       isAnimating.current
     )
       return;
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const threshold = 600;
+    
+    const container = e.currentTarget;
+    const containerRect = container.getBoundingClientRect();
+    const centerY = containerRect.top + containerRect.height / 2;
+    
+    const elements = container.querySelectorAll('.timeline-day-item');
+    let centerEl: Element | null = null;
+    let minDistance = Infinity;
+    
+    elements.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      const elCenterY = rect.top + rect.height / 2;
+      const distance = Math.abs(elCenterY - centerY);
+      if (distance < minDistance) {
+        minDistance = distance;
+        centerEl = el;
+      }
+    });
 
-    if (scrollTop < threshold) {
-      isSliding.current = true;
-      setWindowOffsetDays((prev) => prev - 7);
-      setTimeout(() => {
-        isSliding.current = false;
-      }, 100);
-    } else if (scrollHeight - scrollTop - clientHeight < threshold) {
-      isSliding.current = true;
-      setWindowOffsetDays((prev) => prev + 7);
-      setTimeout(() => {
-        isSliding.current = false;
-      }, 100);
+    if (centerEl) {
+      const diffStr = centerEl.getAttribute('data-date-offset');
+      if (diffStr !== null) {
+        const centerOffsetDays = parseInt(diffStr, 10);
+        const targetOffsetDays = centerOffsetDays - 10;
+        
+        if (Math.abs(windowOffsetDays - targetOffsetDays) >= 5) {
+          isSliding.current = true;
+          
+          scrollAnchorRef.current = {
+            offsetDays: centerOffsetDays,
+            rectTop: centerEl.getBoundingClientRect().top - containerRect.top,
+          };
+          
+          setWindowOffsetDays(targetOffsetDays);
+          
+          setTimeout(() => {
+            isSliding.current = false;
+          }, 50);
+        }
+      }
     }
   };
 
@@ -217,6 +259,7 @@ export function ScheduledTimelineColumn({
       maxDate.setDate(maxDate.getDate() + 21); // 3x ViewHeight (21 days window)
 
       let curr = minDate;
+      let dayIndex = 0;
       while (curr <= maxDate) {
         const dNum = parseInt(
           curr.getFullYear().toString() +
@@ -231,8 +274,10 @@ export function ScheduledTimelineColumn({
           <div
             key={dNum}
             ref={isToday ? todayRef : null}
-            className={`dial-item-3d flex min-h-[120px] group relative ${isToday ? "bg-accent-subtle/10" : ""}`}
+            className="w-full timeline-day-item"
+            data-date-offset={windowOffsetDays + dayIndex}
           >
+            <div className={`dial-item-3d flex min-h-[120px] group relative w-full ${isToday ? "bg-accent-subtle/10" : ""}`}>
             <div className="w-20 flex-shrink-0 flex flex-col items-center justify-center relative">
               <TimelineTicks />
               <div className="flex flex-col items-center justify-center bg-surface px-1 py-1 relative z-10 mt-[-10px]">
@@ -258,9 +303,11 @@ export function ScheduledTimelineColumn({
                 />
               ))}
             </div>
+          </div>
           </div>,
         );
         curr = new Date(curr.getTime() + 24 * 60 * 60 * 1000);
+        dayIndex++;
       }
     } else {
       if (sortedDates.length === 0)
