@@ -28,7 +28,7 @@ export async function POST(): Promise<Response> {
   const prefs = await getOrCreatePreferences(userId);
 
   const todayDate = todayUnixDay(prefs.timezone);
-  const now       = nowSec();
+  const now = nowSec();
 
   // ── Staleness check ───────────────────────────────────────────────────────
   const latestUpdate = await latestTaskUpdateForDay(userId, todayDate);
@@ -50,8 +50,8 @@ export async function POST(): Promise<Response> {
   // ── Fetch today's tasks ───────────────────────────────────────────────────
   const allTasks = await listTasks({ userId, date: todayDate });
 
-  const doneTasks    = allTasks.filter((t) => t.status === "done");
-  const missedTasks  = allTasks.filter(
+  const doneTasks = allTasks.filter((t) => t.status === "done");
+  const missedTasks = allTasks.filter(
     (t) => t.status === "missed" || t.status === "carried",
   );
 
@@ -66,7 +66,7 @@ export async function POST(): Promise<Response> {
   };
 
   // ── Build prompt and call Groq ───────────────────────────────────────────
-  const prompt      = buildEodSummaryPrompt(payload);
+  const prompt = buildEodSummaryPrompt(payload);
   console.log("EOD summary prompt:", prompt);
   const summaryText = await callGroq(prompt, 300);
   console.log("EOD summary:", summaryText);

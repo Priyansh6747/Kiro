@@ -3,10 +3,7 @@
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
 
-async function request<T>(
-  path: string,
-  options?: RequestInit,
-): Promise<T> {
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
@@ -24,25 +21,41 @@ export const getTodayPlan = (date?: number) => {
   const sp = new URLSearchParams();
   if (date != null) sp.set("date", String(date));
   const query = sp.toString() ? `?${sp.toString()}` : "";
-  return request<import("./types").TodayPlannerData>(`/api/planner/today${query}`);
+  return request<import("./types").TodayPlannerData>(
+    `/api/planner/today${query}`,
+  );
 };
 
 export const confirmDay = (availableMin?: number) =>
   request<import("./types").DayLog>("/api/planner/today/confirm", {
     method: "POST",
-    body: availableMin != null ? JSON.stringify({ available_min: availableMin }) : "{}",
+    body:
+      availableMin != null
+        ? JSON.stringify({ available_min: availableMin })
+        : "{}",
   });
 
 export const carryTasks = (toCarry: string[], toDrop: string[]) =>
   request<{ carried: string[]; dropped: string[] }>("/api/planner/carry", {
     method: "POST",
-    body: JSON.stringify({ task_ids_to_carry: toCarry, task_ids_to_drop: toDrop }),
+    body: JSON.stringify({
+      task_ids_to_carry: toCarry,
+      task_ids_to_drop: toDrop,
+    }),
   });
 
-export const placeDayPlanBlock = (taskId: string, planDate: number, startTime: number) =>
+export const placeDayPlanBlock = (
+  taskId: string,
+  planDate: number,
+  startTime: number,
+) =>
   request<"ok">("/api/planner/day-plan", {
     method: "POST",
-    body: JSON.stringify({ task_id: taskId, plan_date: planDate, start_time: startTime }),
+    body: JSON.stringify({
+      task_id: taskId,
+      plan_date: planDate,
+      start_time: startTime,
+    }),
   });
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────
@@ -119,7 +132,9 @@ export const deleteDependency = (taskId: string, predecessorId: string) =>
   });
 
 export const getProjectDependencies = (projectId: string) =>
-  request<{ taskId: string; predecessorId: string }[]>(`/api/projects/${projectId}/dependencies`);
+  request<{ taskId: string; predecessorId: string }[]>(
+    `/api/projects/${projectId}/dependencies`,
+  );
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
@@ -161,12 +176,14 @@ export const archiveProject = (id: string) =>
 export const getPreferences = () =>
   request<import("./types").Preference>("/api/preferences");
 
-export const patchPreferences = (body: Partial<{
-  timezone: string;
-  default_available_min: number;
-  ratio_mode: import("./types").RatioMode;
-  morning_nudge_time: string;
-}>) =>
+export const patchPreferences = (
+  body: Partial<{
+    timezone: string;
+    default_available_min: number;
+    ratio_mode: import("./types").RatioMode;
+    morning_nudge_time: string;
+  }>,
+) =>
   request<import("./types").Preference>("/api/preferences", {
     method: "PATCH",
     body: JSON.stringify(body),

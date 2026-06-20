@@ -6,7 +6,9 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
  * Main function for demonstration.
  */
 export async function main() {
-  const chatCompletion = await getGroqChatCompletion("Explain the importance of fast language models");
+  const chatCompletion = await getGroqChatCompletion(
+    "Explain the importance of fast language models",
+  );
   // Print the completion returned by the LLM.
   console.log(chatCompletion.choices[0]?.message?.content || "");
 }

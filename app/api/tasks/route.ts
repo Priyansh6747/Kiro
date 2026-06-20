@@ -32,7 +32,10 @@ export async function GET(request: NextRequest): Promise<Response> {
   if (dateParam !== null) {
     date = Number(dateParam);
     if (Number.isNaN(date)) {
-      return Response.json({ error: "date must be a unix day integer" }, { status: 400 });
+      return Response.json(
+        { error: "date must be a unix day integer" },
+        { status: 400 },
+      );
     }
   }
 
@@ -46,7 +49,14 @@ export async function GET(request: NextRequest): Promise<Response> {
     todayDate = todayUnixDay(prefs.timezone);
   }
 
-  const rows = await listTasks({ userId, projectId, date, status: statusVal, bucket, todayDate });
+  const rows = await listTasks({
+    userId,
+    projectId,
+    date,
+    status: statusVal,
+    bucket,
+    todayDate,
+  });
   return Response.json({ data: rows });
 }
 
@@ -63,18 +73,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { project_id, title, estimate_min, scheduled_date, deadline_at, parent_id, recurrence_rule, recurrence_ends_at, predecessor_id } =
-    body as {
-      project_id?: unknown;
-      title?: unknown;
-      estimate_min?: unknown;
-      scheduled_date?: unknown;
-      deadline_at?: unknown;
-      parent_id?: unknown;
-      recurrence_rule?: unknown;
-      recurrence_ends_at?: unknown;
-      predecessor_id?: unknown;
-    };
+  const {
+    project_id,
+    title,
+    estimate_min,
+    scheduled_date,
+    deadline_at,
+    parent_id,
+    recurrence_rule,
+    recurrence_ends_at,
+    predecessor_id,
+  } = body as {
+    project_id?: unknown;
+    title?: unknown;
+    estimate_min?: unknown;
+    scheduled_date?: unknown;
+    deadline_at?: unknown;
+    parent_id?: unknown;
+    recurrence_rule?: unknown;
+    recurrence_ends_at?: unknown;
+    predecessor_id?: unknown;
+  };
 
   // ── Required field validation ─────────────────────────────────────────────
   if (!title || typeof title !== "string" || title.trim() === "") {
@@ -86,7 +105,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── Project must belong to user ───────────────────────────────────────────
   const project = await findProjectById(project_id, userId);
-  if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
+  if (!project)
+    return Response.json({ error: "Project not found" }, { status: 404 });
 
   // ── Deadline validation ───────────────────────────────────────────────────
   let deadlineAt: number | null = null;
@@ -94,7 +114,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (deadline_at !== undefined && deadline_at !== null) {
     deadlineAt = Number(deadline_at);
     if (Number.isNaN(deadlineAt)) {
-      return Response.json({ error: "deadline_at must be a unix timestamp" }, { status: 400 });
+      return Response.json(
+        { error: "deadline_at must be a unix timestamp" },
+        { status: 400 },
+      );
     }
     if (project.deadlineAt !== null && deadlineAt > project.deadlineAt) {
       return Response.json(
@@ -112,7 +135,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (estimate_min !== undefined && estimate_min !== null) {
     estimateMin = Number(estimate_min);
     if (!Number.isInteger(estimateMin) || estimateMin <= 0) {
-      return Response.json({ error: "estimate_min must be a positive integer" }, { status: 400 });
+      return Response.json(
+        { error: "estimate_min must be a positive integer" },
+        { status: 400 },
+      );
     }
   }
 
@@ -120,14 +146,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (scheduled_date !== undefined && scheduled_date !== null) {
     scheduledDate = Number(scheduled_date);
     if (Number.isNaN(scheduledDate)) {
-      return Response.json({ error: "scheduled_date must be a unix day integer" }, { status: 400 });
+      return Response.json(
+        { error: "scheduled_date must be a unix day integer" },
+        { status: 400 },
+      );
     }
   }
 
   let recurrenceRule: string | null = null;
   if (recurrence_rule !== undefined && recurrence_rule !== null) {
     if (typeof recurrence_rule !== "string") {
-      return Response.json({ error: "recurrence_rule must be a string" }, { status: 400 });
+      return Response.json(
+        { error: "recurrence_rule must be a string" },
+        { status: 400 },
+      );
     }
     recurrenceRule = recurrence_rule;
   }
@@ -136,15 +168,23 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (recurrence_ends_at !== undefined && recurrence_ends_at !== null) {
     recurrenceEndsAt = Number(recurrence_ends_at);
     if (Number.isNaN(recurrenceEndsAt)) {
-      return Response.json({ error: "recurrence_ends_at must be a unix timestamp" }, { status: 400 });
+      return Response.json(
+        { error: "recurrence_ends_at must be a unix timestamp" },
+        { status: 400 },
+      );
     }
   }
 
   // ── Parent task validation ────────────────────────────────────────────────
   let parentId: string | null = null;
-  if (parent_id !== undefined && parent_id !== null && typeof parent_id === "string") {
+  if (
+    parent_id !== undefined &&
+    parent_id !== null &&
+    typeof parent_id === "string"
+  ) {
     const parent = await findTaskById(parent_id, userId);
-    if (!parent) return Response.json({ error: "Parent task not found" }, { status: 404 });
+    if (!parent)
+      return Response.json({ error: "Parent task not found" }, { status: 404 });
     if (parent.projectId !== project_id) {
       return Response.json(
         { error: "Subtask must belong to same project" },
@@ -155,7 +195,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // ── Insert task + closure table ───────────────────────────────────────────
-  const now       = nowSec();
+  const now = nowSec();
   const newTaskId = crypto.randomUUID();
 
   const task = await createTask({
@@ -191,7 +231,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (pred && pred.projectId === project_id) {
       const { insertTaskDependency } = await import("@/lib/storage");
       await insertTaskDependency(newTaskId, predecessor_id);
-      
+
       // Auto-schedule unresolved predecessors if this task is scheduled
       if (scheduledDate !== null) {
         await pullUnresolvedPredecessors(newTaskId, scheduledDate, userId);

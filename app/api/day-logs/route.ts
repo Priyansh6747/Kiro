@@ -17,12 +17,15 @@ export async function GET(request: NextRequest): Promise<Response> {
   const prefs = await findPrefsByUserId(userId);
   const todayDate = todayUnixDay(prefs?.timezone ?? "UTC");
 
-  const sp  = request.nextUrl.searchParams;
+  const sp = request.nextUrl.searchParams;
   const from = sp.has("from") ? Number(sp.get("from")) : todayDate - 6;
-  const to   = sp.has("to")   ? Number(sp.get("to"))   : todayDate;
+  const to = sp.has("to") ? Number(sp.get("to")) : todayDate;
 
   if (Number.isNaN(from) || Number.isNaN(to)) {
-    return Response.json({ error: "from and to must be unix day integers" }, { status: 400 });
+    return Response.json(
+      { error: "from and to must be unix day integers" },
+      { status: 400 },
+    );
   }
 
   const rows = await listDayLogs(userId, from, to);

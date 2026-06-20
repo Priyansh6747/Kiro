@@ -58,8 +58,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const importanceNum = Number(importance);
-  if (!Number.isInteger(importanceNum) || importanceNum < 1 || importanceNum > 5) {
-    return Response.json({ error: "importance must be an integer 1–5" }, { status: 400 });
+  if (
+    !Number.isInteger(importanceNum) ||
+    importanceNum < 1 ||
+    importanceNum > 5
+  ) {
+    return Response.json(
+      { error: "importance must be an integer 1–5" },
+      { status: 400 },
+    );
   }
   if (!VALID_TYPES.includes(type as ProjectType)) {
     return Response.json(
@@ -72,14 +79,23 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (deadline_at !== undefined && deadline_at !== null) {
     deadlineAt = Number(deadline_at);
     if (Number.isNaN(deadlineAt)) {
-      return Response.json({ error: "deadline_at must be a unix timestamp" }, { status: 400 });
+      return Response.json(
+        { error: "deadline_at must be a unix timestamp" },
+        { status: 400 },
+      );
     }
   }
 
   let finalCadence: "daily" | "weekly" | "custom" | null = null;
   if (cadence !== undefined && cadence !== null) {
-    if (typeof cadence !== "string" || !["daily", "weekly", "custom"].includes(cadence)) {
-      return Response.json({ error: "cadence must be daily, weekly, or custom" }, { status: 400 });
+    if (
+      typeof cadence !== "string" ||
+      !["daily", "weekly", "custom"].includes(cadence)
+    ) {
+      return Response.json(
+        { error: "cadence must be daily, weekly, or custom" },
+        { status: 400 },
+      );
     }
     finalCadence = cadence as "daily" | "weekly" | "custom";
   }

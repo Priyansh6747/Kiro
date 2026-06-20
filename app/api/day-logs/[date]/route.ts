@@ -23,11 +23,15 @@ export async function GET(
   const { date: dateStr } = await params;
   const date = Number(dateStr);
   if (Number.isNaN(date)) {
-    return Response.json({ error: "date must be a unix day integer" }, { status: 400 });
+    return Response.json(
+      { error: "date must be a unix day integer" },
+      { status: 400 },
+    );
   }
 
   const row = await findDayLog(userId, date);
-  if (!row) return Response.json({ error: "Day log not found" }, { status: 404 });
+  if (!row)
+    return Response.json({ error: "Day log not found" }, { status: 404 });
 
   return Response.json({ data: row });
 }
@@ -44,7 +48,10 @@ export async function PATCH(
   const { date: dateStr } = await params;
   const date = Number(dateStr);
   if (Number.isNaN(date)) {
-    return Response.json({ error: "date must be a unix day integer" }, { status: 400 });
+    return Response.json(
+      { error: "date must be a unix day integer" },
+      { status: 400 },
+    );
   }
 
   let body: Record<string, unknown>;
@@ -64,7 +71,8 @@ export async function PATCH(
   }
 
   const existing = await findDayLog(userId, date);
-  if (!existing) return Response.json({ error: "Day log not found" }, { status: 404 });
+  if (!existing)
+    return Response.json({ error: "Day log not found" }, { status: 404 });
 
   const updated = await updateDayLog(userId, date, {
     dayType: day_type as DayType,

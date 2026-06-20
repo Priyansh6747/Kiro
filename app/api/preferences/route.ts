@@ -41,7 +41,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
   if ("timezone" in body) {
     const tz = body.timezone;
     if (typeof tz !== "string" || !isValidTimezone(tz)) {
-      return Response.json({ error: "timezone must be a valid IANA timezone" }, { status: 400 });
+      return Response.json(
+        { error: "timezone must be a valid IANA timezone" },
+        { status: 400 },
+      );
     }
     updates.timezone = tz;
   }

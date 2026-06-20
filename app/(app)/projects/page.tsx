@@ -65,20 +65,19 @@ function ProjectCard({
       {taskCount > 0 && (
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-secondary">
-            <span>{doneCount}/{taskCount} tasks</span>
+            <span>
+              {doneCount}/{taskCount} tasks
+            </span>
             <span>{Math.round(pct * 100)}%</span>
           </div>
           <ProgressBar value={doneCount} max={taskCount} color="blue" />
         </div>
       )}
 
-      {taskCount === 0 && (
-        <p className="text-xs text-tertiary">No tasks yet</p>
-      )}
+      {taskCount === 0 && <p className="text-xs text-tertiary">No tasks yet</p>}
     </button>
   );
 }
-
 
 import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 export default function ProjectsPage() {
@@ -111,7 +110,7 @@ export default function ProjectsPage() {
               done: tasks.filter((t) => t.status === "done").length,
             },
           ] as const;
-        })
+        }),
       );
       setTaskStats(Object.fromEntries(statsEntries));
     } catch (e) {
@@ -175,28 +174,32 @@ export default function ProjectsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {(["critical", "recurring", "habit", "nicetohave"] as const).map((type) => {
-          const items = groups[type];
-          if (!items || items.length === 0) return null;
-          return (
-            <section key={type}>
-              <p className="text-xs font-semibold text-tertiary uppercase mb-2">
-                {type === "nicetohave" ? "Nice To Have" : type.charAt(0).toUpperCase() + type.slice(1)}
-              </p>
-              <div className="space-y-3">
-                {items.map((p) => (
-                  <ProjectCard
-                    key={p.id}
-                    project={p}
-                    taskCount={taskStats[p.id]?.total ?? 0}
-                    doneCount={taskStats[p.id]?.done ?? 0}
-                    onClick={() => setSelectedProject(p)}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
+        {(["critical", "recurring", "habit", "nicetohave"] as const).map(
+          (type) => {
+            const items = groups[type];
+            if (!items || items.length === 0) return null;
+            return (
+              <section key={type}>
+                <p className="text-xs font-semibold text-tertiary uppercase mb-2">
+                  {type === "nicetohave"
+                    ? "Nice To Have"
+                    : type.charAt(0).toUpperCase() + type.slice(1)}
+                </p>
+                <div className="space-y-3">
+                  {items.map((p) => (
+                    <ProjectCard
+                      key={p.id}
+                      project={p}
+                      taskCount={taskStats[p.id]?.total ?? 0}
+                      doneCount={taskStats[p.id]?.done ?? 0}
+                      onClick={() => setSelectedProject(p)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          },
+        )}
 
         {projects.filter((p) => !p.isDefault).length === 0 && (
           <EmptyState
@@ -211,7 +214,10 @@ export default function ProjectsPage() {
         <CreateProjectForm
           onCreated={(p) => {
             setProjects((prev) => [p, ...prev]);
-            setTaskStats((prev) => ({ ...prev, [p.id]: { total: 0, done: 0 } }));
+            setTaskStats((prev) => ({
+              ...prev,
+              [p.id]: { total: 0, done: 0 },
+            }));
             setShowCreate(false);
           }}
           onClose={() => setShowCreate(false)}

@@ -53,9 +53,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-base text-primary">
         <ClerkProvider>
           <ThemeProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <ToastProvider>{children}</ToastProvider>
           </ThemeProvider>
         </ClerkProvider>
       </body>

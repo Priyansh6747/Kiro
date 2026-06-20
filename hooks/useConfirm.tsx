@@ -4,7 +4,9 @@ export function useConfirm() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
-  const [resolvePromise, setResolvePromise] = useState<((val: boolean) => void) | null>(null);
+  const [resolvePromise, setResolvePromise] = useState<
+    ((val: boolean) => void) | null
+  >(null);
 
   const confirmAction = (title: string, message: string): Promise<boolean> => {
     return new Promise((resolve) => {

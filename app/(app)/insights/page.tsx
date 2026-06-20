@@ -15,8 +15,7 @@ import {
 
 function RatioBar({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100);
-  const color =
-    pct >= 80 ? "green" : pct >= 50 ? "yellow" : "red";
+  const color = pct >= 80 ? "green" : pct >= 50 ? "yellow" : "red";
   return (
     <div className="space-y-0.5">
       <ProgressBar value={ratio} max={1} color={color} />
@@ -80,7 +79,7 @@ export default function InsightsPage() {
                 pending: tasks.filter((t) => t.status === "pending").length,
               },
             ] as const;
-          })
+          }),
       );
       setProjectTaskCounts(Object.fromEntries(stats));
     } catch (e) {
@@ -108,9 +107,7 @@ export default function InsightsPage() {
   const totalMissed = logs.reduce((s, l) => s + l.tasksMissed, 0);
   const totalAssigned = logs.reduce((s, l) => s + l.tasksAssigned, 0);
   const avgRatio =
-    totalLogs > 0
-      ? logs.reduce((s, l) => s + l.ratio, 0) / totalLogs
-      : 0;
+    totalLogs > 0 ? logs.reduce((s, l) => s + l.ratio, 0) / totalLogs : 0;
 
   // Streak (consecutive days with ratio >= 0.5)
   const sortedLogs = [...logs].sort((a, b) => b.date - a.date);
@@ -222,10 +219,18 @@ export default function InsightsPage() {
               <table className="w-full text-xs">
                 <thead className="bg-surface-raised border-b border-border-default">
                   <tr>
-                    <th className="text-left px-3 py-2 text-secondary font-medium">Date</th>
-                    <th className="text-center px-3 py-2 text-secondary font-medium">Done</th>
-                    <th className="text-center px-3 py-2 text-secondary font-medium">Missed</th>
-                    <th className="text-right px-3 py-2 text-secondary font-medium">Ratio</th>
+                    <th className="text-left px-3 py-2 text-secondary font-medium">
+                      Date
+                    </th>
+                    <th className="text-center px-3 py-2 text-secondary font-medium">
+                      Done
+                    </th>
+                    <th className="text-center px-3 py-2 text-secondary font-medium">
+                      Missed
+                    </th>
+                    <th className="text-right px-3 py-2 text-secondary font-medium">
+                      Ratio
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -247,8 +252,8 @@ export default function InsightsPage() {
                               log.ratio >= 0.8
                                 ? "text-green-600"
                                 : log.ratio >= 0.5
-                                ? "text-yellow-600"
-                                : "text-red-600"
+                                  ? "text-yellow-600"
+                                  : "text-red-600"
                             }`}
                           >
                             {Math.round(log.ratio * 100)}%
@@ -282,9 +287,12 @@ export default function InsightsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-orange-800">{p.name}</p>
+                      <p className="text-sm font-medium text-orange-800">
+                        {p.name}
+                      </p>
                       <p className="text-xs text-orange-600">
-                        Neglected — {projectTaskCounts[p.id]?.pending ?? 0} pending tasks, 0 done
+                        Neglected — {projectTaskCounts[p.id]?.pending ?? 0}{" "}
+                        pending tasks, 0 done
                       </p>
                     </div>
                     <TypeBadge type={p.type} />
@@ -293,9 +301,7 @@ export default function InsightsPage() {
               ))}
 
               {approaching.map((p) => {
-                const daysLeft = Math.ceil(
-                  ((p.deadlineAt ?? 0) - now) / 86400
-                );
+                const daysLeft = Math.ceil(((p.deadlineAt ?? 0) - now) / 86400);
                 return (
                   <div
                     key={p.id}
@@ -303,7 +309,9 @@ export default function InsightsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-red-800">{p.name}</p>
+                        <p className="text-sm font-medium text-red-800">
+                          {p.name}
+                        </p>
                         <p className="text-xs text-red-600">
                           Deadline in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
                         </p>

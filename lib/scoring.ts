@@ -15,7 +15,7 @@ export interface ProjectStats {
   name: string;
   importance: number;
   type: string;
-  deadlineAt: number | null;    // unix seconds
+  deadlineAt: number | null; // unix seconds
   lastCompletedAt: number | null; // unix seconds
   todayCount: number;
 }
@@ -49,7 +49,8 @@ export function scoreProject(
     // Convert deadline unix-seconds to unix-day
     const deadlineDay = Math.floor(project.deadlineAt / 86_400);
     daysUntilDeadline = Math.max(deadlineDay - todayDay, 0);
-    deadlineProximity = project.importance * (1 / Math.max(daysUntilDeadline, 1));
+    deadlineProximity =
+      project.importance * (1 / Math.max(daysUntilDeadline, 1));
   }
 
   let daysSinceLastCompleted: number | null = null;
@@ -102,22 +103,22 @@ export function buildMorningNudgePrompt(payload: MorningNudgePayload): string {
 
 Context (JSON):
 ${JSON.stringify(
-    {
-      today_unix_day: payload.todayDate,
-      user_timezone: payload.timezone,
-      top_projects: payload.top2.map((p) => ({
-        name: p.name,
-        type: p.type,
-        importance: p.importance,
-        days_until_deadline: p.daysUntilDeadline,
-        days_since_last_completed: p.daysSinceLastCompleted,
-        tasks_scheduled_today: p.todayCount,
-        score: Number(p.totalScore.toFixed(2)),
-      })),
-    },
-    null,
-    2,
-  )}
+  {
+    today_unix_day: payload.todayDate,
+    user_timezone: payload.timezone,
+    top_projects: payload.top2.map((p) => ({
+      name: p.name,
+      type: p.type,
+      importance: p.importance,
+      days_until_deadline: p.daysUntilDeadline,
+      days_since_last_completed: p.daysSinceLastCompleted,
+      tasks_scheduled_today: p.todayCount,
+      score: Number(p.totalScore.toFixed(2)),
+    })),
+  },
+  null,
+  2,
+)}
 
 Write a 2–3 sentence morning nudge in plain English. Be encouraging and specific about why these projects need attention today. Do not use bullet points or headers. Output only the nudge text.`;
 }

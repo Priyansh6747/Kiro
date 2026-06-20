@@ -30,7 +30,7 @@ export async function POST(): Promise<Response> {
   const prefs = await getOrCreatePreferences(userId);
 
   const todayDate = todayUnixDay(prefs.timezone);
-  const now       = nowSec();
+  const now = nowSec();
 
   // ── Staleness check ───────────────────────────────────────────────────────
   const latestUpdate = await latestTaskUpdateSec(userId);
@@ -58,7 +58,11 @@ export async function POST(): Promise<Response> {
   const top2 = topScoredProjects(projectStats, 2, now, prefs.timezone);
 
   // ── Build prompt and call Groq ───────────────────────────────────────────
-  const prompt   = buildMorningNudgePrompt({ top2, todayDate, timezone: prefs.timezone });
+  const prompt = buildMorningNudgePrompt({
+    top2,
+    todayDate,
+    timezone: prefs.timezone,
+  });
   const nudgeText = await callGroq(prompt, 200);
 
   return Response.json({ data: { nudge: nudgeText, projects: top2 } });

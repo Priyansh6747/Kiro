@@ -22,17 +22,25 @@ function validateTasksInput(list: any[]): void {
     if (!item || typeof item !== "object") {
       throw new Error("Each task in the array must be an object");
     }
-    if (!item.title || typeof item.title !== "string" || item.title.trim() === "") {
+    if (
+      !item.title ||
+      typeof item.title !== "string" ||
+      item.title.trim() === ""
+    ) {
       throw new Error("Each task must have a non-empty string title");
     }
     if (
       item.estimate_min !== undefined &&
       (typeof item.estimate_min !== "number" || item.estimate_min <= 0)
     ) {
-      throw new Error(`Task "${item.title}" estimate_min must be a positive number`);
+      throw new Error(
+        `Task "${item.title}" estimate_min must be a positive number`,
+      );
     }
     if (item.deadline && Number.isNaN(new Date(item.deadline).getTime())) {
-      throw new Error(`Task "${item.title}" has an invalid deadline format (use YYYY-MM-DD)`);
+      throw new Error(
+        `Task "${item.title}" has an invalid deadline format (use YYYY-MM-DD)`,
+      );
     }
     if (item.subtasks) {
       if (!Array.isArray(item.subtasks)) {
@@ -41,7 +49,9 @@ function validateTasksInput(list: any[]): void {
       validateTasksInput(item.subtasks);
     }
     if (item.depends_on && !Array.isArray(item.depends_on)) {
-      throw new Error(`Task "${item.title}" depends_on must be an array of ids`);
+      throw new Error(
+        `Task "${item.title}" depends_on must be an array of ids`,
+      );
     }
   }
 }
@@ -73,7 +83,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // ── Project must belong to user ───────────────────────────────────────────
   const project = await findProjectById(project_id, userId);
-  if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
+  if (!project)
+    return Response.json({ error: "Project not found" }, { status: 404 });
 
   // ── Validate entire JSON structure before writing to DB ───────────────────
   try {
@@ -90,7 +101,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (scheduled_date !== undefined && scheduled_date !== null) {
     scheduledDate = Number(scheduled_date);
     if (Number.isNaN(scheduledDate)) {
-      return Response.json({ error: "scheduled_date must be a unix day integer" }, { status: 400 });
+      return Response.json(
+        { error: "scheduled_date must be a unix day integer" },
+        { status: 400 },
+      );
     }
   }
 
@@ -150,12 +164,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (item.subtasks && Array.isArray(item.subtasks)) {
         await insertImportedTasks(item.subtasks, newTaskId);
       }
-      
+
       // Store the mapping from JSON id to DB id
       if (item.id) {
         idMap.set(item.id, newTaskId);
       }
-      
+
       // Keep track of dependencies to resolve after all insertions
       if (item.depends_on && Array.isArray(item.depends_on)) {
         dependencyQueue.push({ taskId: newTaskId, dependsOn: item.depends_on });
@@ -165,7 +179,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   try {
     await insertImportedTasks(tasks as IngestTaskItem[]);
-    
+
     // Resolve dependencies
     const { insertTaskDependency } = await import("@/lib/storage");
     for (const { taskId, dependsOn } of dependencyQueue) {
@@ -176,7 +190,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
       }
     }
-    
+
     return Response.json({ data: createdTasks }, { status: 201 });
   } catch (dbError) {
     console.error("[JSON Ingest Error] Database insertion failed:", dbError);

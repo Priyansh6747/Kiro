@@ -1,6 +1,6 @@
 /**
  * DELETE /api/planner/day-plan/[taskId]
- * 
+ *
  * Remove a task from the day plan timeline.
  */
 
@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ taskId: string }> }
+  { params }: { params: Promise<{ taskId: string }> },
 ): Promise<Response> {
   const { userId } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });

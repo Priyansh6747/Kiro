@@ -22,7 +22,8 @@ export async function PATCH(
   const { id } = await params;
 
   const project = await findProjectById(id, userId);
-  if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
+  if (!project)
+    return Response.json({ error: "Project not found" }, { status: 404 });
 
   let body: Record<string, unknown>;
   try {
@@ -42,15 +43,25 @@ export async function PATCH(
   if ("name" in body) {
     const name = body.name;
     if (!name || typeof name !== "string" || name.trim() === "") {
-      return Response.json({ error: "name must be a non-empty string" }, { status: 400 });
+      return Response.json(
+        { error: "name must be a non-empty string" },
+        { status: 400 },
+      );
     }
     updates.name = name.trim();
   }
 
   if ("importance" in body) {
     const importanceNum = Number(body.importance);
-    if (!Number.isInteger(importanceNum) || importanceNum < 1 || importanceNum > 5) {
-      return Response.json({ error: "importance must be an integer 1–5" }, { status: 400 });
+    if (
+      !Number.isInteger(importanceNum) ||
+      importanceNum < 1 ||
+      importanceNum > 5
+    ) {
+      return Response.json(
+        { error: "importance must be an integer 1–5" },
+        { status: 400 },
+      );
     }
     updates.importance = importanceNum;
   }
@@ -71,7 +82,10 @@ export async function PATCH(
     } else {
       const deadlineAt = Number(body.deadline_at);
       if (Number.isNaN(deadlineAt)) {
-        return Response.json({ error: "deadline_at must be a unix timestamp" }, { status: 400 });
+        return Response.json(
+          { error: "deadline_at must be a unix timestamp" },
+          { status: 400 },
+        );
       }
       updates.deadlineAt = deadlineAt;
     }
@@ -93,7 +107,8 @@ export async function DELETE(
   const { id } = await params;
 
   const project = await findProjectById(id, userId);
-  if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
+  if (!project)
+    return Response.json({ error: "Project not found" }, { status: 404 });
 
   if (project.isDefault) {
     return Response.json(

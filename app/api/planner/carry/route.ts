@@ -35,11 +35,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const toCarry = new Set<string>(body.task_ids_to_carry ?? []);
-  const toDrop  = new Set<string>(body.task_ids_to_drop ?? []);
+  const toDrop = new Set<string>(body.task_ids_to_drop ?? []);
 
   const prefs = await getOrCreatePreferences(userId);
 
-  const todayDate     = todayUnixDay(prefs.timezone);
+  const todayDate = todayUnixDay(prefs.timezone);
   const yesterdayDate = todayDate - 1;
 
   const unresolved = await listUnresolvedTasksForDay(userId, yesterdayDate);
