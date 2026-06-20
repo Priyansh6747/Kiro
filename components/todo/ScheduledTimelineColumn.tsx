@@ -231,7 +231,7 @@ export function ScheduledTimelineColumn({
           <div
             key={dNum}
             ref={isToday ? todayRef : null}
-            className={`flex min-h-[120px] group relative ${isToday ? "bg-accent-subtle/10" : ""}`}
+            className={`dial-item-3d flex min-h-[120px] group relative ${isToday ? "bg-accent-subtle/10" : ""}`}
           >
             <div className="w-20 flex-shrink-0 flex flex-col items-center justify-center relative">
               <TimelineTicks />
@@ -377,6 +377,10 @@ export function ScheduledTimelineColumn({
         <div
           ref={scrollContainerRef}
           className="h-full overflow-y-auto bg-surface relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          style={{ 
+            maskImage: "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)", 
+            WebkitMaskImage: "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)" 
+          }}
           onScroll={handleScroll}
         >
           <div className="relative z-10">{renderTimeline()}</div>
