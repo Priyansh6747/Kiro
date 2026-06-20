@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import type { Task, Project, TodayPlannerData } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
 import { getTodayPlan, listTasks, listProjects, updateTask, placeDayPlanBlock, removeDayPlanBlock, createTask } from "@/lib/api-client";
-import { LoadingScreen, ErrorBanner } from "@/components/ui";
+import { LoadingScreen, ErrorBanner, QuickCapture } from "@/components/ui";
 import { DayPlanner } from "@/components/DayPlanner";
 import { DayView } from "@/components/DayView";
 import { ArcDial } from "@/components/ArcDial";
@@ -36,7 +36,7 @@ function TodayPageContent() {
   const [activeTab, setActiveTab] = useState<'anytime' | 'dayview'>('anytime');
   
   const [isBucketOpen, setIsBucketOpen] = useState(false);
-  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
   const [animatingTasksStatus, setAnimatingTasksStatus] = useState<Record<string, 'loading' | 'success' | 'error'>>({});
@@ -356,24 +356,12 @@ function TodayPageContent() {
     }
   };
 
-  const handleQuickAdd = async () => {
-    if (projects.length === 0) return;
-    setIsCreatingTask(true);
-    try {
-      // Find a suitable project, maybe the first one
-      const targetProject = projects[0];
-      const newTask = await createTask({
-        project_id: targetProject.id,
-        title: "New Task",
-        estimate_min: 30,
-        scheduled_date: selectedDate,
-      });
-      setPlan(prev => prev ? { ...prev, tasks: [...prev.tasks, newTask] } : prev);
-    } catch (e) {
-      showToast((e as Error).message, 'error');
-    } finally {
-      setIsCreatingTask(false);
+  const handleQuickAdd = () => {
+    if (projects.length === 0) {
+      showToast("Create a project first", "error");
+      return;
     }
+    setShowQuickCapture(true);
   };
 
   if (initialLoading) return <LoadingScreen message="Loading today's plan…" />;
@@ -499,16 +487,11 @@ function TodayPageContent() {
           <div className="mt-4 flex justify-center">
             <button 
               onClick={handleQuickAdd}
-              disabled={isCreatingTask}
               className="w-14 h-14 rounded-full bg-accent-subtle text-accent flex items-center justify-center hover:scale-105 transition-transform"
             >
-              {isCreatingTask ? (
-                <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-              )}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -600,6 +583,18 @@ function TodayPageContent() {
           </div>
         </div>
       </div>
+      {showQuickCapture && (
+        <QuickCapture
+          projects={projects}
+          tasks={[...(plan?.tasks || []), ...bucketTasks]}
+          defaultScheduledDate={selectedDate}
+          onCreated={(taskOrTasks) => {
+            load();
+            setShowQuickCapture(false);
+          }}
+          onClose={() => setShowQuickCapture(false)}
+        />
+      )}
     </div>
   );
 }

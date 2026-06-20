@@ -11,6 +11,7 @@ import {
   insertTaskClosureSelf,
   listTasks,
   propagateTaskClosure,
+  pullUnresolvedPredecessors,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
@@ -190,6 +191,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (pred && pred.projectId === project_id) {
       const { insertTaskDependency } = await import("@/lib/storage");
       await insertTaskDependency(newTaskId, predecessor_id);
+      
+      // Auto-schedule unresolved predecessors if this task is scheduled
+      if (scheduledDate !== null) {
+        await pullUnresolvedPredecessors(newTaskId, scheduledDate, userId);
+      }
     }
   }
 

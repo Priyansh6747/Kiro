@@ -29,6 +29,10 @@
   --color-warning: var(--status-warning);
   --color-warning-text: var(--status-warning-text);
   --color-critical: var(--status-critical);
+
+  --color-node-start: var(--node-start);
+  --color-node-ready: var(--node-ready);
+  --color-node-final: var(--node-final);
 }
 
 .theme-paper {
@@ -73,6 +77,10 @@
   --border-header-strong: var(--border-strong);
   --bg-header-surface: var(--bg-surface);
   --text-header-surface: var(--text-primary);
+
+  --node-start: #4A90E2;
+  --node-ready: #F5A623;
+  --node-final: #9013FE;
 }
 
 .theme-midnight {
@@ -119,6 +127,10 @@
   --border-header-strong: var(--border-strong);
   --bg-header-surface: var(--bg-surface);
   --text-header-surface: var(--text-primary);
+
+  --node-start: #2AC2E3;
+  --node-ready: #F5B258;
+  --node-final: #B463F2;
 }
 
 .theme-nebula {
@@ -163,6 +175,10 @@
   --border-header-strong: var(--border-strong);
   --bg-header-surface: var(--bg-surface);
   --text-header-surface: var(--text-primary);
+
+  --node-start: #6CA0DC;
+  --node-ready: #E8A35D;
+  --node-final: #AE5782;
 }
 
 .theme-sage {
@@ -199,6 +215,10 @@
   --status-warning: #9C7A1E;
   --status-warning-text: #4F3D0E;
   --status-critical: #5B8C3E;
+
+  --node-start: #5B8C9C;
+  --node-ready: #D1A054;
+  --node-final: #6B5B8C;
 }
 
 .theme-nightshade {
@@ -245,6 +265,10 @@
   --border-header-strong: var(--border-strong);
   --bg-header-surface: var(--bg-surface);
   --text-header-surface: var(--text-primary);
+
+  --node-start: #20A4F3;
+  --node-ready: #F6921E;
+  --node-final: #B020F3;
 }
 
 body {

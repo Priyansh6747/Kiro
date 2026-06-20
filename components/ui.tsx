@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Project, ProjectType, Task, TaskStatus } from "@/lib/types";
 import { formatTimestamp, formatMinutes } from "@/lib/types";
 import {
@@ -421,11 +421,21 @@ export function QuickCapture({
     defaultScheduledDate !== undefined ? defaultScheduledDate !== null : false,
   );
   
-  // By default depend on the defaultPredecessorId or the last task in the list
+  const getAutoPredecessor = (pId: string) => {
+    const proj = projects.find(p => p.id === pId);
+    if (!proj || proj.isDefault) return "";
+    const pTasks = (tasks || []).filter(t => t.projectId === pId);
+    return pTasks.length > 0 ? pTasks[pTasks.length - 1].id : "";
+  };
+
   const [predecessorId, setPredecessorId] = useState<string>(
-    defaultPredecessorId || (tasks && tasks.length > 0 ? tasks[tasks.length - 1].id : "")
+    defaultPredecessorId !== undefined ? defaultPredecessorId : getAutoPredecessor(defaultProjectId ?? projects[0]?.id ?? "")
   );
 
+  useEffect(() => {
+    if (defaultPredecessorId !== undefined) return;
+    setPredecessorId(getAutoPredecessor(projectId));
+  }, [projectId]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -554,7 +564,7 @@ export function QuickCapture({
                 onChange={(e) => setPredecessorId(e.target.value)}
               >
                 <option value="">None</option>
-                {tasks.map(t => (
+                {tasks.filter(t => t.projectId === projectId).map(t => (
                   <option key={t.id} value={t.id}>{t.title}</option>
                 ))}
               </select>

@@ -580,6 +580,42 @@ export async function insertTaskDependency(
     .onConflictDoNothing();
 }
 
+export async function pullUnresolvedPredecessors(startTaskId: string, scheduledDate: number, userId: string) {
+  let currentTasks = [startTaskId];
+  const seen = new Set<string>();
+
+  while (currentTasks.length > 0) {
+    const deps = await db.select({ predecessorId: taskDependencies.predecessorId })
+      .from(taskDependencies)
+      .where(inArray(taskDependencies.taskId, currentTasks));
+    
+    const predIds = deps.map(d => d.predecessorId).filter(id => !seen.has(id));
+    if (predIds.length === 0) break;
+    
+    for (const id of predIds) seen.add(id);
+
+    const pendingPreds = await db.select({ id: tasks.id })
+      .from(tasks)
+      .where(
+         and(
+           inArray(tasks.id, predIds),
+           eq(tasks.userId, userId),
+           ne(tasks.status, "done"),
+           ne(tasks.status, "deleted")
+         )
+      );
+
+    const pendingIds = pendingPreds.map(p => p.id);
+    if (pendingIds.length === 0) break;
+
+    await db.update(tasks)
+      .set({ scheduledDate, updatedAt: nowSec() })
+      .where(inArray(tasks.id, pendingIds));
+    
+    currentTasks = pendingIds;
+  }
+}
+
 export async function deleteTaskDependency(
   taskId: string,
   predecessorId: string,

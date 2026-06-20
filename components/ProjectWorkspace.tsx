@@ -171,7 +171,7 @@ export function ProjectWorkspace({
 
   const handleTaskUpdated = (updated: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    if (selectedTask?.id === updated.id) setSelectedTask(updated);
+    setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
   };
 
   const handleTaskCreated = (task: Task | Task[]) => {
@@ -219,7 +219,7 @@ export function ProjectWorkspace({
       
       setTimeout(() => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
-        if (selectedTask?.id === taskId) setSelectedTask(null);
+        setSelectedTask(prev => prev?.id === taskId ? null : prev);
         setAnimatingTasksStatus(prev => {
           const next = { ...prev };
           delete next[taskId];
@@ -378,18 +378,37 @@ export function ProjectWorkspace({
 
       <div className="px-4 py-2 bg-surface-raised border-b border-border-default flex items-center justify-between">
         <p className="text-xs font-semibold text-secondary uppercase">Dependency Chart</p>
-        <button onClick={() => setShowChart(!showChart)} className="text-xs text-accent hover:underline">
-          {showChart ? "Hide Chart" : "Show Chart"}
-        </button>
+        <div className="flex gap-4">
+          {showChart && (
+            <button 
+              onClick={() => {
+                setCapturePredecessorId(undefined);
+                setShowCapture(true);
+              }}
+              className="text-xs text-accent hover:underline"
+            >
+              + Add Task
+            </button>
+          )}
+          <button onClick={() => setShowChart(!showChart)} className="text-xs text-secondary hover:underline">
+            {showChart ? "Hide Chart" : "Show Chart"}
+          </button>
+        </div>
       </div>
       {showChart && (
          <div className="p-4 border-b border-border-default bg-surface relative">
            <DependencyChart 
              tasks={tasks} 
              dependencies={dependencies} 
-             onAddSubtask={(predId) => {
-               setCapturePredecessorId(predId);
-               setShowCapture(true);
+             onAddDependency={async (taskId, predecessorId) => {
+               try {
+                 const { addDependency } = await import("@/lib/api-client");
+                 await addDependency(taskId, predecessorId);
+                 loadTasks();
+                 showToast("Dependency added", "success");
+               } catch (e) {
+                 showToast((e as Error).message, 'error');
+               }
              }}
            />
          </div>
