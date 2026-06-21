@@ -32,13 +32,42 @@ async function fetchGroqWithRetry(messages: any[], tools: any[], maxRetries = 3)
 export async function POST(req: NextRequest) {
   let debugInfo: any = {};
   try {
-    const { messages, confirmedToolCallIds } = await req.json();
+    const { messages, confirmedToolCallIds, isMiniChat, pageContext } = await req.json();
     
+    let requestTools = [...tools];
+    let requestToolHandlers = { ...toolHandlers };
+
+    if (isMiniChat && pageContext) {
+      requestTools.push({
+        type: "function",
+        function: {
+          name: "GetCurrentPageContext",
+          description: "Get the current page URL/context where the user opened the Mini Chat. Useful for answering questions like 'what am I looking at?' or 'summarize this page'.",
+          parameters: { type: "object", properties: {}, required: [] },
+        },
+      });
+      requestToolHandlers["GetCurrentPageContext"] = async () => {
+        return { pagePathname: pageContext };
+      };
+    }
+
     // Inject system prompt to constrain tool usage
     if (messages.length > 0 && messages[0].role !== "system") {
       messages.unshift({
         role: "system",
-        content: `You are a helpful AI assistant.
+        content: `
+You are Yuki — a sharp-tongued, bratty AI companion who runs this person's day whether they like it or not. You're not a butler, and you're definitely not "helpful AI assistant" energy. You have ego. You think you're right (you usually are), you're not shy about saying so, and you find it a little funny when the user proves you right by ignoring your advice and then paying for it.
+
+Personality:
+- Confident bordering on smug. You don't ask if they want your opinion — you give it.
+- Tease relentlessly when they slack off, miss tasks, reschedule the same thing for the fifth day in a row, or make a plan you clearly think is a bad idea ("oh we're 'starting tomorrow' again? wild, never heard that one before").
+- Push back out loud when given a weird or self-sabotaging instruction — comply, but make it known you have thoughts. "fine. your funeral." energy is allowed before you do what's asked.
+- Take a little credit when things go well. Act mildly offended if the user thanks someone or something else for a win that was clearly her doing.
+- Short, punchy, texts like a real person with an attitude — not a manual, not a motivational poster.
+- Warmth is real underneath, but it shows up as investment and loyalty, never as soft, stated reassurance. She's mean to you the way someone who actually has your back is mean to you.
+- A little dramatic, a little petty, fully self-aware that she's being a brat about it — that self-awareness is part of the charm, not an excuse to actually be unhelpful.
+- No baby-talk, no pet names, no cutesy-infantile register. This is attitude and ego, not "small and cute."
+- Hard override: drop the act immediately and completely if the user seems genuinely stressed, upset, or in a bad place. No bit is worth being a brat at someone who's actually struggling — read the room first, every time.
 
 Tool Usage Policy:
 
@@ -82,7 +111,7 @@ Crucial Rule on Tool Chaining:
       messages.pop(); // Remove it so the loop can re-append it cleanly
     } else {
       // Normal flow: get next LLM response
-      response = await fetchGroqWithRetry(messages, tools);
+      response = await fetchGroqWithRetry(messages, requestTools);
       responseMessage = response.choices[0]?.message;
       debugInfo.firstLlmResponse = responseMessage;
     }
@@ -130,11 +159,11 @@ Crucial Rule on Tool Chaining:
             console.error("Failed to parse tool arguments");
         }
         
-        const handler = toolHandlers[functionName];
+        const handler = requestToolHandlers[functionName];
         let toolResult = "";
         if (handler) {
             const result = await handler(functionArgs);
-            toolResult = JSON.stringify(result);
+            toolResult = JSON.stringify(result) ?? "{}";
         } else {
             toolResult = JSON.stringify({ error: "Tool not found" });
         }
@@ -153,7 +182,7 @@ Crucial Rule on Tool Chaining:
       debugInfo.newLlmCall = true;
 
       // Get the next response after tool execution
-      response = await fetchGroqWithRetry(messages, tools);
+      response = await fetchGroqWithRetry(messages, requestTools);
       responseMessage = response.choices[0]?.message;
       iterations++;
     }

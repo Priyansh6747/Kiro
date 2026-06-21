@@ -45,20 +45,32 @@ export const dayLogTools: ChatCompletionTool[] = [
   }
 ];
 
+const enrichLog = (log: any) => {
+  if (!log) return log;
+  const assumedLoadMin = log.tasksAssigned * 30; // standard 30 min per task
+  let loadStatus = "balanced";
+  if (assumedLoadMin > log.availableMin * 1.1) loadStatus = "overload";
+  else if (assumedLoadMin < log.availableMin * 0.6) loadStatus = "chill";
+
+  return {
+    ...log,
+    dateStr: new Date(log.date * 86400000).toISOString().split('T')[0],
+    loadStatus // provides chill vs overload data
+  };
+};
+
 export const dayLogHandlers: Record<string, Function> = {
   listDayLogs: async () => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
     const logs = await listDayLogs(userId, 0, 99999);
-    return logs.map(l => ({
-      ...l,
-      dateStr: new Date(l.date * 86400000).toISOString().split('T')[0]
-    }));
+    return logs.map(enrichLog);
   },
   getDayLog: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    return await findDayLog(userId, args.date);
+    const log = await findDayLog(userId, args.date);
+    return enrichLog(log);
   },
   updateDayLog: async (args: any) => {
     const { userId } = await auth();
