@@ -12,6 +12,7 @@ import {
   listTasks,
   propagateTaskClosure,
   pullUnresolvedPredecessors,
+  autoRevertMissedProjectTasks,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 import type { NextRequest } from "next/server";
@@ -48,6 +49,16 @@ export async function GET(request: NextRequest): Promise<Response> {
     const prefs = await getOrCreatePreferences(userId);
     todayDate = todayUnixDay(prefs.timezone);
   }
+
+  if (todayDate === undefined) {
+    const { getOrCreatePreferences } = await import("@/lib/storage");
+    const { todayUnixDay } = await import("@/lib/utils");
+    const prefs = await getOrCreatePreferences(userId);
+    todayDate = todayUnixDay(prefs.timezone);
+  }
+
+  // ── Auto-revert missed project tasks to bucket ────────────────────────────
+  await autoRevertMissedProjectTasks(userId, todayDate);
 
   const rows = await listTasks({
     userId,

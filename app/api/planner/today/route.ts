@@ -16,6 +16,7 @@ import {
   insertTaskClosureSelf,
   listDayPlansForDate,
   listTaskDependenciesForTasks,
+  autoRevertMissedProjectTasks,
 } from "@/lib/storage";
 import { todayUnixDay, nowSec } from "@/lib/utils";
 
@@ -78,6 +79,9 @@ export async function GET(req: Request): Promise<Response> {
       }
     }
   }
+
+  // ── Auto-revert missed project tasks to bucket ────────────────────────────
+  await autoRevertMissedProjectTasks(userId, todayDate);
 
   const scheduledTasks = await listTasks({ userId, date: todayDate });
 

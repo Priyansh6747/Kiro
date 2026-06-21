@@ -282,7 +282,7 @@ function ProjectDetails({
               onClick={() => setIsEditingPriority(true)}
             >
               <div className="flex items-center">
-                <span className="text-base lg:text-lg text-value font-semibold">{project.importance}</span>
+                <span className="text-base lg:text-lg text-primary font-semibold">{project.importance}</span>
                 <span className="text-xs lg:text-sm text-tertiary ml-1">/ 5</span>
               </div>
               <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-tertiary transition-opacity">
@@ -310,7 +310,7 @@ function ProjectDetails({
               className="flex items-center gap-2 group mt-1 cursor-pointer -ml-2 p-2 rounded hover:bg-surface-raised transition-colors inline-flex"
               onClick={() => setIsEditingDeadline(true)}
             >
-              <span className="text-sm lg:text-base text-value font-semibold">{project.deadlineAt ? formatTimestamp(project.deadlineAt) : "No Deadline"}</span>
+              <span className="text-sm lg:text-base text-primary font-semibold">{project.deadlineAt ? formatTimestamp(project.deadlineAt) : "No Deadline"}</span>
               <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-tertiary transition-opacity">
                 <Pencil className="w-3.5 h-3.5" />
               </div>
@@ -320,7 +320,7 @@ function ProjectDetails({
 
         <div className="flex flex-col gap-1.5 pb-4 lg:pb-5 border-b border-border-subtle">
           <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">Created At</span>
-          <span className="text-sm lg:text-base text-value font-semibold">{formatTimestamp(project.createdAt)}</span>
+          <span className="text-sm lg:text-base text-primary font-semibold">{formatTimestamp(project.createdAt)}</span>
         </div>
       </div>
 

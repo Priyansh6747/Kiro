@@ -10,13 +10,11 @@
 
 import { auth } from "@clerk/nextjs/server";
 import {
-  countTasksByStatusForDay,
   createTask,
-  findDayLog,
   getOrCreatePreferences,
   insertTaskClosureSelf,
   listUnresolvedTasksForDay,
-  updateDayLog,
+  syncDayLogStats,
   updateTask,
 } from "@/lib/storage";
 import { nowSec, todayUnixDay } from "@/lib/utils";
@@ -80,8 +78,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       carriedIds.push(newId);
     } else if (toDrop.has(task.id)) {
       // ── Drop ──────────────────────────────────────────────────────────
-      if (task.isDefault) {
-        // Task from the default Todo project: soft-delete and mark missed
+      if (task.isDefault || task.carriedFromId !== null) {
+        // Task from the default Todo project or a recurring instance: soft-delete and mark missed
         await updateTask(task.id, {
           deletedAt: now,
           status: "missed",
@@ -90,7 +88,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       } else {
         // Project task: back to bucket (clear scheduled_date)
         await updateTask(task.id, {
-          status: "missed",
+          status: "pending",
           scheduledDate: null,
           updatedAt: now,
         });
@@ -101,20 +99,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // ── Recalculate yesterday's day_log ───────────────────────────────────────
-  const dayLog = await findDayLog(userId, yesterdayDate);
-  if (dayLog) {
-    const counts = await countTasksByStatusForDay(userId, yesterdayDate);
-    const tasksAssigned = dayLog.tasksAssigned || 1; // guard against division by zero
-    const ratio = counts.done / tasksAssigned;
-
-    await updateDayLog(userId, yesterdayDate, {
-      tasksCompleted: counts.done,
-      tasksMissed: counts.missed,
-      tasksCarried: counts.carried,
-      ratio: Math.min(ratio, 1.0),
-      updatedAt: now,
-    });
-  }
+  await syncDayLogStats(userId, yesterdayDate);
 
   return Response.json({
     data: {

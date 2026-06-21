@@ -438,6 +438,35 @@ export async function listUnresolvedTasksForDay(
     );
 }
 
+/** Auto-reverts pending tasks from past dates back to the bucket for non-default projects */
+export async function autoRevertMissedProjectTasks(
+  userId: string,
+  todayDate: number,
+): Promise<void> {
+  const pastPending = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        eq(tasks.status, "pending"),
+        lte(tasks.scheduledDate, todayDate - 1),
+        isNull(tasks.deletedAt),
+        eq(projects.isDefault, false),
+        isNull(tasks.carriedFromId), // Exclude recurring instances so they go to carry flow
+      ),
+    );
+
+  if (pastPending.length === 0) return;
+
+  const ids = pastPending.map((t) => t.id);
+  await db
+    .update(tasks)
+    .set({ scheduledDate: null, updatedAt: nowSec() })
+    .where(inArray(tasks.id, ids));
+}
+
 // ---------------------------------------------------------------------------
 // Recurring task templates
 // ---------------------------------------------------------------------------
@@ -794,17 +823,22 @@ export async function syncDayLogStats(
 
   const tasksForDay = await listTasks({ userId, date });
   const completed = tasksForDay.filter((t) => t.status === "done").length;
-  const missed = tasksForDay.filter(
-    (t) => t.status === "missed" || t.status === "carried",
-  ).length;
+  const carried = tasksForDay.filter((t) => t.status === "carried").length;
+  const explicitMissed = tasksForDay.filter((t) => t.status === "missed").length;
+  
+  // Tasks that were reverted to the bucket lose their scheduledDate and thus disappear from tasksForDay.
+  // To ensure they are still counted as missed against the day's original commitment, we use Math.max.
+  const missed = Math.max(explicitMissed, log.tasksAssigned - completed - carried);
+
   // ratio is against tasksAssigned which was locked in at the time of confirmDay
   const ratio = log.tasksAssigned > 0 ? completed / log.tasksAssigned : 0.0;
 
   await updateDayLog(userId, date, {
     tasksCompleted: completed,
     tasksMissed: missed,
+    tasksCarried: carried,
     ratio: Math.min(ratio, 1.0),
-    updatedAt: Math.floor(Date.now() / 1000),
+    updatedAt: nowSec(),
   });
 }
 
