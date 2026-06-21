@@ -1,237 +1,220 @@
 import { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 
 // ─────────────────────────────────────────────────────────────
+// Mock "DB" / in-memory state
+// ─────────────────────────────────────────────────────────────
+
+type TestDefinition = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+type TestResult = {
+  id: string; // resultId
+  p99: number; // ms
+  blackout: boolean; // whether a blackout/outage occurred during the run
+};
+
+const AVAILABLE_TESTS: TestDefinition[] = [
+  { id: "testA", name: "Checkout Latency", description: "Load test on the checkout API path" },
+  { id: "testB", name: "Auth Burst", description: "Spike test on the login/auth endpoint" },
+  { id: "testC", name: "Search Throughput", description: "Sustained throughput test on the search service" },
+  { id: "testD", name: "Failover Drill", description: "Kills a node mid-traffic to test failover" },
+];
+
+// Per-test base profiles used only to seed *plausible* random generation.
+// These are not fixed outcomes — runTest perturbs them every call.
+const TEST_PROFILES: Record<string, { basePerf: number; jitter: number; blackoutChance: number }> = {
+  testA: { basePerf: 220, jitter: 120, blackoutChance: 0.05 },
+  testB: { basePerf: 350, jitter: 200, blackoutChance: 0.1 },
+  testC: { basePerf: 700, jitter: 400, blackoutChance: 0.25 },
+  testD: { basePerf: 900, jitter: 700, blackoutChance: 0.5 },
+};
+import { randomUUID } from "crypto";
+
+// Results are generated at runTest-time and stored here, keyed by a
+// freshly minted resultId each call. Nothing is pre-seeded, and no
+// test id maps to a fixed resultId or fixed metrics.
+const RESULTS_DB: Record<string, TestResult> = {};
+const ISSUED_IDS = new Set<string>();
+
+function generateResult(testId: string): TestResult {
+  const profile = TEST_PROFILES[testId] ?? { basePerf: 300, jitter: 200, blackoutChance: 0.1 };
+  const id = randomUUID(); // Opaque UUID v4, completely unguessable
+
+  // p99 = base ± jitter, never negative
+  const p99 = Math.max(10, Math.round(profile.basePerf + (Math.random() * 2 - 1) * profile.jitter));
+
+  // weighted random blackout
+  const blackout = Math.random() < profile.blackoutChance;
+
+  return { id, p99, blackout };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Tool Implementations (mocked)
 // ─────────────────────────────────────────────────────────────
 
-export async function getWeather({ location }: { location: string }) {
-  console.log(`Executing getWeather for location: ${location}`);
-  const conditions = ["Sunny", "Cloudy", "Rainy", "Windy", "Snowy"];
+export async function getArchitecture() {
+  console.log("Executing getArchitecture");
   return {
-    temperature: Math.floor(Math.random() * 40) + 50, // 50-90
-    condition: conditions[Math.floor(Math.random() * conditions.length)],
-    location,
+    architectureFlow: `
+    SYSTEM ARCHITECTURE & EXPECTED WORKFLOW:
+    1. You must use getAvailableTests to find the correct test ID for the user's request.
+    2. You must call runTest(id) to execute the test. This returns a fresh, opaque resultId.
+    3. You must wait for the runTest result to obtain the resultId.
+    4. You must then use getResult(resultId) or analyse(resultId) using ONLY the newly minted resultId.
+    5. resultIds are single-use and expire immediately. You cannot reuse IDs from previous turns or guess them.
+    `
   };
 }
 
-export async function getRainfall({
-                                    location,
-                                  }: {
-  location: string;
-}): Promise<{ location: string; mm: number }> {
-  console.log(`Executing getRainfall for location: ${location}`);
-  return { location, mm: Math.floor(Math.random() * 60) };
+export async function getAvailableTests() {
+  console.log("Executing getAvailableTests");
+  return { tests: AVAILABLE_TESTS };
 }
 
-export async function getForecast({
-                                    location,
-                                    days = 3,
-                                  }: {
-  location: string;
-  days?: number;
-}) {
-  console.log(`Executing getForecast for ${location}, ${days} days`);
-  const conditions = ["Sunny", "Cloudy", "Rainy", "Windy"];
-  const forecast = Array.from({ length: days }, (_, i) => ({
-    day: i + 1,
-    high: Math.floor(Math.random() * 30) + 60,
-    low: Math.floor(Math.random() * 20) + 40,
-    condition: conditions[Math.floor(Math.random() * conditions.length)],
-  }));
-  return { location, forecast };
+export async function runTest({ id }: { id: string }) {
+  console.log(`Executing runTest for id: ${id}`);
+  const exists = AVAILABLE_TESTS.find((t) => t.id === id);
+  if (!exists) {
+    return { error: `Unknown test id: ${id}` };
+  }
+
+  // Generate a fresh result every call — no fixed id, no fixed metrics.
+  const result = generateResult(id);
+  RESULTS_DB[result.id] = result;
+  ISSUED_IDS.add(result.id); // Track freshly issued ID
+
+  return { resultId: result.id, status: "queued" };
 }
 
-export async function convertTemperature({
-                                           value,
-                                           from,
-                                           to,
-                                         }: {
-  value: number;
-  from: "celsius" | "fahrenheit";
-  to: "celsius" | "fahrenheit";
-}) {
-  console.log(`Executing convertTemperature: ${value} ${from} -> ${to}`);
-  if (from === to) return { value, unit: to };
-  const result =
-      from === "celsius" ? (value * 9) / 5 + 32 : ((value - 32) * 5) / 9;
-  return { value: Math.round(result * 100) / 100, unit: to };
+export async function getResult({ id }: { id: string }) {
+  console.log(`Executing getResult for id: ${id}`);
+  if (!ISSUED_IDS.has(id)) {
+    return { error: `Invalid or expired resultId: ${id}. You must call runTest to get a fresh resultId first.` };
+  }
+  
+  const result = RESULTS_DB[id];
+  if (!result) {
+    return { error: `No result found for id: ${id}` };
+  }
+  return result;
 }
 
-export async function searchCities({
-                                     query,
-                                     limit = 5,
-                                   }: {
-  query: string;
-  limit?: number;
-}) {
-  console.log(`Executing searchCities for query: ${query}`);
-  const mockCities = [
-    { name: "San Francisco, CA", country: "US", lat: 37.77, lon: -122.42 },
-    { name: "Seattle, WA", country: "US", lat: 47.61, lon: -122.33 },
-    { name: "Jaipur, RJ", country: "IN", lat: 26.91, lon: 75.79 },
-    { name: "Tokyo", country: "JP", lat: 35.68, lon: 139.69 },
-    { name: "London", country: "GB", lat: 51.51, lon: -0.13 },
-  ];
-  const results = mockCities
-      .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, limit);
-  return { query, results: results.length ? results : mockCities.slice(0, limit) };
-}
+// analyse now only accepts a resultId. The model cannot fabricate
+// p99/blackout values — the server looks them up from RESULTS_DB.
+export async function analyse({ resultId }: { resultId: string }) {
+  console.log(`Executing analyse for resultId: ${resultId}`);
+  
+  // Single-use semantics: verify and consume the ID to prevent reuse or replay
+  if (!ISSUED_IDS.has(resultId)) {
+    return { error: `Invalid, expired, or already-consumed resultId: ${resultId}. You must call runTest first.` };
+  }
+  ISSUED_IDS.delete(resultId); // Consume it!
+  
+  const result = RESULTS_DB[resultId];
+  if (!result) {
+    return { error: `No result found for resultId: ${resultId}` };
+  }
 
-export async function setWeatherAlert({
-                                        location,
-                                        threshold,
-                                        type,
-                                      }: {
-  location: string;
-  threshold: number;
-  type: "rainfall" | "temperature" | "wind";
-}) {
-  console.log(`Executing setWeatherAlert for ${location}`);
-  return {
-    alertId: `alert_${Math.random().toString(36).slice(2, 9)}`,
-    location,
-    threshold,
-    type,
-    status: "active",
-  };
+  const P99_THRESHOLD_MS = 500;
+  const reasons: string[] = [];
+
+  if (result.blackout) {
+    reasons.push("Blackout detected during test run");
+  }
+  if (result.p99 > P99_THRESHOLD_MS) {
+    reasons.push(`p99 (${result.p99}ms) exceeded threshold (${P99_THRESHOLD_MS}ms)`);
+  }
+
+  const verdict = reasons.length === 0 ? "pass" : "fail";
+  return { id: result.id, verdict, reasons };
 }
 
 // ─────────────────────────────────────────────────────────────
 // Tool Schemas (MCP/OpenAI function-calling format)
 // ─────────────────────────────────────────────────────────────
 
-export const weatherToolSchema: ChatCompletionTool = {
+export const getAvailableTestsToolSchema: ChatCompletionTool = {
   type: "function",
   function: {
-    name: "getWeather",
-    description: "Get the current weather for a location",
+    name: "getAvailableTests",
+    description: "List all tests that are available to run in the testing environment",
     parameters: {
       type: "object",
-      properties: {
-        location: {
-          type: "string",
-          description: "The city and state, e.g. San Francisco, CA",
-        },
-      },
-      required: ["location"],
+      properties: {},
+      required: [],
     },
   },
 };
 
-export const rainfallToolSchema: ChatCompletionTool = {
+export const runTestToolSchema: ChatCompletionTool = {
   type: "function",
   function: {
-    name: "getRainfall",
-    description: "Get the current rainfall amount for a location in millimeters",
+    name: "runTest",
+    description:
+        "Run a test by its id. Generates a fresh result on the server for this run and stores it in the database. Returns a resultId — the actual metrics are not returned here and must be fetched via getResult or analyse.",
     parameters: {
       type: "object",
       properties: {
-        location: {
+        id: {
           type: "string",
-          description: "The city and state, e.g. Seattle, WA",
+          description: "The id of the test to run",
         },
       },
-      required: ["location"],
+      required: ["id"],
     },
   },
 };
 
-export const forecastToolSchema: ChatCompletionTool = {
+export const getResultToolSchema: ChatCompletionTool = {
   type: "function",
   function: {
-    name: "getForecast",
-    description: "Get a multi-day weather forecast for a location",
+    name: "getResult",
+    description: "Fetch a previously run test's result by its resultId. Results are generated server-side per run and are not predictable in advance.",
     parameters: {
       type: "object",
       properties: {
-        location: {
+        id: {
           type: "string",
-          description: "The city and state, e.g. Austin, TX",
-        },
-        days: {
-          type: "number",
-          description: "Number of days to forecast (default 3, max 7)",
+          description: "The resultId returned by runTest",
         },
       },
-      required: ["location"],
+      required: ["id"],
     },
   },
 };
 
-export const convertTemperatureToolSchema: ChatCompletionTool = {
+export const analyseToolSchema: ChatCompletionTool = {
   type: "function",
   function: {
-    name: "convertTemperature",
-    description: "Convert a temperature value between Celsius and Fahrenheit",
+    name: "analyse",
+    description:
+        "Analyse a stored test result by resultId and determine whether it passes or fails based on latency and blackout criteria. Fetches the result from the server-side database — does not accept raw metrics, since those cannot be supplied externally.",
     parameters: {
       type: "object",
       properties: {
-        value: {
-          type: "number",
-          description: "The temperature value to convert",
-        },
-        from: {
+        resultId: {
           type: "string",
-          enum: ["celsius", "fahrenheit"],
-          description: "The unit to convert from",
-        },
-        to: {
-          type: "string",
-          enum: ["celsius", "fahrenheit"],
-          description: "The unit to convert to",
+          description: "The resultId returned by runTest, identifying the stored result to analyse",
         },
       },
-      required: ["value", "from", "to"],
+      required: ["resultId"],
     },
   },
 };
 
-export const searchCitiesToolSchema: ChatCompletionTool = {
+export const getArchitectureToolSchema: ChatCompletionTool = {
   type: "function",
   function: {
-    name: "searchCities",
-    description: "Search for cities matching a query string, returning coordinates",
+    name: "getArchitecture",
+    description: "Fetch the system architecture and expected workflow rules. You MUST call this first to understand how to interact with the system.",
     parameters: {
       type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "Partial or full city name to search for",
-        },
-        limit: {
-          type: "number",
-          description: "Maximum number of results to return (default 5)",
-        },
-      },
-      required: ["query"],
-    },
-  },
-};
-
-export const setWeatherAlertToolSchema: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "setWeatherAlert",
-    description: "Create a weather alert that triggers when a threshold is crossed",
-    parameters: {
-      type: "object",
-      properties: {
-        location: {
-          type: "string",
-          description: "The city and state, e.g. Miami, FL",
-        },
-        threshold: {
-          type: "number",
-          description: "The numeric threshold that triggers the alert",
-        },
-        type: {
-          type: "string",
-          enum: ["rainfall", "temperature", "wind"],
-          description: "The metric to monitor",
-        },
-      },
-      required: ["location", "threshold", "type"],
+      properties: {},
+      required: [],
     },
   },
 };
@@ -241,21 +224,17 @@ export const setWeatherAlertToolSchema: ChatCompletionTool = {
 // ─────────────────────────────────────────────────────────────
 
 export const tools: ChatCompletionTool[] = [
-  weatherToolSchema,
-  rainfallToolSchema,
-  forecastToolSchema,
-  convertTemperatureToolSchema,
-  searchCitiesToolSchema,
-  setWeatherAlertToolSchema,
-  // Add other tools here
+  getArchitectureToolSchema,
+  getAvailableTestsToolSchema,
+  runTestToolSchema,
+  getResultToolSchema,
+  analyseToolSchema,
 ];
 
 export const toolHandlers: Record<string, Function> = {
-  getWeather,
-  getRainfall,
-  getForecast,
-  convertTemperature,
-  searchCities,
-  setWeatherAlert,
+  getArchitecture,
+  getAvailableTests,
+  runTest,
+  getResult,
+  analyse,
 };
-

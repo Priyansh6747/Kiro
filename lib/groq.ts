@@ -24,7 +24,7 @@ export async function getGroqChatCompletion(prompt: string, maxTokens = 300) {
         content: prompt,
       },
     ],
-    model: "llama-3.3-70b-versatile", // Using a standard Groq model for reliability, user's placeholder 'openai/gpt-oss-20b' likely intended llama.
+    model: "openai/gpt-oss-120b", // Using a standard Groq model for reliability, user's placeholder 'openai/gpt-oss-20b' likely intended llama.
     max_tokens: maxTokens,
   });
 }
@@ -49,7 +49,7 @@ export async function groqChat(
 ) {
   return groq.chat.completions.create({
     messages,
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-120b",
     tools,
     tool_choice: tools && tools.length > 0 ? "auto" : "none",
   });

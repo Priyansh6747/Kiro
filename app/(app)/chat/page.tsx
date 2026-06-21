@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Bot, Bug, Code } from "lucide-react";
+import { Send, Bot, Bug, Code, Copy, Check } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -17,6 +17,15 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
+
+  const copyDebugJson = () => {
+    if (!debugInfo) return;
+    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -38,14 +47,64 @@ export default function ChatPage() {
         setDebugInfo(data.debug);
       }
 
-      if (data.message) {
-        setMessages((prev) => [...prev, data.message]);
+      if (data.requiresConfirmation) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setPendingToolCalls(data.message.tool_calls);
+      } else if (data.message) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
       } else if (data.error) {
         console.error("API error:", data.error);
         setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${data.error}` }]);
       }
     } catch (err) {
       console.error("Chat error:", err);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, there was an error processing your request." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const executeTools = async (approved: boolean) => {
+    setLoading(true);
+    const toolsToProcess = [...pendingToolCalls];
+    setPendingToolCalls([]);
+    
+    let currentMessages = [...messages];
+    
+    if (!approved) {
+      // Mock the tool results as explicitly denied by the user
+      const toolMessages: ChatMessage[] = toolsToProcess.map(tc => ({
+        role: "tool",
+        tool_call_id: tc.id,
+        name: tc.function.name,
+        content: JSON.stringify({ error: "User explicitly denied this action." })
+      }));
+      currentMessages = [...currentMessages, ...toolMessages];
+      setMessages(currentMessages);
+    }
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          messages: currentMessages,
+          confirmedToolCallIds: approved ? toolsToProcess.map(t => t.id) : [] 
+        })
+      });
+      const data = await res.json();
+      
+      if (data.debug) setDebugInfo(data.debug);
+
+      if (data.requiresConfirmation) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setPendingToolCalls(data.message.tool_calls);
+      } else if (data.message) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+      } else if (data.error) {
+        setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${data.error}` }]);
+      }
+    } catch (err) {
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, there was an error processing your request." }]);
     } finally {
       setLoading(false);
@@ -78,17 +137,42 @@ export default function ChatPage() {
               <p className="text-sm text-tertiary mt-2">I have access to tools. Ask me about the weather or rainfall!</p>
             </div>
           )}
-          {messages.filter(m => m.role !== "tool").map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}>
-                {m.content ? (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                ) : (
-                  m.tool_calls && <span className="italic opacity-70">Running tools...</span>
-                )}
+          {messages.filter(m => m.role !== "tool").map((m, i) => {
+            const isLastMessage = i === messages.filter(m => m.role !== "tool").length - 1;
+            const isPending = isLastMessage && pendingToolCalls.length > 0;
+
+            return (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}>
+                  {m.content ? (
+                    <p className="whitespace-pre-wrap">{m.content}</p>
+                  ) : m.tool_calls ? (
+                    isPending ? (
+                      <div className="flex flex-col gap-3">
+                        <span className="font-semibold text-sm">Action Required:</span>
+                        <p className="text-sm opacity-80">The assistant wants to run the following tools:</p>
+                        <ul className="text-xs bg-surface p-2 rounded border border-border-subtle font-mono space-y-1">
+                          {m.tool_calls.map(tc => (
+                            <li key={tc.id}>👉 {tc.function.name}</li>
+                          ))}
+                        </ul>
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => executeTools(true)} className="flex-1 py-1.5 bg-accent text-white rounded text-sm hover:bg-accent-hover transition-colors">
+                            Allow
+                          </button>
+                          <button onClick={() => executeTools(false)} className="flex-1 py-1.5 bg-surface border border-border-default text-secondary hover:text-primary rounded text-sm transition-colors">
+                            Deny
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="italic opacity-70">Ran tools ({m.tool_calls.map(t => t.function.name).join(", ")})</span>
+                    )
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {loading && (
             <div className="flex justify-start">
               <div className="p-4 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2">
@@ -124,38 +208,42 @@ export default function ChatPage() {
       {/* Debug Sidebar */}
       {showDebug && (
         <div className="w-80 lg:w-96 shrink-0 bg-surface h-full flex flex-col border-l border-border-default">
-          <div className="px-6 py-5 border-b border-border-default shrink-0 flex items-center">
-            <Code className="w-5 h-5 mr-2 text-accent" />
-            <h2 className="text-lg font-bold text-primary">Debug Inspector</h2>
+          <div className="px-6 py-5 border-b border-border-default shrink-0 flex items-center justify-between">
+            <div className="flex items-center">
+              <Code className="w-5 h-5 mr-2 text-accent" />
+              <h2 className="text-lg font-bold text-primary">Debug Inspector</h2>
+            </div>
+            {debugInfo && (
+              <button 
+                onClick={copyDebugJson}
+                className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-raised transition-colors flex items-center gap-1 text-xs font-medium"
+                title="Copy JSON to Clipboard"
+              >
+                {copied ? (
+                  <><Check className="w-4 h-4 text-[#4f7a4a]" /> Copied!</>
+                ) : (
+                  <><Copy className="w-4 h-4" /> Copy</>
+                )}
+              </button>
+            )}
           </div>
           
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
             {!debugInfo ? (
               <p className="text-sm text-tertiary italic text-center mt-10">Send a message to see debug info...</p>
             ) : (
-              <>
-                <DebugSection title="Initial Prompt (Messages)" data={debugInfo.initialPrompt} />
-                <DebugSection title="First LLM Response" data={debugInfo.firstLlmResponse} />
-                
-                {debugInfo.toolCalls && (
-                  <DebugSection title="Tool Calls Made" data={debugInfo.toolCalls} />
-                )}
-                
-                {debugInfo.toolResults && (
-                  <DebugSection title="Tool Results" data={debugInfo.toolResults} />
-                )}
-                
-                {debugInfo.newLlmCall && (
-                  <>
-                    <DebugSection title="Final Prompt (With Tool Context)" data={debugInfo.finalPrompt} />
-                    <div className="text-xs bg-done-subtle text-done p-2 rounded border border-status-done/20">
-                      New LLM Call Triggered
-                    </div>
-                  </>
-                )}
+              <div className="flex flex-col gap-4">
+                {debugInfo.fullTrace?.map((msg: any, idx: number) => {
+                  let title = "";
+                  if (msg.role === "system") title = "System Prompt";
+                  else if (msg.role === "user") title = "User Prompt";
+                  else if (msg.role === "assistant" && msg.tool_calls) title = `Assistant (Called ${msg.tool_calls.length} Tools)`;
+                  else if (msg.role === "tool") title = `Tool Result (${msg.name})`;
+                  else if (msg.role === "assistant" && !msg.tool_calls) title = "Final Assistant Response";
 
-                <DebugSection title="Final LLM Response" data={debugInfo.finalLlmResponse} />
-              </>
+                  return <DebugSection key={idx} title={title} data={msg} />;
+                })}
+              </div>
             )}
           </div>
         </div>
