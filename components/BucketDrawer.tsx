@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Task, Project } from "@/lib/types";
+import { formatTimestamp } from "@/lib/types";
 
 interface BucketDrawerProps {
   bucketTasksByProject: Record<string, Task[]>;
@@ -67,7 +68,9 @@ export function BucketDrawer({
                 <span className="text-sm font-semibold text-primary">
                   {projectName}
                 </span>
-                <span className="text-xs text-secondary">Deadline</span>
+                <span className="text-xs text-secondary">
+                  {project?.deadlineAt ? formatTimestamp(project.deadlineAt) : "No Deadline"}
+                </span>
               </div>
 
               {!isCollapsed && (
@@ -191,7 +194,9 @@ function SwipeableTask({
             </svg>
             Swipe to add
           </button>
-          <span className="ml-auto text-tertiary">Deadline</span>
+          <span className="ml-auto text-tertiary">
+            {task.deadlineAt ? formatTimestamp(task.deadlineAt) : "No Deadline"}
+          </span>
         </div>
       </div>
     </div>

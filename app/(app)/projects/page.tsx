@@ -104,7 +104,7 @@ function ProjectCard({
               cy="18"
               r="15"
               fill="none"
-              className="stroke-status-done transition-all duration-500 ease-in-out"
+              className="stroke-done transition-all duration-500 ease-in-out"
               strokeWidth="2.5"
               strokeDasharray="94.248"
               strokeDashoffset={94.248 - (pct / 100) * 94.248}

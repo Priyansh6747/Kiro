@@ -433,6 +433,8 @@ function TodayPageContent() {
     );
   if (!plan) return null;
 
+  const isToday = selectedDate === todayUnixDay();
+
   const scheduledTasks = plan.tasks;
   const totalPlannedMin = scheduledTasks.reduce(
     (sum, t) => sum + (t.estimateMin || 30),
@@ -494,7 +496,7 @@ function TodayPageContent() {
               className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "anytime" ? "text-primary border-b-2 border-accent" : "text-secondary"}`}
               onClick={() => setActiveTab("anytime")}
             >
-              Any Time Today
+              {isToday ? "Any Time Today" : "Any Time"}
             </button>
             <button
               className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "dayview" ? "text-primary border-b-2 border-accent" : "text-secondary"}`}
@@ -511,7 +513,7 @@ function TodayPageContent() {
               className={`${activeTab === "anytime" ? "flex" : "hidden"} md:flex flex-1 md:flex-none md:w-64 border-r border-border-default flex-col p-6 bg-surface md:shrink-0 overflow-y-auto`}
             >
               <h3 className="text-lg font-medium text-primary mb-6 tracking-wide">
-                Any Time Today
+                {isToday ? "Any Time Today" : "Any Time"}
               </h3>
 
               <div className="space-y-4 mb-8">
@@ -598,23 +600,25 @@ function TodayPageContent() {
                 )}
               </div>
 
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={handleQuickAdd}
-                  className="w-14 h-14 rounded-full bg-accent-subtle text-accent flex items-center justify-center hover:scale-105 transition-transform"
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
+              {isToday && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={handleQuickAdd}
+                    className="w-14 h-14 rounded-full bg-accent-subtle text-accent flex items-center justify-center hover:scale-105 transition-transform"
                   >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
-              </div>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Center Area: DayView or DayPlanner */}
