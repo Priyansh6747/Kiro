@@ -5,6 +5,7 @@ import { taskTools, taskHandlers } from "./tasks";
 import { preferenceTools, preferenceHandlers } from "./preferences";
 import { dayLogTools, dayLogHandlers } from "./dayLogs";
 import { plannerTools, plannerHandlers } from "./planner";
+import { uiTools, uiHandlers } from "./ui";
 
 export const tools: ChatCompletionTool[] = [
   ...projectTools,
@@ -12,6 +13,7 @@ export const tools: ChatCompletionTool[] = [
   ...preferenceTools,
   ...dayLogTools,
   ...plannerTools,
+  ...uiTools,
 ];
 
 export const toolHandlers: Record<string, Function> = {
@@ -20,4 +22,5 @@ export const toolHandlers: Record<string, Function> = {
   ...preferenceHandlers,
   ...dayLogHandlers,
   ...plannerHandlers,
+  ...uiHandlers,
 };

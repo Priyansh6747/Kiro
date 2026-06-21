@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send, Bot, Bug, Code, Copy, Check } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -19,6 +20,7 @@ export default function ChatPage() {
   const [showDebug, setShowDebug] = useState(true);
   const [copied, setCopied] = useState(false);
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
+  const { setTheme } = useTheme();
 
   const copyDebugJson = () => {
     if (!debugInfo) return;
@@ -45,6 +47,17 @@ export default function ChatPage() {
       
       if (data.debug) {
         setDebugInfo(data.debug);
+      }
+      
+      if (data.messagesTrace) {
+        for (const msg of data.messagesTrace) {
+          if (msg.role === "tool" && msg.name === "changeTheme") {
+            try {
+              const resObj = JSON.parse(msg.content);
+              if (resObj.success && resObj.theme) setTheme(resObj.theme);
+            } catch (e) {}
+          }
+        }
       }
 
       if (data.requiresConfirmation) {
@@ -95,6 +108,17 @@ export default function ChatPage() {
       const data = await res.json();
       
       if (data.debug) setDebugInfo(data.debug);
+      
+      if (data.messagesTrace) {
+        for (const msg of data.messagesTrace) {
+          if (msg.role === "tool" && msg.name === "changeTheme") {
+            try {
+              const resObj = JSON.parse(msg.content);
+              if (resObj.success && resObj.theme) setTheme(resObj.theme);
+            } catch (e) {}
+          }
+        }
+      }
 
       if (data.requiresConfirmation) {
         setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
