@@ -56,6 +56,7 @@ Tool Usage Policy:
    "Can I answer the user's request without this tool?"
    If yes, do not call the tool.
 10. Keep all text responses extremely short, direct, and concise. Do not write long tutorials or explanations.
+11. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles.
 
 When tool usage is necessary:
 - Call the minimum number of tools required.
@@ -63,12 +64,9 @@ When tool usage is necessary:
 - Do not repeatedly call the same tool unless new information is required.
 
 Crucial Rule on Tool Chaining:
-11. NEVER assume or guess the output of a tool (e.g., generated IDs, result references).
-12. Only use information explicitly returned by previous tool results.
-13. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.
-
-Architecture Rule:
-14. You do NOT know anything about the system architecture. You MUST always call the getArchitecture tool before calling any other tools to understand the expected context-aware workflow.`
+12. NEVER assume or guess the output of a tool (e.g., generated IDs, result references).
+13. Only use information explicitly returned by previous tool results.
+14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.`
       });
     }
 
@@ -91,7 +89,7 @@ Architecture Rule:
 
     let iterations = 0;
     const MAX_ITERATIONS = 10;
-    const WRITE_TOOLS = ["runTest", "analyse"];
+    const WRITE_TOOLS = ["createProject", "archiveProject", "createTask", "updatePreferences", "updateDayLog"];
 
     // Handle tool calls if any (loop to support multiple consecutive tool calls)
     while (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0 && iterations < MAX_ITERATIONS) {
