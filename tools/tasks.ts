@@ -4,6 +4,8 @@ import {
   listTasks,
   createTask,
   findProjectById,
+  findTaskById,
+  updateTask,
   insertTaskClosureSelf,
   propagateTaskClosure,
   listTaskDependenciesForTasks,
@@ -43,6 +45,24 @@ export const taskTools: ChatCompletionTool[] = [
           scheduledDate: { type: "number", description: "Unix day integer" },
         },
         required: ["projectId", "title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "updateTask",
+      description: "Update a task's properties (e.g. mark as 'done', change scheduledDate, update estimate).",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          status: { type: "string", enum: ["pending", "done", "missed", "carried", "adjusted", "deleted"] },
+          title: { type: "string" },
+          estimateMin: { type: "integer" },
+          scheduledDate: { type: "number", description: "Unix day integer" },
+        },
+        required: ["id"],
       },
     },
   }
@@ -116,5 +136,28 @@ export const taskHandlers: Record<string, Function> = {
 
     await insertTaskClosureSelf(newTaskId);
     return task;
+  },
+  updateTask: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+    
+    const task = await findTaskById(args.id, userId);
+    if (!task) throw new Error("Task not found");
+
+    const updates: any = {};
+    if (args.status !== undefined) updates.status = args.status;
+    if (args.title !== undefined) updates.title = args.title;
+    if (args.estimateMin !== undefined) updates.estimateMin = args.estimateMin;
+    if (args.scheduledDate !== undefined) updates.scheduledDate = args.scheduledDate;
+
+    if (args.status === "done") {
+      updates.completedAt = nowSec();
+    } else if (args.status === "pending") {
+      updates.completedAt = null;
+    }
+    
+    updates.updatedAt = nowSec();
+
+    return await updateTask(args.id, updates);
   }
 };

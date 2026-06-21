@@ -89,7 +89,7 @@ Crucial Rule on Tool Chaining:
 
     let iterations = 0;
     const MAX_ITERATIONS = 10;
-    const WRITE_TOOLS = ["createProject", "archiveProject", "createTask", "updatePreferences", "updateDayLog"];
+    const WRITE_TOOLS = ["createProject", "archiveProject", "createTask", "updateTask", "updatePreferences", "updateDayLog"];
 
     // Handle tool calls if any (loop to support multiple consecutive tool calls)
     while (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0 && iterations < MAX_ITERATIONS) {
