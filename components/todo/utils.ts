@@ -3,11 +3,7 @@ export function formatDateShort(d: Date) {
 }
 
 export function parseDateStr(d: number) {
-  const str = String(d);
-  const y = parseInt(str.substring(0, 4), 10);
-  const m = parseInt(str.substring(4, 6), 10) - 1;
-  const day = parseInt(str.substring(6, 8), 10);
-  return new Date(y, m, day);
+  return new Date(d * 86400000);
 }
 
 export function formatTimestamp(ts: number | null | undefined) {
@@ -17,13 +13,17 @@ export function formatTimestamp(ts: number | null | undefined) {
 
 export function yyyymmddToDateString(d: number | null | undefined) {
   if (!d) return "";
-  const str = String(d);
-  return `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
+  const date = new Date(d * 86400000);
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function dateStringToYyyymmdd(str: string) {
   if (!str) return null;
-  return parseInt(str.replace(/-/g, ""), 10);
+  const [y, m, d] = str.split('-').map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
 }
 
 export function timestampToDateString(ts: number | null | undefined) {

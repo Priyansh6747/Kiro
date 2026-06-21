@@ -139,3 +139,13 @@ export function useToast() {
   }
   return context;
 }
+
+export function useSuccessToast() {
+  const { showToast } = useToast();
+  return useCallback(
+    (message: string) => {
+      showToast(message, "success");
+    },
+    [showToast]
+  );
+}

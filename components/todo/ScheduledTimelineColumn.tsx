@@ -5,6 +5,7 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Task } from "@/lib/types";
 import { StatusBadge } from "@/components/ui";
 import { formatDateShort, parseDateStr } from "./utils";
+import { todayUnixDay } from "@/lib/types";
 
 function ScheduledTask({
   task,
@@ -243,16 +244,9 @@ export function ScheduledTimelineColumn({
     const timelineItems = [];
 
     if (timelineMode === "continuous") {
-      const todayObj = new Date();
-      todayObj.setHours(0, 0, 0, 0);
-      const todayNum = parseInt(
-        todayObj.getFullYear().toString() +
-          (todayObj.getMonth() + 1).toString().padStart(2, "0") +
-          todayObj.getDate().toString().padStart(2, "0"),
-        10,
-      );
+      const todayNum = todayUnixDay();
 
-      const minDate = new Date(todayObj.getTime());
+      const minDate = new Date();
       minDate.setDate(minDate.getDate() + windowOffsetDays);
 
       const maxDate = new Date(minDate.getTime());
@@ -261,11 +255,8 @@ export function ScheduledTimelineColumn({
       let curr = minDate;
       let dayIndex = 0;
       while (curr <= maxDate) {
-        const dNum = parseInt(
-          curr.getFullYear().toString() +
-            (curr.getMonth() + 1).toString().padStart(2, "0") +
-            curr.getDate().toString().padStart(2, "0"),
-          10,
+        const dNum = Math.floor(
+          Date.UTC(curr.getFullYear(), curr.getMonth(), curr.getDate()) / 86400000
         );
         const dayTasks = groupedScheduled[dNum] || [];
         const isToday = dNum === todayNum;
@@ -321,17 +312,11 @@ export function ScheduledTimelineColumn({
         const prevObj = new Date(dateObj.getTime() - 24 * 60 * 60 * 1000);
         const nextObj = new Date(dateObj.getTime() + 24 * 60 * 60 * 1000);
 
-        const prevNum = parseInt(
-          prevObj.getFullYear().toString() +
-            (prevObj.getMonth() + 1).toString().padStart(2, "0") +
-            prevObj.getDate().toString().padStart(2, "0"),
-          10,
+        const prevNum = Math.floor(
+          Date.UTC(prevObj.getUTCFullYear(), prevObj.getUTCMonth(), prevObj.getUTCDate()) / 86400000
         );
-        const nextNum = parseInt(
-          nextObj.getFullYear().toString() +
-            (nextObj.getMonth() + 1).toString().padStart(2, "0") +
-            nextObj.getDate().toString().padStart(2, "0"),
-          10,
+        const nextNum = Math.floor(
+          Date.UTC(nextObj.getUTCFullYear(), nextObj.getUTCMonth(), nextObj.getUTCDate()) / 86400000
         );
 
         const renderDay = (n: number, isMain: boolean) => (

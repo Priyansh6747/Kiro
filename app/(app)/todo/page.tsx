@@ -80,7 +80,14 @@ export default function TodoPage() {
     }
 
     try {
-      await updateTask(taskId, updates);
+      const apiUpdates: Parameters<typeof updateTask>[1] = {};
+      if (updates.title !== undefined) apiUpdates.title = updates.title;
+      if (updates.estimateMin !== undefined) apiUpdates.estimate_min = updates.estimateMin;
+      if (updates.status !== undefined) apiUpdates.status = updates.status;
+      if (updates.scheduledDate !== undefined) apiUpdates.scheduled_date = updates.scheduledDate;
+      if (updates.deadlineAt !== undefined) apiUpdates.deadline_at = updates.deadlineAt;
+
+      await updateTask(taskId, apiUpdates);
     } catch (e) {
       showToast((e as Error).message, "error");
       setTasks(prevTasks);

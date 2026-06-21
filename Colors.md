@@ -68,6 +68,7 @@ Glowing Emerald / Mint. Very high vibrancy against the near-black background.
 | Token | Hex | Usage |
 |---|---|---|
 | `text-primary` | `#FFFFFF` | Headings, body — pure white |
+| `text-value` | `#E8EBEA` | Distinct values, metadata emphasis |
 | `text-secondary` | `#9AA6A1` | Labels, hints, meta — soft green-tinted grey |
 | `text-tertiary` | `#606E68` | Placeholder, disabled |
 | `text-accent` | `#3ABF92` | Links, interactive labels |
@@ -130,6 +131,7 @@ Electric Indigo. Unmistakable, vibrant action color.
 | Token | Hex | Usage |
 |---|---|---|
 | `text-primary` | `#FFFFFF` | Headings, body — pure white |
+| `text-value` | `#E4E5E9` | Distinct values, metadata emphasis |
 | `text-secondary` | `#9294A0` | Labels, hints, meta — cool grey |
 | `text-tertiary` | `#585962` | Placeholder, disabled |
 | `text-accent` | `#7A5CFA` | Links, interactive labels |
@@ -198,6 +200,7 @@ Terracotta clay — calm and grounded, the warmest possible accent that still re
 | Token | Hex | Usage |
 |---|---|---|
 | `text-primary` | `#3A2E22` | Headings, body — soft espresso-brown, never black |
+| `text-value` | `#5A4A3A` | Distinct values, metadata emphasis |
 | `text-secondary` | `#7A6B58` | Labels, hints, meta — warm taupe |
 | `text-tertiary` | `#B3A48F` | Placeholder, disabled |
 | `text-accent` | `#B0623E` | Links, interactive labels |
@@ -260,6 +263,7 @@ Fresh stem green — more saturated than a typical "sage," closer to new growth 
 | Token | Hex | Usage |
 |---|---|---|
 | `text-primary` | `#283420` | Headings, body — bark brown-green, not olive-gray |
+| `text-value` | `#435137` | Distinct values, metadata emphasis |
 | `text-secondary` | `#5F6E4F` | Labels, hints, meta — mossy gray-green |
 | `text-tertiary` | `#9DA98A` | Placeholder, disabled |
 | `text-accent` | `#5B8C3E` | Links, interactive labels |
@@ -322,6 +326,7 @@ Dusty muted violet — soft and held-back rather than saturated. Reads as gentle
 | Token | Hex | Usage |
 |---|---|---|
 | `text-primary` | `#352E40` | Headings, body — warm deep plum, never charcoal-black |
+| `text-value` | `#5A5068` | Distinct values, metadata emphasis |
 | `text-secondary` | `#827697` | Labels, hints, meta — soft dusty mauve |
 | `text-tertiary` | `#B8ACC4` | Placeholder, disabled |
 | `text-accent` | `#8468AE` | Links, interactive labels |
