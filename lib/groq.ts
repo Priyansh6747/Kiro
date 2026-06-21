@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
  * Main function for demonstration.
@@ -38,4 +38,19 @@ export async function callGroq(
 ): Promise<string> {
   const response = await getGroqChatCompletion(prompt, maxTokens);
   return response.choices[0]?.message?.content || "";
+}
+
+/**
+ * Advanced Groq chat with tool support
+ */
+export async function groqChat(
+  messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
+  tools?: Groq.Chat.Completions.ChatCompletionTool[]
+) {
+  return groq.chat.completions.create({
+    messages,
+    model: "llama-3.3-70b-versatile",
+    tools,
+    tool_choice: tools && tools.length > 0 ? "auto" : "none",
+  });
 }
