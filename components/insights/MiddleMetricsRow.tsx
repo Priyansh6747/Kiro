@@ -11,15 +11,15 @@ interface MiddleMetricsRowProps {
 }
 
 const COLORS = {
-  Critical: "#5EE0A8",  // Mint green
-  Recurring: "#F5B258", // Amber
-  Habit: "#5A9BFC",     // Light blue
-  Nicetohave: "#A374F5" // Purple
+  Critical: "var(--status-critical)",
+  Recurring: "var(--status-warning)",
+  Habit: "var(--node-start)",
+  Nicetohave: "var(--node-final)"
 };
 
 export function MiddleMetricsRow({ data }: MiddleMetricsRowProps) {
   // Safe default colors if type isn't perfectly matched
-  const getColor = (name: string) => (COLORS as any)[name] || "#ffffff";
+  const getColor = (name: string) => (COLORS as any)[name] || "var(--border-strong)";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

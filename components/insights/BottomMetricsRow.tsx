@@ -7,7 +7,6 @@ interface BottomMetricsRowProps {
   data: {
     peakHour: number;
     completedTasks: Task[];
-    dayTypes: { normal: number; adjusted: number; break: number };
   };
 }
 
@@ -26,13 +25,9 @@ const getDayName = (dayIndex: number) => {
 
 export function BottomMetricsRow({ data }: BottomMetricsRowProps) {
   // Activity map: 7 days x 3 blocks (Morning, Afternoon, Evening)
-  // 0=Sun..6=Sat. Block 0: 0-11, Block 1: 12-17, Block 2: 18-23.
   const activity = Array.from({ length: 7 }, () => [0, 0, 0]);
   let maxActivity = 0;
 
-  // Let's populate the activity map (we want Sat to Fri as per the image, but we'll adapt to JS standard Sun-Sat or shift to match image)
-  // Image days order: Sat, Sun, Mon, Tue, Wed, Thu, Fri.
-  // We'll use: 6 (Sat), 0 (Sun), 1 (Mon), 2 (Tue), 3 (Wed), 4 (Thu), 5 (Fri)
   const orderedDays = [6, 0, 1, 2, 3, 4, 5];
 
   data.completedTasks.forEach((t) => {
@@ -52,94 +47,71 @@ export function BottomMetricsRow({ data }: BottomMetricsRowProps) {
   });
 
   const getActivityOpacity = (count: number) => {
-    if (count === 0) return 0.2;
-    return Math.max(0.4, count / (maxActivity || 1));
+    if (count === 0) return 0.15; // Increased minimum opacity to ensure empty cells still look like part of a grid
+    return Math.max(0.35, count / (maxActivity || 1));
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-      {/* Productivity by hour */}
+    <div className="w-full">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="rounded-xl p-6 flex flex-col justify-between bg-surface-raised border border-border-default md:col-span-3"
+        className="rounded-xl p-6 md:p-8 flex flex-col bg-surface-raised border border-border-default overflow-hidden"
       >
-        <div>
-          <h3 className="text-sm font-medium text-primary">Productivity by hour</h3>
-          <p className="text-xs text-secondary mt-0.5">Completions across the week</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b border-border-subtle pb-6">
+          <div>
+            <h3 className="text-base font-extrabold text-primary tracking-tight">Productivity Heatmap</h3>
+            <p className="text-sm text-secondary mt-1">Task completions grouped by time of day</p>
+          </div>
+          <div className="flex items-center gap-2 bg-surface px-4 py-2.5 rounded-lg border border-border-default shadow-sm">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--status-done)" }}></span>
+            <span className="text-sm font-semibold text-primary">
+              Peak Focus: <span className="text-secondary ml-1.5">{getDayName(orderedDays[2])} {formatHour(data.peakHour)}</span>
+            </span>
+          </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-1.5">
-          {/* Rows (Blocks 0, 1, 2) */}
-          {[0, 1, 2].map((block) => (
-            <div key={block} className="flex gap-1.5">
-              {orderedDays.map((dayIdx) => {
-                const count = activity[dayIdx][block];
-                return (
-                  <div
-                    key={`${dayIdx}-${block}`}
-                    className="h-6 flex-1 rounded-sm transition-opacity"
-                    style={{
-                      backgroundColor: "var(--status-done)",
-                      opacity: getActivityOpacity(count),
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ))}
-
-          {/* X Axis Labels */}
-          <div className="flex gap-1.5 mt-2">
-            {orderedDays.map((dayIdx) => (
-              <div key={`lbl-${dayIdx}`} className="flex-1 text-center text-[10px] text-secondary font-medium">
-                {getDayName(dayIdx)}
+        <div className="flex justify-center w-full">
+          <div className="flex flex-col gap-2.5 w-full max-w-4xl">
+            {/* Rows (Blocks 0, 1, 2) */}
+            {[0, 1, 2].map((block, i) => (
+              <div key={block} className="flex gap-2.5 relative group/row">
+                {/* Y Axis Label */}
+                <div className="w-20 flex items-center justify-end pr-4 text-[10px] font-bold text-tertiary uppercase tracking-wider">
+                  {i === 0 ? "Morning" : i === 1 ? "Afternoon" : "Evening"}
+                </div>
+                {orderedDays.map((dayIdx) => {
+                  const count = activity[dayIdx][block];
+                  return (
+                    <motion.div
+                      key={`${dayIdx}-${block}`}
+                      whileHover={{ scale: 1.05 }}
+                      className="h-12 md:h-14 flex-1 rounded-lg transition-all cursor-pointer relative group/cell"
+                      style={{
+                        backgroundColor: "var(--status-done)",
+                        opacity: getActivityOpacity(count),
+                      }}
+                    >
+                      {/* Tooltip on hover */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-surface border border-border-default rounded-md shadow-lg text-xs font-bold text-primary opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                        {count} task{count !== 1 && "s"}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             ))}
-          </div>
-        </div>
 
-        <div className="mt-4 text-xs text-secondary">
-          Peak: {getDayName(orderedDays[2])} {formatHour(data.peakHour)}
-        </div>
-      </motion.div>
-
-      {/* Day-type balance */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="rounded-xl p-6 flex flex-col bg-surface-raised border border-border-default md:col-span-2"
-      >
-        <div>
-          <h3 className="text-sm font-medium text-primary">Day-type balance</h3>
-          <p className="text-xs text-secondary mt-0.5">Last 7 days</p>
-        </div>
-
-        <div className="mt-auto space-y-4 pt-6">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#5A9BFC" }} />
-              <span className="text-secondary">Normal</span>
+            {/* X Axis Labels */}
+            <div className="flex gap-2.5 mt-3">
+              <div className="w-20"></div> {/* Offset for Y labels */}
+              {orderedDays.map((dayIdx) => (
+                <div key={`lbl-${dayIdx}`} className="flex-1 text-center text-[11px] font-bold text-secondary uppercase tracking-wider">
+                  {getDayName(dayIdx)}
+                </div>
+              ))}
             </div>
-            <span className="text-primary font-medium">{data.dayTypes.normal}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#F5B258" }} />
-              <span className="text-secondary">Adjusted</span>
-            </div>
-            <span className="text-primary font-medium">{data.dayTypes.adjusted}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#5EE0A8" }} />
-              <span className="text-secondary">Break</span>
-            </div>
-            <span className="text-primary font-medium">{data.dayTypes.break}</span>
           </div>
         </div>
       </motion.div>

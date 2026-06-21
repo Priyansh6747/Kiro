@@ -104,16 +104,6 @@ export function InsightsDashboard({
       }
     });
 
-    // Bottom Row: Day-type balance
-    let normalDays = 0;
-    let adjustedDays = 0;
-    let breakDays = 0;
-    logs.forEach(l => {
-      if (l.dayType === "normal") normalDays++;
-      else if (l.dayType === "adjusted") adjustedDays++;
-      else if (l.dayType === "break") breakDays++;
-    });
-
     return {
       carryOverRate,
       completionRate,
@@ -123,7 +113,6 @@ export function InsightsDashboard({
       longestChain: { count: chainDisplay, name: longestTaskName },
       peakHour,
       completedTasks,
-      dayTypes: { normal: normalDays, adjusted: adjustedDays, break: breakDays }
     };
   }, [logs, allTasks, projects]);
 
