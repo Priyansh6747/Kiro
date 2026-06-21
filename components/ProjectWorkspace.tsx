@@ -30,6 +30,7 @@ export function ProjectWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
+  const [showGraphModal, setShowGraphModal] = useState(false);
   const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
   const [dependencies, setDependencies] = useState<{ taskId: string; predecessorId: string }[]>([]);
 
@@ -87,9 +88,7 @@ export function ProjectWorkspace({
       return activity;
   }, [tasks, todayStart]);
 
-  const doneCount = tasks.filter(t => t.status === "done").length;
-  const pct = tasks.length > 0 ? (doneCount / tasks.length) * 100 : 0;
-
+  const totalTasks = tasks.length;
   const doneTasks = tasks.filter(t => t.status === "done");
   const notDoneTasks = tasks.filter(t => t.status !== "done");
 
@@ -104,10 +103,14 @@ export function ProjectWorkspace({
   const lockedTasks = notDoneTasks.filter(t => lockedTaskIds.has(t.id));
   const readyTasks = notDoneTasks.filter(t => !lockedTaskIds.has(t.id));
 
+  const donePct = totalTasks > 0 ? (doneTasks.length / totalTasks) * 100 : 0;
+  const readyPct = totalTasks > 0 ? (readyTasks.length / totalTasks) * 100 : 0;
+  const lockedPct = totalTasks > 0 ? (lockedTasks.length / totalTasks) * 100 : 0;
+
   return (
     <div className="flex flex-col flex-1 h-full bg-base overflow-hidden relative">
       <ProjectHeader project={project} onBack={onBack} activityData={activityData} />
-      <ProjectProgressBar pct={pct} />
+      <ProjectProgressBar donePct={donePct} readyPct={readyPct} lockedPct={lockedPct} />
 
       <div className="flex flex-1 min-h-0">
           {/* Left Tasks Column */}
@@ -148,18 +151,17 @@ export function ProjectWorkspace({
 
           {/* Right Sidebar */}
           <div className="w-full md:w-[420px] flex flex-col shrink-0 border-l border-border-default bg-surface shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-              {/* Dependency Chart */}
-              <div className="h-[280px] border-b border-border-default p-4 shrink-0 relative bg-surface-raised/50">
-                   <DependencyChart tasks={tasks} dependencies={dependencies} onAddDependency={async (taskId, predecessorId) => {
-                       try {
-                         const { addDependency } = await import("@/lib/api-client");
-                         await addDependency(taskId, predecessorId);
-                         loadTasks();
-                         showToast("Dependency added", "success");
-                       } catch (e) {
-                         showToast((e as Error).message, "error");
-                       }
-                   }} />
+              {/* Dependency Chart Preview */}
+              <div className="h-[280px] border-b border-border-default p-4 shrink-0 relative bg-surface-raised/50 group">
+                   <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-base/40 backdrop-blur-[2px]">
+                       <button
+                           onClick={() => setShowGraphModal(true)}
+                           className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-lg shadow hover:bg-blue-700 transition-colors"
+                       >
+                           Expand Graph
+                       </button>
+                   </div>
+                   <DependencyChart tasks={tasks} dependencies={dependencies} preview />
               </div>
               
               {/* Task Details */}
@@ -175,6 +177,34 @@ export function ProjectWorkspace({
               </div>
           </div>
       </div>
+
+      {showGraphModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-sm p-8">
+            <div className="w-full h-full max-w-7xl max-h-[90vh] flex flex-col bg-surface border border-border-default rounded-xl shadow-2xl overflow-hidden">
+                <div className="flex justify-between items-center px-6 py-4 border-b border-border-default bg-surface-raised shrink-0">
+                    <h2 className="text-xl font-bold text-primary">Dependency Graph</h2>
+                    <button
+                        onClick={() => setShowGraphModal(false)}
+                        className="text-secondary hover:text-primary transition-colors text-sm font-semibold"
+                    >
+                        Close ✕
+                    </button>
+                </div>
+                <div className="flex-1 overflow-hidden p-6 bg-base">
+                    <DependencyChart tasks={tasks} dependencies={dependencies} onAddDependency={async (taskId, predecessorId) => {
+                        try {
+                          const { addDependency } = await import("@/lib/api-client");
+                          await addDependency(taskId, predecessorId);
+                          loadTasks();
+                          showToast("Dependency added", "success");
+                        } catch (e) {
+                          showToast((e as Error).message, "error");
+                        }
+                    }} />
+                </div>
+            </div>
+        </div>
+      )}
 
       {showCapture && (
         <QuickCapture

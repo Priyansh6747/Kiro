@@ -173,6 +173,45 @@ export default function SettingsPage() {
           </p>
         </div>
 
+        <SectionCard title="Account" description="Manage your active session.">
+          <div className="flex items-center justify-between py-2">
+            {user ? (
+              <div className="flex items-center gap-4">
+                <img
+                  src={user.imageUrl}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full border border-border-default shadow-sm"
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-primary">
+                    {user.fullName || user.firstName || "User"}
+                  </span>
+                  <span className="text-xs text-secondary">
+                    {user.primaryEmailAddress?.emailAddress}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-secondary">Loading profile...</div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => clerk.openUserProfile()}
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-raised hover:text-primary hover:border-border-strong border border-border-default rounded-lg transition-all focus:ring-2 focus:ring-accent/30"
+              >
+                Manage Account
+              </button>
+              <button
+                onClick={() => clerk.signOut()}
+                className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all focus:ring-2 focus:ring-red-200"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+
         <SectionCard
           title="Planning Preferences"
           description="Control how your daily tasks and availability are calculated."
@@ -425,45 +464,6 @@ export default function SettingsPage() {
               })}
             </div>
           </Field>
-        </SectionCard>
-
-        <SectionCard title="Account" description="Manage your active session.">
-          <div className="flex items-center justify-between py-2">
-            {user ? (
-              <div className="flex items-center gap-4">
-                <img
-                  src={user.imageUrl}
-                  alt="Profile"
-                  className="w-12 h-12 rounded-full border border-border-default shadow-sm"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-primary">
-                    {user.fullName || user.firstName || "User"}
-                  </span>
-                  <span className="text-xs text-secondary">
-                    {user.primaryEmailAddress?.emailAddress}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-secondary">Loading profile...</div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => clerk.openUserProfile()}
-                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-raised hover:text-primary hover:border-border-strong border border-border-default rounded-lg transition-all focus:ring-2 focus:ring-accent/30"
-              >
-                Manage Account
-              </button>
-              <button
-                onClick={() => clerk.signOut()}
-                className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all focus:ring-2 focus:ring-red-200"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
         </SectionCard>
 
         <div className="h-12" />

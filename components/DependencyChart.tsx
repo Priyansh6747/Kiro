@@ -46,10 +46,12 @@ export function DependencyChart({
   tasks,
   dependencies,
   onAddDependency,
+  preview = false,
 }: {
   tasks: Task[];
   dependencies: { taskId: string; predecessorId: string }[];
   onAddDependency?: (taskId: string, predecessorId: string) => void;
+  preview?: boolean;
 }) {
   const { theme } = useTheme();
 
@@ -281,75 +283,85 @@ export function DependencyChart({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex justify-end px-2">
-        <button
-          onClick={handleResetLayout}
-          className="text-xs text-accent hover:underline px-2 py-1 bg-surface-raised border border-border-default rounded shadow-sm"
-        >
-          Reset Layout
-        </button>
-      </div>
+    <div className={`flex flex-col gap-3 ${preview ? "h-full" : ""}`}>
+      {!preview && (
+        <div className="flex justify-end px-2">
+          <button
+            onClick={handleResetLayout}
+            className="text-xs text-accent hover:underline px-2 py-1 bg-surface-raised border border-border-default rounded shadow-sm"
+          >
+            Reset Layout
+          </button>
+        </div>
+      )}
       <div
         style={{
-          height: 500,
+          height: preview ? "100%" : 500,
           width: "100%",
-          border: "1px solid var(--border-default)",
-          borderRadius: "12px",
-          background: "var(--bg-surface-raised)",
+          border: preview ? "none" : "1px solid var(--border-default)",
+          borderRadius: preview ? "0" : "12px",
+          background: preview ? "transparent" : "var(--bg-surface-raised)",
         }}
       >
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onNodesChange={preview ? undefined : onNodesChange}
+          onEdgesChange={preview ? undefined : onEdgesChange}
+          onConnect={preview ? undefined : onConnect}
           nodeTypes={nodeTypes}
           fitView
           colorMode={theme === "paper" || theme === "sage" ? "light" : "dark"}
+          panOnDrag={!preview}
+          zoomOnScroll={!preview}
+          zoomOnDoubleClick={!preview}
+          nodesDraggable={!preview}
+          nodesConnectable={!preview}
+          elementsSelectable={!preview}
         >
           <Background color="var(--border-strong)" gap={16} size={2} />
-          <Controls />
+          {!preview && <Controls />}
         </ReactFlow>
       </div>
-      <div className="flex flex-wrap gap-4 items-center justify-center text-xs text-secondary py-1 bg-surface rounded-lg border border-border-default px-4 py-2 self-center">
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "var(--node-start)" }}
-          ></div>{" "}
-          Start
+      {!preview && (
+        <div className="flex flex-wrap gap-4 items-center justify-center text-xs text-secondary py-1 bg-surface rounded-lg border border-border-default px-4 py-2 self-center">
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: "var(--node-start)" }}
+            ></div>{" "}
+            Start
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: "var(--node-ready)" }}
+            ></div>{" "}
+            Ready
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: "var(--node-final)" }}
+            ></div>{" "}
+            Final
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: "var(--status-done)" }}
+            ></div>{" "}
+            Done
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: "var(--accent)" }}
+            ></div>{" "}
+            Pending/Locked
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "var(--node-ready)" }}
-          ></div>{" "}
-          Ready
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "var(--node-final)" }}
-          ></div>{" "}
-          Final
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "var(--status-done)" }}
-          ></div>{" "}
-          Done
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: "var(--accent)" }}
-          ></div>{" "}
-          Pending/Locked
-        </div>
-      </div>
+      )}
     </div>
   );
 }
