@@ -45,7 +45,7 @@ export async function callGroq(
  */
 export async function groqChat(
   messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
-  tools?: Groq.Chat.Completions.ChatCompletionTool[]
+  tools?: Groq.Chat.Completions.ChatCompletionTool[],
 ) {
   return groq.chat.completions.create({
     messages,

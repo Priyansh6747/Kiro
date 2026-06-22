@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
-import type { Task, DayPlan, Project } from "@/lib/types";
+import type React from "react";
+import { useRef, useState } from "react";
+import type { DayPlan, Project, Task } from "@/lib/types";
 
 interface TimelineProps {
   tasks: Task[];

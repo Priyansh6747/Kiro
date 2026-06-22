@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { InsightsDashboard } from "@/components/insights/InsightsDashboard";
+import { ErrorBanner, LoadingScreen } from "@/components/ui";
+import { listDayLogs, listProjects, listTasks } from "@/lib/api-client";
 import type { DayLog, Project, Task } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
-import { listDayLogs, listProjects, listTasks } from "@/lib/api-client";
-import { LoadingScreen, ErrorBanner } from "@/components/ui";
-import { InsightsDashboard } from "@/components/insights/InsightsDashboard";
 
 export default function InsightsPage() {
   const [logs, setLogs] = useState<DayLog[]>([]);
@@ -43,7 +43,8 @@ export default function InsightsPage() {
             {
               total: projectTasks.length,
               done: projectTasks.filter((t) => t.status === "done").length,
-              pending: projectTasks.filter((t) => t.status === "pending").length,
+              pending: projectTasks.filter((t) => t.status === "pending")
+                .length,
             },
           ] as const;
         }),
@@ -61,7 +62,7 @@ export default function InsightsPage() {
   }, [load]);
 
   if (loading) return <LoadingScreen message="Loading insights…" />;
-  
+
   if (error) {
     return (
       <div className="p-6">

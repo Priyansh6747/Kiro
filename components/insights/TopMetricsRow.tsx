@@ -23,10 +23,16 @@ export function TopMetricsRow({ data }: TopMetricsRowProps) {
         className="rounded-xl p-5 flex flex-col justify-center"
         style={{ backgroundColor: "var(--bg-done-subtle)" }}
       >
-        <span className="text-3xl font-medium tracking-tight" style={{ color: "var(--status-done)" }}>
+        <span
+          className="text-3xl font-medium tracking-tight"
+          style={{ color: "var(--status-done)" }}
+        >
           {formatPct(data.carryOverRate)}
         </span>
-        <span className="text-sm mt-1 opacity-80" style={{ color: "var(--status-done)" }}>
+        <span
+          className="text-sm mt-1 opacity-80"
+          style={{ color: "var(--status-done)" }}
+        >
           Carry-over rate
         </span>
       </motion.div>
@@ -39,10 +45,16 @@ export function TopMetricsRow({ data }: TopMetricsRowProps) {
         className="rounded-xl p-5 flex flex-col justify-center"
         style={{ backgroundColor: "var(--bg-done-subtle)" }}
       >
-        <span className="text-3xl font-medium tracking-tight" style={{ color: "var(--status-done)" }}>
+        <span
+          className="text-3xl font-medium tracking-tight"
+          style={{ color: "var(--status-done)" }}
+        >
           {formatPct(data.completionRate)}
         </span>
-        <span className="text-sm mt-1 opacity-80" style={{ color: "var(--status-done)" }}>
+        <span
+          className="text-sm mt-1 opacity-80"
+          style={{ color: "var(--status-done)" }}
+        >
           Completion rate
         </span>
       </motion.div>
@@ -55,10 +67,16 @@ export function TopMetricsRow({ data }: TopMetricsRowProps) {
         className="rounded-xl p-5 flex flex-col justify-center"
         style={{ backgroundColor: "var(--bg-warning-subtle)" }}
       >
-        <span className="text-3xl font-medium tracking-tight" style={{ color: "var(--status-warning)" }}>
+        <span
+          className="text-3xl font-medium tracking-tight"
+          style={{ color: "var(--status-warning)" }}
+        >
           {formatPct(data.timeOverCommit)}
         </span>
-        <span className="text-sm mt-1 opacity-80" style={{ color: "var(--status-warning)" }}>
+        <span
+          className="text-sm mt-1 opacity-80"
+          style={{ color: "var(--status-warning)" }}
+        >
           Time over-commit
         </span>
       </motion.div>
@@ -73,9 +91,7 @@ export function TopMetricsRow({ data }: TopMetricsRowProps) {
         <span className="text-3xl font-medium tracking-tight text-primary">
           {data.baselineRatio.toFixed(2)}×
         </span>
-        <span className="text-sm mt-1 text-secondary">
-          Vs 14d baseline
-        </span>
+        <span className="text-sm mt-1 text-secondary">Vs 14d baseline</span>
       </motion.div>
     </div>
   );

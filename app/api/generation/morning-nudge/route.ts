@@ -10,15 +10,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { callGroq } from "@/lib/groq";
 import {
+  buildMorningNudgePrompt,
+  type ProjectStats,
+  topScoredProjects,
+} from "@/lib/scoring";
+import {
   getOrCreatePreferences,
   latestTaskUpdateSec,
   listProjectsWithStats,
 } from "@/lib/storage";
-import {
-  buildMorningNudgePrompt,
-  topScoredProjects,
-  type ProjectStats,
-} from "@/lib/scoring";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 
 const STALE_THRESHOLD_SEC = 8 * 3600; // 8 hours

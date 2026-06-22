@@ -5,8 +5,8 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { placeDayPlanBlock, OverlapConflictError } from "@/lib/storage";
 import type { NextRequest } from "next/server";
+import { OverlapConflictError, placeDayPlanBlock } from "@/lib/storage";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const { userId } = await auth();

@@ -10,13 +10,13 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { callGroq } from "@/lib/groq";
+import { buildEodSummaryPrompt, type EodSummaryPayload } from "@/lib/scoring";
 import {
   findDayLog,
   getOrCreatePreferences,
   latestTaskUpdateForDay,
   listTasks,
 } from "@/lib/storage";
-import { buildEodSummaryPrompt, type EodSummaryPayload } from "@/lib/scoring";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 
 const STALE_THRESHOLD_SEC = 24 * 3600; // 24 hours

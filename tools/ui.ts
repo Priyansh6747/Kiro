@@ -1,4 +1,4 @@
-import { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
+import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 
 export const uiTools: ChatCompletionTool[] = [
   {
@@ -9,16 +9,19 @@ export const uiTools: ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          theme: { type: "string", enum: ["paper", "midnight", "nebula", "sage", "nightshade"] }
+          theme: {
+            type: "string",
+            enum: ["paper", "midnight", "nebula", "sage", "nightshade"],
+          },
         },
         required: ["theme"],
       },
     },
-  }
+  },
 ];
 
 export const uiHandlers: Record<string, Function> = {
   changeTheme: async (args: any) => {
     return { success: true, theme: args.theme };
-  }
+  },
 };

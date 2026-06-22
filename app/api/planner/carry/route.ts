@@ -9,6 +9,7 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
   createTask,
   getOrCreatePreferences,
@@ -18,7 +19,6 @@ import {
   updateTask,
 } from "@/lib/storage";
 import { nowSec, todayUnixDay } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest): Promise<Response> {
   const { userId } = await auth();

@@ -4,9 +4,9 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import { getOrCreatePreferences, updatePreferences } from "@/lib/storage";
 import { isValidHHMM, isValidTimezone, nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 const VALID_RATIO_MODES = ["cumulative", "streak"] as const;
 type RatioMode = (typeof VALID_RATIO_MODES)[number];

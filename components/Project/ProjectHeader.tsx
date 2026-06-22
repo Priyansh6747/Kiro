@@ -1,6 +1,5 @@
-import { Project } from "@/lib/types";
-import { formatTimestamp } from "@/lib/types";
 import { TypeBadge } from "@/components/ui";
+import { formatTimestamp, type Project } from "@/lib/types";
 import { ProjectSparkline } from "./ProjectSparkline";
 
 export function ProjectHeader({

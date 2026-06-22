@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { Send, Bot, CheckSquare, FolderKanban, PenTool, Lightbulb } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import {
+  Bot,
+  CheckSquare,
+  FolderKanban,
+  Lightbulb,
+  PenTool,
+  Send,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useTheme } from "@/components/ThemeProvider";
-import { useSearchParams, useRouter } from "next/navigation";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -16,18 +23,30 @@ interface ChatMessage {
   tool_call_id?: string;
 }
 
+const AGENTS = [
+  { id: "Yuki", name: "Yuki (Assistant)" },
+  { id: "Nova", name: "Nova (Project Agent)" },
+  { id: "Quill", name: "Quill (Task Agent)" },
+  { id: "Echo", name: "Echo (Preferences Agent)" },
+  { id: "Iva", name: "Iva (DayLog Agent)" },
+  { id: "Juno", name: "Juno (Planner Agent)" },
+  { id: "Zef", name: "Zef (UI Agent)" },
+];
+
 function ChatUI() {
   const { user } = useUser();
   const [input, setInput] = useState("");
-  
+
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState("Yuki");
   const { setTheme } = useTheme();
-  
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -37,7 +56,7 @@ function ChatUI() {
       setInput(msg);
       // Remove query param to prevent resending on reload
       router.replace("/chat");
-      
+
       // We need to trigger the send immediately. Since sendMessage relies on the state `input`,
       // which isn't updated instantly, we can pass `msg` directly to a helper or just execute the logic.
       handleSendDirect(msg);
@@ -46,8 +65,11 @@ function ChatUI() {
 
   const handleSendDirect = async (textToSend: string) => {
     if (!textToSend.trim()) return;
-    
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: textToSend }];
+
+    const newMessages: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: textToSend },
+    ];
     setMessages(newMessages);
     setInput("");
     setLoadingText("Thinking...");
@@ -57,7 +79,7 @@ function ChatUI() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages })
+        body: JSON.stringify({ messages: newMessages, selectedAgent }),
       });
       const data = await res.json();
 
@@ -73,15 +95,30 @@ function ChatUI() {
       }
 
       if (data.requiresConfirmation) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setMessages([
+          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
+          data.message,
+        ]);
         setPendingToolCalls(data.message.tool_calls);
       } else if (data.message) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setMessages([
+          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
+          data.message,
+        ]);
       } else if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${data.error}` }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${data.error}` },
+        ]);
       }
     } catch (err) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, there was an error processing your request." }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, there was an error processing your request.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -96,16 +133,18 @@ function ChatUI() {
     setLoading(true);
     const toolsToProcess = [...pendingToolCalls];
     setPendingToolCalls([]);
-    
+
     let currentMessages = [...messages];
-    
+
     if (!approved) {
       // Mock the tool results as explicitly denied by the user
-      const toolMessages: ChatMessage[] = toolsToProcess.map(tc => ({
+      const toolMessages: ChatMessage[] = toolsToProcess.map((tc) => ({
         role: "tool",
         tool_call_id: tc.id,
         name: tc.function.name,
-        content: JSON.stringify({ error: "User explicitly denied this action." })
+        content: JSON.stringify({
+          error: "User explicitly denied this action.",
+        }),
       }));
       currentMessages = [...currentMessages, ...toolMessages];
       setMessages(currentMessages);
@@ -115,13 +154,13 @@ function ChatUI() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: currentMessages,
-          confirmedToolCallIds: approved ? toolsToProcess.map(t => t.id) : [] 
-        })
+          confirmedToolCallIds: approved ? toolsToProcess.map((t) => t.id) : [],
+          selectedAgent,
+        }),
       });
       const data = await res.json();
-      
 
       if (data.messagesTrace) {
         for (const msg of data.messagesTrace) {
@@ -135,15 +174,30 @@ function ChatUI() {
       }
 
       if (data.requiresConfirmation) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setMessages([
+          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
+          data.message,
+        ]);
         setPendingToolCalls(data.message.tool_calls);
       } else if (data.message) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system"), data.message]);
+        setMessages([
+          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
+          data.message,
+        ]);
       } else if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${data.error}` }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${data.error}` },
+        ]);
       }
     } catch (err) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, there was an error processing your request." }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, there was an error processing your request.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -154,65 +208,87 @@ function ChatUI() {
       {messages.length === 0 ? (
         // --- EMPTY DASHBOARD STATE ---
         <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto w-full">
-           <div className="max-w-3xl w-full flex flex-col items-center gap-8 mt-[-10vh]">
-              {/* Greeting */}
-              <div className="text-center space-y-2">
-                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{greeting}, {user?.firstName || "there"}</h1>
-                 <p className="text-secondary text-lg">How can I help you?</p>
-              </div>
+          <div className="max-w-3xl w-full flex flex-col items-center gap-8 mt-[-10vh]">
+            {/* Greeting */}
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                {greeting}, {user?.firstName || "there"}
+              </h1>
+              <p className="text-secondary text-lg">How can I help you?</p>
+            </div>
 
-              {/* Big Centered Input */}
-              <div className="w-full bg-surface-raised border border-border-default rounded-3xl p-4 shadow-sm flex flex-col gap-3 transition-shadow focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent">
-                 <input 
-                   type="text" 
-                   value={input}
-                   onChange={(e) => setInput(e.target.value)}
-                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                   placeholder="Ask Yuki AI.."
-                   className="w-full bg-transparent border-none focus:outline-none text-lg px-2 py-1 placeholder:text-tertiary"
-                   disabled={loading}
-                 />
-                 <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-surface border border-border-default text-xs font-medium text-secondary">
-                       <Bot className="w-3 h-3 mr-1" /> Yuki AI
-                    </div>
-                    <div className="flex items-center gap-1 md:gap-2">
-                       <button 
-                         onClick={sendMessage}
-                         disabled={loading || !input.trim()}
-                         className="p-2 bg-accent text-white rounded-xl hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
-                       >
-                         <Send className="w-4 h-4" />
-                       </button>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
-                 <button onClick={() => setInput("What's on my agenda today?")} className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm">
-                    <CheckSquare className="w-4 h-4" /> My Agenda
-                 </button>
-                 <button onClick={() => setInput("Show me my active projects")} className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm">
-                    <FolderKanban className="w-4 h-4" /> Active Projects
-                 </button>
-                 <button onClick={() => setInput("Create a new task: ")} className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm">
-                    <PenTool className="w-4 h-4" /> New Task
-                 </button>
-                 <button onClick={() => setInput("Give me an inspirational quote")} className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm">
-                    <Lightbulb className="w-4 h-4" /> Inspire Me
-                 </button>
-              </div>
-
-              {loading && (
-                <div className="flex justify-center mt-4">
-                  <div className="p-4 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                    {loadingText}
-                  </div>
+            {/* Big Centered Input */}
+            <div className="w-full bg-surface-raised border border-border-default rounded-3xl p-4 shadow-sm flex flex-col gap-3 transition-shadow focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder={`Ask ${selectedAgent}...`}
+                className="w-full bg-transparent border-none focus:outline-none text-lg px-2 py-1 placeholder:text-tertiary"
+                disabled={loading}
+              />
+              <div className="flex items-center justify-between mt-2">
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-surface border border-border-default text-xs font-medium text-secondary focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
+                >
+                  {AGENTS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <button
+                    onClick={sendMessage}
+                    disabled={loading || !input.trim()}
+                    className="p-2 bg-accent text-white rounded-xl hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-           </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
+              <button
+                onClick={() => setInput("What's on my agenda today?")}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm"
+              >
+                <CheckSquare className="w-4 h-4" /> My Agenda
+              </button>
+              <button
+                onClick={() => setInput("Show me my active projects")}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm"
+              >
+                <FolderKanban className="w-4 h-4" /> Active Projects
+              </button>
+              <button
+                onClick={() => setInput("Create a new task: ")}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm"
+              >
+                <PenTool className="w-4 h-4" /> New Task
+              </button>
+              <button
+                onClick={() => setInput("Give me an inspirational quote")}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border-default hover:bg-surface-raised text-sm text-secondary transition-colors shadow-sm"
+              >
+                <Lightbulb className="w-4 h-4" /> Inspire Me
+              </button>
+            </div>
+
+            {loading && (
+              <div className="flex justify-center mt-4">
+                <div className="p-4 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                  {loadingText}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         // --- CHAT STATE ---
@@ -221,21 +297,32 @@ function ChatUI() {
           <div className="flex items-center justify-between px-4 lg:px-8 py-4 lg:py-5 border-b border-border-default bg-surface shrink-0">
             <div className="flex items-center">
               <Bot className="w-6 h-6 mr-3 text-accent" />
-              <h1 className="text-2xl font-bold tracking-tight">Yuki AI</h1>
+              <select
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="text-2xl font-bold tracking-tight bg-transparent focus:outline-none cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {AGENTS.map((a) => (
+                  <option key={a.id} value={a.id} className="text-base text-primary">
+                    {a.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-4 bg-base">
             {(() => {
-              const visibleMessages = messages.filter(m => m.role !== "tool");
+              const visibleMessages = messages.filter((m) => m.role !== "tool");
               const grouped = [];
               let currentTools: any[] = [];
 
               for (let i = 0; i < visibleMessages.length; i++) {
                 const m = visibleMessages[i];
                 const isLastMessage = i === visibleMessages.length - 1;
-                const isPending = isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
+                const isPending =
+                  isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
 
                 if (m.role === "assistant" && m.tool_calls && !isPending) {
                   currentTools.push(...m.tool_calls);
@@ -247,19 +334,29 @@ function ChatUI() {
 
               // If there are dangling tools without a response yet
               if (currentTools.length > 0) {
-                grouped.push({ m: null, isPending: false, tools: currentTools });
+                grouped.push({
+                  m: null,
+                  isPending: false,
+                  tools: currentTools,
+                });
               }
 
               return grouped.map((group, idx) => {
                 const { m, isPending, tools } = group;
 
                 return (
-                  <div key={idx} className={`flex flex-col ${!m || m.role !== "user" ? "items-start" : "items-end"}`}>
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
+                  >
                     {/* Render grouped tools horizontally above the bubble */}
                     {tools.length > 0 && (
                       <div className="flex flex-row flex-wrap items-center gap-2 mb-1.5 ml-2">
-                        {tools.map(tc => (
-                          <div key={tc.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-xs font-semibold text-accent tracking-wide shadow-sm">
+                        {tools.map((tc) => (
+                          <div
+                            key={tc.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-xs font-semibold text-accent tracking-wide shadow-sm"
+                          >
                             <div className="w-1.5 h-1.5 rounded-full bg-accent" />
                             {tc.function.name}
                           </div>
@@ -269,25 +366,39 @@ function ChatUI() {
 
                     {/* Render the actual message bubble if it exists */}
                     {m && (
-                      <div className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}>
+                      <div
+                        className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
+                      >
                         {m.content ? (
                           <div className="prose prose-sm md:prose-base prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {m.content}
+                            </ReactMarkdown>
                           </div>
                         ) : m.tool_calls && isPending ? (
                           <div className="flex flex-col gap-3">
-                            <span className="font-semibold text-sm">Action Required:</span>
-                            <p className="text-sm opacity-80">The assistant wants to run the following tools:</p>
+                            <span className="font-semibold text-sm">
+                              Action Required:
+                            </span>
+                            <p className="text-sm opacity-80">
+                              The assistant wants to run the following tools:
+                            </p>
                             <ul className="text-xs bg-surface p-2 rounded border border-border-subtle font-mono space-y-1 text-primary">
-                              {m.tool_calls.map(tc => (
+                              {m.tool_calls.map((tc) => (
                                 <li key={tc.id}>👉 {tc.function.name}</li>
                               ))}
                             </ul>
                             <div className="flex gap-2 mt-2">
-                              <button onClick={() => executeTools(true)} className="flex-1 py-1.5 bg-accent text-white rounded text-sm hover:bg-accent-hover transition-colors">
+                              <button
+                                onClick={() => executeTools(true)}
+                                className="flex-1 py-1.5 bg-accent text-white rounded text-sm hover:bg-accent-hover transition-colors"
+                              >
                                 Allow
                               </button>
-                              <button onClick={() => executeTools(false)} className="flex-1 py-1.5 bg-surface border border-border-default text-secondary hover:text-primary rounded text-sm transition-colors">
+                              <button
+                                onClick={() => executeTools(false)}
+                                className="flex-1 py-1.5 bg-surface border border-border-default text-secondary hover:text-primary rounded text-sm transition-colors"
+                              >
                                 Deny
                               </button>
                             </div>
@@ -312,16 +423,16 @@ function ChatUI() {
           {/* Bottom Input */}
           <div className="p-4 bg-surface border-t border-border-default shrink-0">
             <div className="max-w-4xl mx-auto flex gap-2">
-              <input 
+              <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Ask Yuki AI.."
+                placeholder={`Ask ${selectedAgent}...`}
                 className="flex-1 px-4 py-3 bg-surface-raised border border-border-default rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all placeholder:text-tertiary shadow-sm text-primary"
                 disabled={loading}
               />
-              <button 
+              <button
                 onClick={sendMessage}
                 disabled={loading || !input.trim()}
                 className="px-5 py-3 bg-accent text-white rounded-xl hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center"
@@ -338,10 +449,14 @@ function ChatUI() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-accent border-t-transparent rounded-full" /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-4 border-accent border-t-transparent rounded-full" />
+        </div>
+      }
+    >
       <ChatUI />
     </Suspense>
   );
 }
-
-

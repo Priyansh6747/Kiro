@@ -6,12 +6,12 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
   findTaskById,
   insertTaskDependency,
   isCyclicDependency,
 } from "@/lib/storage";
-import type { NextRequest } from "next/server";
 
 export async function POST(
   request: NextRequest,

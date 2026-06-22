@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import type { Project, Task } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ScheduledTimelineColumn } from "@/components/todo/ScheduledTimelineColumn";
+import { TaskDetailColumn } from "@/components/todo/TaskDetailColumn";
+import { UnscheduledColumn } from "@/components/todo/UnscheduledColumn";
+import { ErrorBanner, LoadingScreen } from "@/components/ui";
+import { useToast } from "@/hooks/useToast";
 import {
+  addDependency,
+  deleteDependency,
+  deleteTask,
+  getProjectDependencies,
   listProjects,
   listTasks,
   updateTask,
-  deleteTask,
-  getProjectDependencies,
-  addDependency,
-  deleteDependency,
 } from "@/lib/api-client";
-import { LoadingScreen, ErrorBanner } from "@/components/ui";
-import { useToast } from "@/hooks/useToast";
-
-import { UnscheduledColumn } from "@/components/todo/UnscheduledColumn";
-import { ScheduledTimelineColumn } from "@/components/todo/ScheduledTimelineColumn";
-import { TaskDetailColumn } from "@/components/todo/TaskDetailColumn";
+import type { Project, Task } from "@/lib/types";
 
 export default function TodoPage() {
   const [todoProject, setTodoProject] = useState<Project | null>(null);
@@ -82,10 +81,13 @@ export default function TodoPage() {
     try {
       const apiUpdates: Parameters<typeof updateTask>[1] = {};
       if (updates.title !== undefined) apiUpdates.title = updates.title;
-      if (updates.estimateMin !== undefined) apiUpdates.estimate_min = updates.estimateMin;
+      if (updates.estimateMin !== undefined)
+        apiUpdates.estimate_min = updates.estimateMin;
       if (updates.status !== undefined) apiUpdates.status = updates.status;
-      if (updates.scheduledDate !== undefined) apiUpdates.scheduled_date = updates.scheduledDate;
-      if (updates.deadlineAt !== undefined) apiUpdates.deadline_at = updates.deadlineAt;
+      if (updates.scheduledDate !== undefined)
+        apiUpdates.scheduled_date = updates.scheduledDate;
+      if (updates.deadlineAt !== undefined)
+        apiUpdates.deadline_at = updates.deadlineAt;
 
       await updateTask(taskId, apiUpdates);
     } catch (e) {

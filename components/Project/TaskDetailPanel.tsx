@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Task } from "@/lib/types";
-import { formatTimestamp } from "@/lib/types";
-import { updateTask } from "@/lib/api-client";
 import { StatusBadge } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
+import { updateTask } from "@/lib/api-client";
+import { formatTimestamp, type Task } from "@/lib/types";
 
 export function TaskDetailPanel({
   task,

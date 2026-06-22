@@ -10,13 +10,13 @@
  *   "crons": [{ "path": "/api/memory/compute", "schedule": "0 2 * * *" }]
  */
 
+import type { NextRequest } from "next/server";
 import {
   insertMemoryBaseline,
   listDistinctUserIds,
   listNormalDayLogs,
 } from "@/lib/storage";
 import { nowSec, todayUnixDay } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 const MIN_DATA_POINTS = 3; // skip users with fewer than 3 normal day logs
 

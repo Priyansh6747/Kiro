@@ -5,8 +5,6 @@
  * they go through functions exported from this module.
  */
 
-import { revalidateTag, cacheTag, cacheLife } from "next/cache";
-
 import {
   and,
   asc,
@@ -17,17 +15,21 @@ import {
   inArray,
   isNull,
   lte,
+  ne,
   or,
   sql,
-  ne,
 } from "drizzle-orm";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { db } from "./db/client";
 import {
   type DayLog,
+  type DayPlan,
   dayLogs,
+  dayPlan,
   type MemoryBaseline,
   memoryBaseline,
   type NewDayLog,
+  type NewDayPlan,
   type NewMemoryBaseline,
   type NewPreference,
   type NewProject,
@@ -43,9 +45,6 @@ import {
   tasks,
   type User,
   users,
-  dayPlan,
-  type DayPlan,
-  type NewDayPlan,
 } from "./db/models";
 import { nowSec } from "./utils";
 
@@ -824,11 +823,16 @@ export async function syncDayLogStats(
   const tasksForDay = await listTasks({ userId, date });
   const completed = tasksForDay.filter((t) => t.status === "done").length;
   const carried = tasksForDay.filter((t) => t.status === "carried").length;
-  const explicitMissed = tasksForDay.filter((t) => t.status === "missed").length;
-  
+  const explicitMissed = tasksForDay.filter(
+    (t) => t.status === "missed",
+  ).length;
+
   // Tasks that were reverted to the bucket lose their scheduledDate and thus disappear from tasksForDay.
   // To ensure they are still counted as missed against the day's original commitment, we use Math.max.
-  const missed = Math.max(explicitMissed, log.tasksAssigned - completed - carried);
+  const missed = Math.max(
+    explicitMissed,
+    log.tasksAssigned - completed - carried,
+  );
 
   // ratio is against tasksAssigned which was locked in at the time of confirmDay
   const ratio = log.tasksAssigned > 0 ? completed / log.tasksAssigned : 0.0;

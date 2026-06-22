@@ -1,10 +1,6 @@
-import { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import { auth } from "@clerk/nextjs/server";
-import {
-  findDayLog,
-  listDayLogs,
-  updateDayLog,
-} from "@/lib/storage";
+import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
+import { findDayLog, listDayLogs, updateDayLog } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 
 export const dayLogTools: ChatCompletionTool[] = [
@@ -23,7 +19,9 @@ export const dayLogTools: ChatCompletionTool[] = [
       description: "Get the day log for a specific unix day date.",
       parameters: {
         type: "object",
-        properties: { date: { type: "number", description: "Unix day integer" } },
+        properties: {
+          date: { type: "number", description: "Unix day integer" },
+        },
         required: ["date"],
       },
     },
@@ -42,7 +40,7 @@ export const dayLogTools: ChatCompletionTool[] = [
         required: ["date", "dayType"],
       },
     },
-  }
+  },
 ];
 
 const enrichLog = (log: any) => {
@@ -54,8 +52,8 @@ const enrichLog = (log: any) => {
 
   return {
     ...log,
-    dateStr: new Date(log.date * 86400000).toISOString().split('T')[0],
-    loadStatus // provides chill vs overload data
+    dateStr: new Date(log.date * 86400000).toISOString().split("T")[0],
+    loadStatus, // provides chill vs overload data
   };
 };
 
@@ -79,5 +77,5 @@ export const dayLogHandlers: Record<string, Function> = {
       dayType: args.dayType,
       updatedAt: nowSec(),
     });
-  }
+  },
 };

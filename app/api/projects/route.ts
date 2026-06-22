@@ -4,13 +4,13 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
   countActiveNonDefaultProjects,
   createProject,
   listActiveProjects,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 const VALID_TYPES = ["critical", "recurring", "habit", "nicetohave"] as const;
 type ProjectType = (typeof VALID_TYPES)[number];

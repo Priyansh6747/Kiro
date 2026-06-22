@@ -4,16 +4,16 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
   findProjectById,
   findTaskById,
   findTaskWithProject,
   softDeleteTask,
-  updateTask,
   syncDayLogStats,
+  updateTask,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 const VALID_STATUSES = [
   "pending",
@@ -117,7 +117,7 @@ export async function PATCH(
     }
   }
 
-  let allSuccessorsToUnschedule: { id: string; date: number }[] = [];
+  const allSuccessorsToUnschedule: { id: string; date: number }[] = [];
 
   // ── scheduled_date ─────────────────────────────────────────────────────────
   if ("scheduled_date" in body) {

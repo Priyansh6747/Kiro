@@ -1,4 +1,4 @@
-import { Task } from "@/lib/types";
+import type { Task } from "@/lib/types";
 
 export function TaskItem({
   task,
@@ -33,9 +33,7 @@ export function TaskItem({
       }`}
     >
       <div className="flex items-center gap-3">
-        <div
-          className={`w-2.5 h-2.5 rounded-full ${dot} shrink-0 shadow-sm`}
-        />
+        <div className={`w-2.5 h-2.5 rounded-full ${dot} shrink-0 shadow-sm`} />
         <span className="font-semibold text-sm">{task.title}</span>
       </div>
       <span className="text-xs font-mono font-bold opacity-80 shrink-0">

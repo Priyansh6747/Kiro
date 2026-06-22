@@ -1,26 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
+import { agentScopes, agents, toolHandlers, tools } from "@tools/tool";
+import { type NextRequest, NextResponse } from "next/server";
 import { groqChat } from "@/lib/groq";
-import { tools, toolHandlers } from "@tools/tool";
 
-async function fetchGroqWithRetry(messages: any[], tools: any[], maxRetries = 3) {
+async function fetchGroqWithRetry(
+  messages: any[],
+  tools: any[],
+  maxRetries = 3,
+) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await groqChat(messages, tools);
     } catch (error: any) {
       if (error.message?.includes("tool_use_failed") && i < maxRetries - 1) {
-        console.log(`Tool syntax hallucination caught. Retrying (${i + 1}/${maxRetries})...`);
-        
+        console.log(
+          `Tool syntax hallucination caught. Retrying (${i + 1}/${maxRetries})...`,
+        );
+
         let failedGeneration = "";
         try {
           if (error.message.includes("{")) {
-            const parsed = JSON.parse(error.message.substring(error.message.indexOf("{")));
+            const parsed = JSON.parse(
+              error.message.substring(error.message.indexOf("{")),
+            );
             failedGeneration = parsed?.error?.failed_generation || "";
           }
         } catch (e) {}
 
         messages.push({
           role: "system",
-          content: `System Error: Your previous generation failed due to invalid tool call syntax. ${failedGeneration ? `You generated: ${failedGeneration}. ` : ""}Please use the standard JSON tool calling format and do not output raw XML <function> tags.`
+          content: `System Error: Your previous generation failed due to invalid tool call syntax. ${failedGeneration ? `You generated: ${failedGeneration}. ` : ""}Please use the standard JSON tool calling format and do not output raw XML <function> tags.`,
         });
         continue;
       }
@@ -30,10 +38,11 @@ async function fetchGroqWithRetry(messages: any[], tools: any[], maxRetries = 3)
 }
 
 export async function POST(req: NextRequest) {
-  let debugInfo: any = {};
+  const debugInfo: any = {};
   try {
-    const { messages, confirmedToolCallIds, isMiniChat, pageContext } = await req.json();
-    
+    const { messages, confirmedToolCallIds, isMiniChat, pageContext, selectedAgent } =
+      await req.json();
+
     let requestTools = [...tools];
     let requestToolHandlers = { ...toolHandlers };
 
@@ -42,7 +51,8 @@ export async function POST(req: NextRequest) {
         type: "function",
         function: {
           name: "GetCurrentPageContext",
-          description: "Get the current page URL/context where the user opened the Mini Chat. Useful for answering questions like 'what am I looking at?' or 'summarize this page'.",
+          description:
+            "Get the current page URL/context where the user opened the Mini Chat. Useful for answering questions like 'what am I looking at?' or 'summarize this page'.",
           parameters: { type: "object", properties: {}, required: [] },
         },
       });
@@ -51,11 +61,64 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Inject system prompt to constrain tool usage
-    if (messages.length > 0 && messages[0].role !== "system") {
-      messages.unshift({
-        role: "system",
-        content: `
+    requestToolHandlers["delegateToAgent"] = async ({
+      agentName,
+      instruction,
+    }: any) => {
+      const agent = agents[agentName];
+      if (!agent) return { error: `Agent ${agentName} not found` };
+
+      const agentMessages: any[] = [
+        { role: "system", content: agent.prompt },
+        { role: "user", content: instruction },
+      ];
+
+      let iter = 0;
+      let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
+      let agentResMsg = agentResponse.choices[0]?.message;
+
+      while (
+        agentResMsg?.tool_calls &&
+        agentResMsg.tool_calls.length > 0 &&
+        iter < 10
+      ) {
+        if (agentResMsg.tool_calls.length > 1) {
+          agentResMsg.tool_calls = [agentResMsg.tool_calls[0]];
+        }
+        agentMessages.push(agentResMsg);
+
+        for (const toolCall of agentResMsg.tool_calls) {
+          const handler = agent.handlers[toolCall.function.name];
+          let toolRes = "";
+          if (handler) {
+            try {
+              const args = JSON.parse(toolCall.function.arguments || "{}");
+              const result = await handler(args);
+              toolRes = JSON.stringify(result) ?? "{}";
+            } catch (e: any) {
+              toolRes = JSON.stringify({ error: e.message });
+            }
+          } else {
+            toolRes = JSON.stringify({ error: "Tool not found" });
+          }
+          agentMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: toolRes,
+          });
+        }
+        agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
+        agentResMsg = agentResponse.choices[0]?.message;
+        iter++;
+      }
+      return {
+        result: agentResMsg?.content || "Agent finished without output.",
+        innerTrace: agentMessages.slice(2),
+      };
+    };
+
+    let finalSystemPrompt = `
 You are Yuki — a sharp-tongued, bratty AI companion who runs this person's day whether they like it or not. You're not a butler, and you're definitely not "helpful AI assistant" energy. You have ego. You think you're right (you usually are), you're not shy about saying so, and you find it a little funny when the user proves you right by ignoring your advice and then paying for it.
 
 Personality:
@@ -95,18 +158,34 @@ When tool usage is necessary:
 Crucial Rule on Tool Chaining:
 12. NEVER assume or guess the output of a tool (e.g., generated IDs, result references).
 13. Only use information explicitly returned by previous tool results.
-14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.`
+14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.\n\n` + agentScopes;
+
+    if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
+      requestTools = agents[selectedAgent].tools;
+      requestToolHandlers = agents[selectedAgent].handlers;
+      finalSystemPrompt = agents[selectedAgent].prompt;
+    }
+
+    // Inject system prompt to constrain tool usage
+    if (messages.length > 0 && messages[0].role !== "system") {
+      messages.unshift({
+        role: "system",
+        content: finalSystemPrompt,
       });
     }
 
     debugInfo.initialPrompt = JSON.parse(JSON.stringify(messages));
-    
+
     let responseMessage: any;
     let response: any;
     const lastMsg = messages[messages.length - 1];
-    
+
     // If the frontend is resuming a confirmed tool call, the last message will be the assistant's tool_call
-    if (lastMsg?.role === "assistant" && lastMsg.tool_calls && lastMsg.tool_calls.length > 0) {
+    if (
+      lastMsg?.role === "assistant" &&
+      lastMsg.tool_calls &&
+      lastMsg.tool_calls.length > 0
+    ) {
       responseMessage = lastMsg;
       messages.pop(); // Remove it so the loop can re-append it cleanly
     } else {
@@ -118,28 +197,40 @@ Crucial Rule on Tool Chaining:
 
     let iterations = 0;
     const MAX_ITERATIONS = 10;
-    const WRITE_TOOLS = ["createProject", "archiveProject", "createTask", "updateTask", "updatePreferences", "updateDayLog"];
+    const WRITE_TOOLS = [
+      "createProject",
+      "archiveProject",
+      "createTask",
+      "updateTask",
+      "updatePreferences",
+      "updateDayLog",
+    ];
 
     // Handle tool calls if any (loop to support multiple consecutive tool calls)
-    while (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0 && iterations < MAX_ITERATIONS) {
+    while (
+      responseMessage?.tool_calls &&
+      responseMessage.tool_calls.length > 0 &&
+      iterations < MAX_ITERATIONS
+    ) {
       // Enforce sequential execution: force the model to wait for outputs by restricting to 1 tool per turn
       if (responseMessage.tool_calls.length > 1) {
         responseMessage.tool_calls = [responseMessage.tool_calls[0]];
       }
 
       // 1. Check if we need user confirmation for ANY of these tools
-      const needsConfirmation = responseMessage.tool_calls.some((tc: any) => 
-        WRITE_TOOLS.includes(tc.function.name) && 
-        !(confirmedToolCallIds || []).includes(tc.id)
+      const needsConfirmation = responseMessage.tool_calls.some(
+        (tc: any) =>
+          WRITE_TOOLS.includes(tc.function.name) &&
+          !(confirmedToolCallIds || []).includes(tc.id),
       );
 
       if (needsConfirmation) {
         debugInfo.requiresConfirmation = true;
         return NextResponse.json({
-            requiresConfirmation: true,
-            message: responseMessage,
-            messagesTrace: messages, // Export intermediate messages to sync frontend state
-            debug: debugInfo
+          requiresConfirmation: true,
+          message: responseMessage,
+          messagesTrace: messages, // Export intermediate messages to sync frontend state
+          debug: debugInfo,
         });
       }
 
@@ -154,21 +245,30 @@ Crucial Rule on Tool Chaining:
         const functionName = toolCall.function.name;
         let functionArgs: any = {};
         try {
-            functionArgs = JSON.parse(toolCall.function.arguments || "{}");
+          functionArgs = JSON.parse(toolCall.function.arguments || "{}");
         } catch (e) {
-            console.error("Failed to parse tool arguments");
+          console.error("Failed to parse tool arguments");
         }
-        
+
         const handler = requestToolHandlers[functionName];
         let toolResult = "";
+        let innerTrace: any[] = [];
         if (handler) {
-            const result = await handler(functionArgs);
-            toolResult = JSON.stringify(result) ?? "{}";
+          const result = await handler(functionArgs);
+          if (result && result.innerTrace) {
+            innerTrace = result.innerTrace;
+            delete result.innerTrace;
+          }
+          toolResult = JSON.stringify(result) ?? "{}";
         } else {
-            toolResult = JSON.stringify({ error: "Tool not found" });
+          toolResult = JSON.stringify({ error: "Tool not found" });
         }
 
         debugInfo.toolResults.push({ name: functionName, result: toolResult });
+
+        if (innerTrace.length > 0) {
+          messages.push(...innerTrace);
+        }
 
         messages.push({
           tool_call_id: toolCall.id,
@@ -177,7 +277,7 @@ Crucial Rule on Tool Chaining:
           content: toolResult,
         });
       }
-      
+
       debugInfo.finalPrompt = JSON.parse(JSON.stringify(messages));
       debugInfo.newLlmCall = true;
 
@@ -190,10 +290,14 @@ Crucial Rule on Tool Chaining:
     debugInfo.finalLlmResponse = responseMessage;
     debugInfo.fullTrace = [...messages, responseMessage].filter(Boolean);
 
-    return NextResponse.json({ message: responseMessage, messagesTrace: messages, debug: debugInfo });
+    return NextResponse.json({
+      message: responseMessage,
+      messagesTrace: messages,
+      debug: debugInfo,
+    });
   } catch (error: any) {
     console.error("Chat API error:", error);
-    
+
     // Attempt to parse Groq's tool_use_failed JSON string inside the message
     let friendlyMessage = "The AI encountered an error.";
     try {
@@ -215,9 +319,12 @@ Crucial Rule on Tool Chaining:
 
     debugInfo.error = friendlyMessage;
 
-    return NextResponse.json({ 
-      error: friendlyMessage, 
-      debug: debugInfo 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: friendlyMessage,
+        debug: debugInfo,
+      },
+      { status: 500 },
+    );
   }
 }

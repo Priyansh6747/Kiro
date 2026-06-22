@@ -6,8 +6,8 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { deleteTaskDependency, findTaskById } from "@/lib/storage";
 import type { NextRequest } from "next/server";
+import { deleteTaskDependency, findTaskById } from "@/lib/storage";
 
 export async function DELETE(
   _request: NextRequest,
