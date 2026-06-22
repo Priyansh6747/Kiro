@@ -193,6 +193,22 @@ Delegation Rule:
 
     debugInfo.initialPrompt = JSON.parse(JSON.stringify(messages));
 
+    // Parse @mentions in the latest user message
+    const lastMsgIdx = messages.findLastIndex((m: any) => m.role === "user");
+    if (lastMsgIdx !== -1 && typeof messages[lastMsgIdx].content === "string") {
+      const content = messages[lastMsgIdx].content;
+      const agentNames = Object.keys(agents);
+      
+      const mentionedAgents = agentNames.filter(agent => 
+        new RegExp(`@${agent}\\b`, 'i').test(content)
+      );
+
+      if (mentionedAgents.length > 0) {
+        const hint = `[SYSTEM HINT: The user has explicitly tagged the following agents in their message: ${mentionedAgents.join(", ")}. If they tagged the correct agent for the task, you MUST use the delegateToAgent tool to assign them the task. HOWEVER, if the user tagged the WRONG agent for a task based on agent scopes, you MUST correct them, mock them for their mistake in your snarky comment, and delegate the task to the RIGHT agent instead.]`;
+        messages.splice(lastMsgIdx + 1, 0, { role: "system", content: hint });
+      }
+    }
+
     let responseMessage: any;
     let response: any;
     const lastMsg = messages[messages.length - 1];

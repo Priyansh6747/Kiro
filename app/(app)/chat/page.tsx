@@ -12,7 +12,7 @@ import {
   Code
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTheme } from "@/components/ThemeProvider";
@@ -46,8 +46,46 @@ function ChatUI() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState("Yuki");
   const { setTheme } = useTheme();
+  
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const bottomInputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, isBottom: boolean) => {
+    const val = e.target.value;
+    setInput(val);
+
+    const cursorPosition = e.target.selectionStart || val.length;
+    const textBeforeCursor = val.slice(0, cursorPosition);
+    
+    const lastAtMatch = textBeforeCursor.match(/@([a-zA-Z]*)$/);
+    if (lastAtMatch) {
+      setMentionFilter(lastAtMatch[1].toLowerCase());
+      setShowMentionMenu(true);
+    } else {
+      setShowMentionMenu(false);
+    }
+  };
+
+  const insertMention = (agentId: string, isBottom: boolean) => {
+    const ref = isBottom ? bottomInputRef : inputRef;
+    const cursorPosition = ref.current?.selectionStart || input.length;
+    const textBeforeCursor = input.slice(0, cursorPosition);
+    const textAfterCursor = input.slice(cursorPosition);
+    
+    const newTextBefore = textBeforeCursor.replace(/@([a-zA-Z]*)$/, `@${agentId} `);
+    setInput(newTextBefore + textAfterCursor);
+    setShowMentionMenu(false);
+    
+    setTimeout(() => {
+      if (ref.current) {
+        ref.current.focus();
+        ref.current.setSelectionRange(newTextBefore.length, newTextBefore.length);
+      }
+    }, 0);
+  };
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
 
@@ -81,6 +119,7 @@ function ChatUI() {
     ];
     setMessages(newMessages);
     setInput("");
+    setShowMentionMenu(false);
     setLoadingText("Thinking...");
     setLoading(true);
 
@@ -88,7 +127,7 @@ function ChatUI() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages, selectedAgent }),
+        body: JSON.stringify({ messages: newMessages }),
       });
       const data = await res.json();
       
@@ -166,7 +205,6 @@ function ChatUI() {
         body: JSON.stringify({
           messages: currentMessages,
           confirmedToolCallIds: approved ? toolsToProcess.map((t) => t.id) : [],
-          selectedAgent,
         }),
       });
       const data = await res.json();
@@ -229,27 +267,33 @@ function ChatUI() {
 
             {/* Big Centered Input */}
             <div className="w-full bg-surface-raised border border-border-default rounded-3xl p-4 shadow-sm flex flex-col gap-3 transition-shadow focus-within:ring-2 focus-within:ring-accent/20 focus-within:border-accent">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder={`Ask ${selectedAgent}...`}
-                className="w-full bg-transparent border-none focus:outline-none text-lg px-2 py-1 placeholder:text-tertiary"
-                disabled={loading}
-              />
+              <div className="relative w-full">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => handleInputChange(e, false)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Ask Yuki..."
+                  className="w-full bg-transparent border-none focus:outline-none text-lg px-2 py-1 placeholder:text-tertiary"
+                  disabled={loading}
+                />
+                {showMentionMenu && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-surface border border-border-default rounded-xl shadow-lg overflow-hidden z-50">
+                    {AGENTS.filter(a => a.name.toLowerCase().includes(mentionFilter) || a.id.toLowerCase().includes(mentionFilter)).map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => insertMention(a.id, false)}
+                        className="w-full text-left px-4 py-2 hover:bg-surface-raised text-sm text-primary transition-colors border-b border-border-subtle last:border-0"
+                      >
+                        <span className="font-bold text-accent">@{a.id}</span> - <span className="text-secondary">{a.name.split(' ')[1].replace(/[()]/g, '')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex items-center justify-between mt-2">
-                <select
-                  value={selectedAgent}
-                  onChange={(e) => setSelectedAgent(e.target.value)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-surface border border-border-default text-xs font-medium text-secondary focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
-                >
-                  {AGENTS.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="text-sm text-tertiary px-2">Type @ to assign tasks to specific agents</div>
                 <div className="flex items-center gap-1 md:gap-2">
                   <button
                     onClick={sendMessage}
@@ -307,17 +351,7 @@ function ChatUI() {
           <div className="flex items-center justify-between px-4 lg:px-8 py-4 lg:py-5 border-b border-border-default bg-surface shrink-0">
             <div className="flex items-center">
               <Bot className="w-6 h-6 mr-3 text-accent" />
-              <select
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="text-2xl font-bold tracking-tight bg-transparent focus:outline-none cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                {AGENTS.map((a) => (
-                  <option key={a.id} value={a.id} className="text-base text-primary">
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+              <span className="text-2xl font-bold tracking-tight text-primary">Yuki (Assistant)</span>
             </div>
             <button 
               onClick={() => setShowDebug(!showDebug)}
@@ -386,7 +420,7 @@ function ChatUI() {
                       <>
                         {m.role === "assistant" && (
                           <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
-                            {m.name ? `@${m.name}` : `@${selectedAgent}`}
+                            {m.name ? `@${m.name}` : `@Yuki`}
                           </div>
                         )}
                         <div
@@ -447,15 +481,31 @@ function ChatUI() {
           {/* Bottom Input */}
           <div className="p-4 bg-surface border-t border-border-default shrink-0">
             <div className="max-w-4xl mx-auto flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder={`Ask ${selectedAgent}...`}
-                className="flex-1 px-4 py-3 bg-surface-raised border border-border-default rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all placeholder:text-tertiary shadow-sm text-primary"
-                disabled={loading}
-              />
+              <div className="relative flex-1">
+                <input
+                  ref={bottomInputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => handleInputChange(e, true)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Ask Yuki..."
+                  className="w-full px-4 py-3 bg-surface-raised border border-border-default rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all placeholder:text-tertiary shadow-sm text-primary"
+                  disabled={loading}
+                />
+                {showMentionMenu && (
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-surface border border-border-default rounded-xl shadow-lg overflow-hidden z-50">
+                    {AGENTS.filter(a => a.name.toLowerCase().includes(mentionFilter) || a.id.toLowerCase().includes(mentionFilter)).map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => insertMention(a.id, true)}
+                        className="w-full text-left px-4 py-2 hover:bg-surface-raised text-sm text-primary transition-colors border-b border-border-subtle last:border-0"
+                      >
+                        <span className="font-bold text-accent">@{a.id}</span> - <span className="text-secondary">{a.name.split(' ')[1].replace(/[()]/g, '')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={sendMessage}
                 disabled={loading || !input.trim()}

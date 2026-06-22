@@ -31,7 +31,42 @@ export function MiniChat() {
   const { setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState("");
-  const [selectedAgent, setSelectedAgent] = useState("Yuki");
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setText(val);
+
+    const cursorPosition = e.target.selectionStart || val.length;
+    const textBeforeCursor = val.slice(0, cursorPosition);
+    
+    const lastAtMatch = textBeforeCursor.match(/@([a-zA-Z]*)$/);
+    if (lastAtMatch) {
+      setMentionFilter(lastAtMatch[1].toLowerCase());
+      setShowMentionMenu(true);
+    } else {
+      setShowMentionMenu(false);
+    }
+  };
+
+  const insertMention = (agentId: string) => {
+    const cursorPosition = inputRef.current?.selectionStart || text.length;
+    const textBeforeCursor = text.slice(0, cursorPosition);
+    const textAfterCursor = text.slice(cursorPosition);
+    
+    const newTextBefore = textBeforeCursor.replace(/@([a-zA-Z]*)$/, `@${agentId} `);
+    setText(newTextBefore + textAfterCursor);
+    setShowMentionMenu(false);
+    
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(newTextBefore.length, newTextBefore.length);
+      }
+    }, 0);
+  };
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,6 +91,7 @@ export function MiniChat() {
     ];
     setMessages(newMessages);
     setText("");
+    setShowMentionMenu(false);
     setLoadingText("Thinking...");
     setLoading(true);
 
@@ -67,7 +103,6 @@ export function MiniChat() {
           messages: newMessages,
           isMiniChat: true,
           pageContext: pathname,
-          selectedAgent,
         }),
       });
       const data = await res.json();
@@ -137,7 +172,6 @@ export function MiniChat() {
           confirmedToolCallIds: approved ? toolsToProcess.map((t) => t.id) : [],
           isMiniChat: true,
           pageContext: pathname,
-          selectedAgent,
         }),
       });
       const data = await res.json();
@@ -193,19 +227,9 @@ export function MiniChat() {
       {isOpen && (
         <div className="fixed bottom-24 right-6 md:bottom-28 md:right-10 w-80 md:w-96 bg-surface border border-border-default rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200">
           <div className="flex items-center justify-between p-4 border-b border-border-default bg-surface-raised">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-accent" />
-              <select
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="font-semibold text-primary bg-transparent focus:outline-none cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                {AGENTS.map((a) => (
-                  <option key={a.id} value={a.id} className="font-normal text-base text-primary">
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-1">
+              <Bot className="w-4 h-4 text-accent" />
+              <span className="text-xs font-bold text-primary">Yuki</span>
             </div>
             <div className="flex items-center gap-1">
               <Link
@@ -292,7 +316,7 @@ export function MiniChat() {
                         <>
                           {m.role === "assistant" && (
                             <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
-                              {m.name ? `@${m.name}` : `@${selectedAgent}`}
+                              {m.name ? `@${m.name}` : `@Yuki`}
                             </div>
                           )}
                           <div
@@ -350,15 +374,32 @@ export function MiniChat() {
           </div>
 
           <div className="p-3 border-t border-border-default bg-surface flex gap-2 shrink-0">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={`Message ${selectedAgent}...`}
-              className="flex-1 px-3 py-2 bg-surface-raised border border-border-subtle rounded-lg text-sm text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
-              disabled={loading}
-            />
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={text}
+                onChange={handleInputChange}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Ask Yuki..."
+                className="w-full bg-surface-raised border border-border-default rounded-full px-4 py-2 pr-10 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 text-primary placeholder:text-tertiary"
+                disabled={loading}
+              />
+              {showMentionMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-56 bg-surface border border-border-default rounded-xl shadow-lg overflow-hidden z-50">
+                  {AGENTS.filter(a => a.name.toLowerCase().includes(mentionFilter) || a.id.toLowerCase().includes(mentionFilter)).map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => insertMention(a.id)}
+                      className="w-full text-left px-3 py-2 hover:bg-surface-raised text-xs text-primary transition-colors border-b border-border-subtle last:border-0 flex items-center justify-between"
+                    >
+                      <span className="font-bold text-accent">@{a.id}</span>
+                      <span className="text-tertiary text-[10px]">{a.name.split(' ')[1].replace(/[()]/g, '')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={handleSend}
               disabled={!text.trim() || loading}
