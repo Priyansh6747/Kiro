@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useTheme } from "@/components/ThemeProvider";
+import { ContentRenderer } from "@/components/ResponsiveTable";
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -323,11 +323,7 @@ export function MiniChat() {
                             className={`max-w-[90%] p-3 rounded-xl shadow-sm text-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
                           >
                           {m.content ? (
-                            <div className="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {m.content}
-                              </ReactMarkdown>
-                            </div>
+                            <ContentRenderer content={m.content} proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" />
                           ) : m.tool_calls && isPending ? (
                             <div className="flex flex-col gap-2">
                               <span className="font-semibold text-xs">

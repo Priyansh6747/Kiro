@@ -1,6 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import { listDayPlansForDate, listTasks } from "@/lib/storage";
+import { db } from "@/lib/db/client";
+import { projects } from "@/lib/db/models";
+import { eq } from "drizzle-orm";
 
 export const plannerTools: ChatCompletionTool[] = [
   {
@@ -50,6 +53,20 @@ export const plannerHandlers: Record<string, Function> = {
       bucket: true,
       todayDate: args.date,
     });
-    return { agenda, bucket };
+    
+    const userProjects = await db.select().from(projects).where(eq(projects.userId, userId));
+    const projectMap = Object.fromEntries(userProjects.map(p => [p.id, p.name]));
+    
+    const enrich = (t: any) => {
+      const copy = { ...t };
+      copy.projectName = projectMap[t.projectId] || t.projectId;
+      delete copy.projectId; // Prevent LLM from seeing the raw UUID
+      return copy;
+    };
+
+    return { 
+      agenda: agenda.map(enrich), 
+      bucket: bucket.map(enrich) 
+    };
   },
 };

@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ContentRenderer } from "@/components/ResponsiveTable";
 import { useTheme } from "@/components/ThemeProvider";
 
 interface ChatMessage {
@@ -251,7 +250,7 @@ function ChatUI() {
   };
 
   return (
-    <div className="absolute inset-0 flex bg-base text-primary overflow-hidden">
+    <div className="relative h-full w-full flex bg-base text-primary overflow-hidden">
       <div className="flex flex-col flex-1 h-full overflow-hidden relative">
         {/* --- EMPTY DASHBOARD STATE --- */}
         <div 
@@ -434,11 +433,7 @@ function ChatUI() {
                           className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
                         >
                         {m.content ? (
-                          <div className="prose prose-sm md:prose-base prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {m.content}
-                            </ReactMarkdown>
-                          </div>
+                          <ContentRenderer content={m.content} />
                         ) : m.tool_calls && isPending ? (
                           <div className="flex flex-col gap-3">
                             <span className="font-semibold text-sm">

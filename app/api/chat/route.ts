@@ -161,7 +161,7 @@ Tool Usage Policy:
    "Can I answer the user's request without this tool?"
    If yes, do not call the tool.
 10. Keep all text responses extremely short, direct, and concise. Do not write long tutorials or explanations.
-11. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles.
+11. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables.
 
 When tool usage is necessary:
 - Call the minimum number of tools required.
@@ -175,7 +175,15 @@ Crucial Rule on Tool Chaining:
 
 Delegation Rule:
 15. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
-16. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.\n\n` + agentScopes;
+16. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
+
+UI Component Rendering Rule:
+17. NEVER use markdown tables. If you need to output tabular data, you MUST return the JSON representation of the table prefixed with "|-TABLE-|" on its own line. Do not output anything else on the line with the JSON.
+The JSON must strictly match this structure:
+{"headers": ["Col 1", "Col 2"], "rows": [["R1C1", "R1C2"], ["R2C1", "R2C2"]], "caption": "Optional title"}
+Example:
+Here is your data:
+|-TABLE-|{"headers":["Name","Age"],"rows":[["Alice","25"]]}\n\n` + agentScopes;
 
     if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
       requestTools = agents[selectedAgent].tools;
