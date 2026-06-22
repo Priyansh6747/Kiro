@@ -65,6 +65,20 @@ export const taskTools: ChatCompletionTool[] = [
         required: ["id"],
       },
     },
+  },
+  {
+    type: "function",
+    function: {
+      name: "unscheduleToBucket",
+      description: "Unschedule a task, returning it to the bucket. This will automatically unschedule all of its dependent tasks as well.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The ID of the task to unschedule" }
+        },
+        required: ["id"],
+      },
+    },
   }
 ];
 
@@ -159,5 +173,63 @@ export const taskHandlers: Record<string, Function> = {
     updates.updatedAt = nowSec();
 
     return await updateTask(args.id, updates);
+  },
+  unscheduleToBucket: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+    
+    const task = await findTaskById(args.id, userId);
+    if (!task) throw new Error("Task not found");
+
+    const { db } = await import("@/lib/db/client");
+    const { tasks, taskDependencies } = await import("@/lib/db/models");
+    const { inArray } = await import("drizzle-orm");
+
+    let allSuccessorsToUnschedule: string[] = [];
+    let currentLevelIds = [args.id];
+
+    while (currentLevelIds.length > 0) {
+      const depsRows = await db
+        .select({ taskId: taskDependencies.taskId })
+        .from(taskDependencies)
+        .where(inArray(taskDependencies.predecessorId, currentLevelIds));
+
+      const nextLevelIds = depsRows.map((r) => r.taskId);
+      if (nextLevelIds.length === 0) break;
+
+      const allNextSuccessors = await db
+        .select({ id: tasks.id, date: tasks.scheduledDate })
+        .from(tasks)
+        .where(inArray(tasks.id, nextLevelIds));
+
+      for (const s of allNextSuccessors) {
+        if (s.date !== null) {
+          allSuccessorsToUnschedule.push(s.id);
+        }
+      }
+
+      currentLevelIds = allNextSuccessors.map((s) => s.id);
+    }
+
+    if (allSuccessorsToUnschedule.length > 0) {
+      await db
+        .update(tasks)
+        .set({ scheduledDate: null, updatedAt: nowSec() })
+        .where(inArray(tasks.id, allSuccessorsToUnschedule));
+    }
+
+    await updateTask(args.id, { scheduledDate: null, updatedAt: nowSec() });
+
+    // Sync day log for the task's old date if any
+    if (task.scheduledDate !== null) {
+      const { syncDayLogStats } = await import("@/lib/storage");
+      await syncDayLogStats(userId, task.scheduledDate);
+    }
+
+    return { 
+      success: true, 
+      unscheduledTask: args.id, 
+      unscheduledSuccessorsCount: allSuccessorsToUnschedule.length 
+    };
   }
 };

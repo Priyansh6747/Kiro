@@ -19,7 +19,7 @@ export const plannerTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "getTodayAgenda",
-      description: "Get today's agenda including unconfirmed tasks.",
+      description: "Get today's agenda including unconfirmed tasks, as well as the 'bucket' (pending tasks without a scheduled date).",
       parameters: {
         type: "object",
         properties: { date: { type: "number", description: "Unix day integer for today" } },
@@ -38,6 +38,8 @@ export const plannerHandlers: Record<string, Function> = {
   getTodayAgenda: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    return await listTasks({ userId, date: args.date });
+    const agenda = await listTasks({ userId, date: args.date });
+    const bucket = await listTasks({ userId, bucket: true, todayDate: args.date });
+    return { agenda, bucket };
   }
 };
