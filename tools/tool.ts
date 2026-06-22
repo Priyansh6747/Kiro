@@ -119,8 +119,12 @@ const delegateToAgentToolSchema: ChatCompletionTool = {
           type: "string",
           description: "Detailed instructions for the agent on what to do.",
         },
+        snarkyComment: {
+          type: "string",
+          description: "Your mandatory snarky/witty comment explicitly tagging the agent (e.g. 'Wow, you're lazy. Hey @Zef change the theme'). This string will be displayed to the user as your response BEFORE the delegation.",
+        },
       },
-      required: ["agentName", "instruction"],
+      required: ["agentName", "instruction", "snarkyComment"],
     },
   },
 };

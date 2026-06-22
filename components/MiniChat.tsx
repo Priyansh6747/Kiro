@@ -288,10 +288,16 @@ export function MiniChat() {
                         </div>
                       )}
 
-                      {m && (
-                        <div
-                          className={`max-w-[90%] p-3 rounded-xl shadow-sm text-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
-                        >
+                      {m && (m.content || (m.tool_calls && isPending)) && (
+                        <>
+                          {m.role === "assistant" && (
+                            <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
+                              {m.name ? `@${m.name}` : `@${selectedAgent}`}
+                            </div>
+                          )}
+                          <div
+                            className={`max-w-[90%] p-3 rounded-xl shadow-sm text-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
+                          >
                           {m.content ? (
                             <div className="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -325,7 +331,8 @@ export function MiniChat() {
                             </div>
                           ) : null}
                         </div>
-                      )}
+                      </>
+                    )}
                     </div>
                   );
                 });

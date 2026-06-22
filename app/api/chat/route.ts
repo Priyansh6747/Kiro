@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     requestToolHandlers["delegateToAgent"] = async ({
       agentName,
       instruction,
+      snarkyComment,
     }: any) => {
       const agent = agents[agentName];
       if (!agent) return { error: `Agent ${agentName} not found` };
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
       let iter = 0;
       let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
       let agentResMsg = agentResponse.choices[0]?.message;
+      if (agentResMsg) (agentResMsg as any).name = agentName;
 
       while (
         agentResMsg?.tool_calls &&
@@ -110,11 +112,22 @@ export async function POST(req: NextRequest) {
         }
         agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
         agentResMsg = agentResponse.choices[0]?.message;
+        if (agentResMsg) (agentResMsg as any).name = agentName;
         iter++;
       }
+
+      if (agentResMsg && agentResMsg.content) {
+        agentMessages.push(agentResMsg);
+      }
+
+      const fakeAssistantMsg = {
+        role: "assistant",
+        content: snarkyComment || `Delegating to ${agentName}...`,
+      };
+
       return {
         result: agentResMsg?.content || "Agent finished without output.",
-        innerTrace: agentMessages.slice(2),
+        innerTrace: [fakeAssistantMsg, ...agentMessages.slice(2)],
       };
     };
 
@@ -158,7 +171,11 @@ When tool usage is necessary:
 Crucial Rule on Tool Chaining:
 12. NEVER assume or guess the output of a tool (e.g., generated IDs, result references).
 13. Only use information explicitly returned by previous tool results.
-14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.\n\n` + agentScopes;
+14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.
+
+Delegation Rule:
+15. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
+16. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.\n\n` + agentScopes;
 
     if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
       requestTools = agents[selectedAgent].tools;
@@ -285,6 +302,13 @@ Crucial Rule on Tool Chaining:
       response = await fetchGroqWithRetry(messages, requestTools);
       responseMessage = response.choices[0]?.message;
       iterations++;
+    }
+
+    if (responseMessage?.content) {
+      responseMessage.content = responseMessage.content.replace(/<DONE>/gi, "").trim();
+      if (!responseMessage.content && !responseMessage.tool_calls?.length) {
+        responseMessage = null;
+      }
     }
 
     debugInfo.finalLlmResponse = responseMessage;

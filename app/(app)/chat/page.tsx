@@ -8,6 +8,8 @@ import {
   Lightbulb,
   PenTool,
   Send,
+  Bug,
+  Code
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -46,6 +48,13 @@ function ChatUI() {
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState("Yuki");
   const { setTheme } = useTheme();
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+  const copyDebugJson = () => {
+    if (!debugInfo) return;
+    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+  };
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -82,6 +91,8 @@ function ChatUI() {
         body: JSON.stringify({ messages: newMessages, selectedAgent }),
       });
       const data = await res.json();
+      
+      if (data.debug) setDebugInfo(data.debug);
 
       if (data.messagesTrace) {
         for (const msg of data.messagesTrace) {
@@ -100,11 +111,9 @@ function ChatUI() {
           data.message,
         ]);
         setPendingToolCalls(data.message.tool_calls);
-      } else if (data.message) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
+      } else if (data.messagesTrace) {
+        const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
+        setMessages(data.message ? [...trace, data.message] : trace);
       } else if (data.error) {
         setMessages((prev) => [
           ...prev,
@@ -161,6 +170,8 @@ function ChatUI() {
         }),
       });
       const data = await res.json();
+      
+      if (data.debug) setDebugInfo(data.debug);
 
       if (data.messagesTrace) {
         for (const msg of data.messagesTrace) {
@@ -179,11 +190,9 @@ function ChatUI() {
           data.message,
         ]);
         setPendingToolCalls(data.message.tool_calls);
-      } else if (data.message) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
+      } else if (data.messagesTrace) {
+        const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
+        setMessages(data.message ? [...trace, data.message] : trace);
       } else if (data.error) {
         setMessages((prev) => [
           ...prev,
@@ -204,7 +213,8 @@ function ChatUI() {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-base text-primary">
+    <div className="absolute inset-0 flex bg-base text-primary overflow-hidden">
+      <div className="flex flex-col flex-1 h-full overflow-hidden relative">
       {messages.length === 0 ? (
         // --- EMPTY DASHBOARD STATE ---
         <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto w-full">
@@ -309,6 +319,13 @@ function ChatUI() {
                 ))}
               </select>
             </div>
+            <button 
+              onClick={() => setShowDebug(!showDebug)}
+              className={`p-2 rounded-lg transition-colors ${showDebug ? "bg-accent text-white" : "bg-surface-raised text-secondary hover:text-primary"}`}
+              title="Toggle Debug Sidebar"
+            >
+              <Bug className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Messages */}
@@ -365,10 +382,16 @@ function ChatUI() {
                     )}
 
                     {/* Render the actual message bubble if it exists */}
-                    {m && (
-                      <div
-                        className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
-                      >
+                    {m && (m.content || (m.tool_calls && isPending)) && (
+                      <>
+                        {m.role === "assistant" && (
+                          <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
+                            {m.name ? `@${m.name}` : `@${selectedAgent}`}
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
+                        >
                         {m.content ? (
                           <div className="prose prose-sm md:prose-base prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -402,9 +425,10 @@ function ChatUI() {
                                 Deny
                               </button>
                             </div>
-                          </div>
-                        ) : null}
-                      </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
                     )}
                   </div>
                 );
@@ -443,6 +467,55 @@ function ChatUI() {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Debug Sidebar */}
+      {showDebug && (
+        <div className="w-80 lg:w-96 shrink-0 bg-surface h-full flex flex-col border-l border-border-default z-10">
+          <div className="px-6 py-5 border-b border-border-default shrink-0 flex items-center justify-between">
+            <div className="flex items-center">
+              <Code className="w-5 h-5 mr-2 text-accent" />
+              <h2 className="text-lg font-bold text-primary">Debug Inspector</h2>
+            </div>
+            {debugInfo && (
+              <button 
+                onClick={copyDebugJson}
+                className="text-xs px-2 py-1 bg-surface-raised rounded text-secondary hover:text-primary transition-colors"
+              >
+                Copy JSON
+              </button>
+            )}
+          </div>
+          
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+            {!debugInfo ? (
+              <p className="text-sm text-tertiary italic text-center mt-10">Send a message to see debug info...</p>
+            ) : (
+              <>
+                {debugInfo.fullTrace?.map((msg: any, idx: number) => {
+                  let title = `Message ${idx + 1} (${msg.role})`;
+                  if (msg.role === "tool") title = `Tool Result: ${msg.name}`;
+                  if (msg.tool_calls) title = `Tool Call(s) by ${msg.role}`;
+                  return <DebugSection key={idx} title={title} data={msg} />;
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helper component for debug sections
+function DebugSection({ title, data }: { title: string, data: any }) {
+  if (!data) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{title}</h3>
+      <pre className="max-h-96 overflow-y-auto bg-surface-raised border border-border-subtle p-3 rounded-lg text-xs text-primary overflow-x-auto whitespace-pre-wrap">
+        {JSON.stringify(data, null, 2)}
+      </pre>
     </div>
   );
 }
