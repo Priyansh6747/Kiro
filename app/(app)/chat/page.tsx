@@ -253,9 +253,12 @@ function ChatUI() {
   return (
     <div className="absolute inset-0 flex bg-base text-primary overflow-hidden">
       <div className="flex flex-col flex-1 h-full overflow-hidden relative">
-      {messages.length === 0 ? (
-        // --- EMPTY DASHBOARD STATE ---
-        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto w-full">
+        {/* --- EMPTY DASHBOARD STATE --- */}
+        <div 
+          className={`absolute inset-0 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto w-full transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+            messages.length > 0 ? 'opacity-0 -translate-y-12 pointer-events-none' : 'opacity-100 translate-y-0'
+          }`}
+        >
           <div className="max-w-3xl w-full flex flex-col items-center gap-8 mt-[-10vh]">
             {/* Greeting */}
             <div className="text-center space-y-2">
@@ -344,9 +347,13 @@ function ChatUI() {
             )}
           </div>
         </div>
-      ) : (
-        // --- CHAT STATE ---
-        <div className="flex flex-col flex-1 h-full overflow-hidden relative">
+
+        {/* --- CHAT STATE --- */}
+        <div 
+          className={`absolute inset-0 flex flex-col h-full overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+            messages.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+          }`}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 lg:px-8 py-4 lg:py-5 border-b border-border-default bg-surface shrink-0">
             <div className="flex items-center">
@@ -398,7 +405,7 @@ function ChatUI() {
                 return (
                   <div
                     key={idx}
-                    className={`flex flex-col ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
+                    className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
                   >
                     {/* Render grouped tools horizontally above the bubble */}
                     {tools.length > 0 && (
@@ -469,10 +476,16 @@ function ChatUI() {
               });
             })()}
             {loading && (
-              <div className="flex justify-start">
-                <div className="p-4 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                  {loadingText}
+              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+                <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
+                  @Yuki
+                </div>
+                <div className="max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default min-w-[200px]">
+                  <div className="flex flex-col gap-3">
+                    <div className="h-4 bg-border-default/50 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-border-default/50 rounded w-1/2 animate-pulse" />
+                    <div className="h-4 bg-border-default/50 rounded w-5/6 animate-pulse" />
+                  </div>
                 </div>
               </div>
             )}
@@ -516,7 +529,6 @@ function ChatUI() {
             </div>
           </div>
         </div>
-      )}
       </div>
 
       {/* Debug Sidebar */}

@@ -296,7 +296,7 @@ export function MiniChat() {
                   return (
                     <div
                       key={idx}
-                      className={`flex flex-col ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
+                      className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
                     >
                       {tools.length > 0 && (
                         <div className="flex flex-row flex-wrap items-center gap-1.5 mb-1 ml-1">
@@ -363,10 +363,16 @@ export function MiniChat() {
               })()
             )}
             {loading && (
-              <div className="flex justify-start">
-                <div className="p-3 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                  {loadingText}
+              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+                <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
+                  @Yuki
+                </div>
+                <div className="max-w-[90%] p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default min-w-[150px]">
+                  <div className="flex flex-col gap-2">
+                    <div className="h-3 bg-border-default/50 rounded w-3/4 animate-pulse" />
+                    <div className="h-3 bg-border-default/50 rounded w-1/2 animate-pulse" />
+                    <div className="h-3 bg-border-default/50 rounded w-5/6 animate-pulse" />
+                  </div>
                 </div>
               </div>
             )}
