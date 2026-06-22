@@ -11,6 +11,7 @@ import {
   FolderKanban,
   BarChart2,
   Settings,
+  Bot,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -18,8 +19,11 @@ const NAV_ITEMS = [
   { href: "/todo", label: "Todo", Icon: CheckSquare },
   { href: "/projects", label: "Projects", Icon: FolderKanban },
   { href: "/insights", label: "Insights", Icon: BarChart2 },
+  { href: "/chat", label: "Yuki", Icon: Bot },
   { href: "/settings", label: "Settings", Icon: Settings },
 ];
+
+import { MiniChat } from "./MiniChat";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -127,12 +131,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative">
       <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
+      <main className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0 relative overflow-hidden">
         {children}
       </main>
       <BottomNav />
+      <MiniChat />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
  * Main function for demonstration.
@@ -24,7 +24,7 @@ export async function getGroqChatCompletion(prompt: string, maxTokens = 300) {
         content: prompt,
       },
     ],
-    model: "llama-3.3-70b-versatile", // Using a standard Groq model for reliability, user's placeholder 'openai/gpt-oss-20b' likely intended llama.
+    model: "openai/gpt-oss-120b", // Using a standard Groq model for reliability, user's placeholder 'openai/gpt-oss-20b' likely intended llama.
     max_tokens: maxTokens,
   });
 }
@@ -38,4 +38,19 @@ export async function callGroq(
 ): Promise<string> {
   const response = await getGroqChatCompletion(prompt, maxTokens);
   return response.choices[0]?.message?.content || "";
+}
+
+/**
+ * Advanced Groq chat with tool support
+ */
+export async function groqChat(
+  messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
+  tools?: Groq.Chat.Completions.ChatCompletionTool[]
+) {
+  return groq.chat.completions.create({
+    messages,
+    model: "openai/gpt-oss-120b",
+    tools,
+    tool_choice: tools && tools.length > 0 ? "auto" : "none",
+  });
 }
