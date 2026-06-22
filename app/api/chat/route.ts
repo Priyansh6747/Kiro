@@ -1,15 +1,20 @@
 import { agentScopes, agents, toolHandlers, tools } from "@tools/tool";
 import { type NextRequest, NextResponse } from "next/server";
 import { groqChat } from "@/lib/groq";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db/client";
+import { aiUsage } from "@/lib/db/models";
 
 async function fetchGroqWithRetry(
   messages: any[],
   tools: any[],
+  userId: string,
   maxRetries = 3,
 ) {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      return await groqChat(messages, tools);
+      const completion = await groqChat(messages, tools, userId);
+      return completion;
     } catch (error: any) {
       if (error.message?.includes("tool_use_failed") && i < maxRetries - 1) {
         console.log(
@@ -37,9 +42,27 @@ async function fetchGroqWithRetry(
   }
 }
 
+const SHARED_RULES = `
+UI Component Rendering Rule:
+17. NEVER use markdown tables. If you need to output tabular data, you MUST return the JSON representation of the table prefixed with "|-TABLE-|" on its own line. Do not output anything else on the line with the JSON.
+The JSON must strictly match this structure:
+{"headers": ["Col 1", "Col 2"], "rows": [["R1C1", "R1C2"], ["R2C1", "R2C2"]], "caption": "Optional title"}
+Example:
+Here is your data:
+|-TABLE-|{"headers":["Name","Age"],"rows":[["Alice","25"]]}
+
+Data Protection Rule:
+18. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables.
+`;
+
 export async function POST(req: NextRequest) {
   const debugInfo: any = {};
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { messages, confirmedToolCallIds, isMiniChat, pageContext, selectedAgent } =
       await req.json();
 
@@ -70,12 +93,12 @@ export async function POST(req: NextRequest) {
       if (!agent) return { error: `Agent ${agentName} not found` };
 
       const agentMessages: any[] = [
-        { role: "system", content: agent.prompt },
+        { role: "system", content: agent.prompt + "\n" + SHARED_RULES },
         { role: "user", content: instruction },
       ];
 
       let iter = 0;
-      let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
+      let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId);
       let agentResMsg = agentResponse.choices[0]?.message;
       if (agentResMsg) (agentResMsg as any).name = agentName;
 
@@ -110,7 +133,7 @@ export async function POST(req: NextRequest) {
             content: toolRes,
           });
         }
-        agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools);
+        agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId);
         agentResMsg = agentResponse.choices[0]?.message;
         if (agentResMsg) (agentResMsg as any).name = agentName;
         iter++;
@@ -161,7 +184,6 @@ Tool Usage Policy:
    "Can I answer the user's request without this tool?"
    If yes, do not call the tool.
 10. Keep all text responses extremely short, direct, and concise. Do not write long tutorials or explanations.
-11. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables.
 
 When tool usage is necessary:
 - Call the minimum number of tools required.
@@ -176,20 +198,15 @@ Crucial Rule on Tool Chaining:
 Delegation Rule:
 15. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
 16. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
-
-UI Component Rendering Rule:
-17. NEVER use markdown tables. If you need to output tabular data, you MUST return the JSON representation of the table prefixed with "|-TABLE-|" on its own line. Do not output anything else on the line with the JSON.
-The JSON must strictly match this structure:
-{"headers": ["Col 1", "Col 2"], "rows": [["R1C1", "R1C2"], ["R2C1", "R2C2"]], "caption": "Optional title"}
-Example:
-Here is your data:
-|-TABLE-|{"headers":["Name","Age"],"rows":[["Alice","25"]]}\n\n` + agentScopes;
+` + agentScopes;
 
     if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
       requestTools = agents[selectedAgent].tools;
       requestToolHandlers = agents[selectedAgent].handlers;
       finalSystemPrompt = agents[selectedAgent].prompt;
     }
+
+    finalSystemPrompt += "\n" + SHARED_RULES;
 
     // Inject system prompt to constrain tool usage
     if (messages.length > 0 && messages[0].role !== "system") {
@@ -231,7 +248,7 @@ Here is your data:
       messages.pop(); // Remove it so the loop can re-append it cleanly
     } else {
       // Normal flow: get next LLM response
-      response = await fetchGroqWithRetry(messages, requestTools);
+      response = await fetchGroqWithRetry(messages, requestTools, userId);
       responseMessage = response.choices[0]?.message;
       debugInfo.firstLlmResponse = responseMessage;
     }
@@ -323,7 +340,7 @@ Here is your data:
       debugInfo.newLlmCall = true;
 
       // Get the next response after tool execution
-      response = await fetchGroqWithRetry(messages, requestTools);
+      response = await fetchGroqWithRetry(messages, requestTools, userId);
       responseMessage = response.choices[0]?.message;
       iterations++;
     }
@@ -366,13 +383,15 @@ Here is your data:
     }
 
     debugInfo.error = friendlyMessage;
+    
+    const statusCode = friendlyMessage === "Quota exceeded" ? 429 : 500;
 
     return NextResponse.json(
       {
         error: friendlyMessage,
         debug: debugInfo,
       },
-      { status: 500 },
+      { status: statusCode },
     );
   }
 }

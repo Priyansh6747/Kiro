@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { useToast } from "@/hooks/useToast";
 import {
   Bot,
   CheckSquare,
@@ -86,6 +87,7 @@ function ChatUI() {
     }, 0);
   };
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const { showToast } = useToast();
   const [showDebug, setShowDebug] = useState(false);
 
   const copyDebugJson = () => {
@@ -153,12 +155,18 @@ function ChatUI() {
         const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
         setMessages(data.message ? [...trace, data.message] : trace);
       } else if (data.error) {
+        if (res.status === 429 || data.error === "Quota exceeded") {
+          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+        } else {
+          showToast(`Error: ${data.error}`, "error");
+        }
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: `Error: ${data.error}` },
         ]);
       }
     } catch (err) {
+      showToast("Sorry, there was an error processing your request.", "error");
       setMessages((prev) => [
         ...prev,
         {
@@ -231,12 +239,18 @@ function ChatUI() {
         const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
         setMessages(data.message ? [...trace, data.message] : trace);
       } else if (data.error) {
+        if (res.status === 429 || data.error === "Quota exceeded") {
+          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+        } else {
+          showToast(`Error: ${data.error}`, "error");
+        }
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: `Error: ${data.error}` },
         ]);
       }
     } catch (err) {
+      showToast("Sorry, there was an error processing your request.", "error");
       setMessages((prev) => [
         ...prev,
         {

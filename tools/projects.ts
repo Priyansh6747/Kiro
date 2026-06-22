@@ -61,10 +61,13 @@ export const projectHandlers: Record<string, Function> = {
     if (!userId) throw new Error("Unauthorized");
     const projects = await listActiveProjects(userId);
     return projects.map((p) => ({
-      ...p,
-      deadlineStr: p.deadlineAt
+      name: p.name,
+      importance: p.importance,
+      type: p.type,
+      deadline: p.deadlineAt
         ? new Date(p.deadlineAt * 1000).toISOString().split("T")[0]
         : null,
+      cadence: p.cadence,
     }));
   },
   createProject: async (args: any) => {
@@ -73,7 +76,7 @@ export const projectHandlers: Record<string, Function> = {
     const activeCount = await countActiveNonDefaultProjects(userId);
     if (activeCount >= 10) throw new Error("Max 10 active projects");
 
-    return await createProject({
+    const project = await createProject({
       id: randomUUID(),
       userId,
       name: args.name,
@@ -85,12 +88,19 @@ export const projectHandlers: Record<string, Function> = {
       createdAt: nowSec(),
       archivedAt: null,
     });
+    return {
+      success: true,
+      name: project.name,
+      importance: project.importance,
+      type: project.type,
+    };
   },
   archiveProject: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
     const project = await findProjectById(args.id, userId);
     if (!project) throw new Error("Project not found");
-    return await archiveProject(args.id);
+    await archiveProject(args.id);
+    return { success: true, archivedProject: project.name };
   },
 };

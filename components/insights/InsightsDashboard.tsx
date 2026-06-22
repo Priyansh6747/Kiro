@@ -16,6 +16,7 @@ interface InsightsDashboardProps {
   >;
   days: number;
   setDays: (days: number) => void;
+  usage: { dayCost: number; maxCost: number } | null;
 }
 
 export function InsightsDashboard({
@@ -24,6 +25,7 @@ export function InsightsDashboard({
   allTasks,
   days,
   setDays,
+  usage,
 }: InsightsDashboardProps) {
   // We do all heavy calculation here and pass exact props down.
   const dashboardData = useMemo(() => {
@@ -136,8 +138,9 @@ export function InsightsDashboard({
       longestChain: { count: chainDisplay, name: longestTaskName },
       peakHour,
       completedTasks,
+      usage,
     };
-  }, [logs, allTasks, projects]);
+  }, [logs, allTasks, projects, usage]);
 
   return (
     <div className="flex flex-col flex-1 h-full min-w-0 bg-base text-primary">

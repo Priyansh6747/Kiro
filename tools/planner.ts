@@ -29,10 +29,8 @@ export const plannerTools: ChatCompletionTool[] = [
         "Get today's agenda including unconfirmed tasks, as well as the 'bucket' (pending tasks without a scheduled date).",
       parameters: {
         type: "object",
-        properties: {
-          date: { type: "number", description: "Unix day integer for today" },
-        },
-        required: ["date"],
+        properties: {},
+        required: [],
       },
     },
   },
@@ -47,21 +45,38 @@ export const plannerHandlers: Record<string, Function> = {
   getTodayAgenda: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    const agenda = await listTasks({ userId, date: args.date });
+    
+    const { getOrCreatePreferences } = await import("@/lib/storage");
+    const { todayUnixDay } = await import("@/lib/utils");
+    const prefs = await getOrCreatePreferences(userId);
+    const todayDate = todayUnixDay(prefs.timezone);
+
+    const agenda = await listTasks({ userId, date: todayDate });
     const bucket = await listTasks({
       userId,
       bucket: true,
-      todayDate: args.date,
+      todayDate,
     });
     
     const userProjects = await db.select().from(projects).where(eq(projects.userId, userId));
     const projectMap = Object.fromEntries(userProjects.map(p => [p.id, p.name]));
     
     const enrich = (t: any) => {
-      const copy = { ...t };
-      copy.projectName = projectMap[t.projectId] || t.projectId;
-      delete copy.projectId; // Prevent LLM from seeing the raw UUID
-      return copy;
+      return {
+        title: t.title,
+        projectName: projectMap[t.projectId] || "Unknown",
+        estimateMin: t.estimateMin,
+        status: t.status,
+        scheduledDate: t.scheduledDate
+          ? new Date(t.scheduledDate * 86400000).toISOString().split("T")[0]
+          : null,
+        deadlineAt: t.deadlineAt
+          ? new Date(t.deadlineAt * 1000).toISOString().split("T")[0]
+          : null,
+        completedAt: t.completedAt
+          ? new Date(t.completedAt * 1000).toISOString().split("T")[0]
+          : null,
+      };
     };
 
     return { 

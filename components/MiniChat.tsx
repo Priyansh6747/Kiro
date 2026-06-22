@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@/components/ThemeProvider";
 import { ContentRenderer } from "@/components/ResponsiveTable";
+import { useToast } from "@/hooks/useToast";
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -71,6 +72,7 @@ export function MiniChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
+  const { showToast } = useToast();
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -130,12 +132,20 @@ export function MiniChat() {
           data.message,
         ]);
       } else if (data.error) {
+        if (res.status === 429 || data.error === "Quota exceeded") {
+          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+        } else {
+          showToast(`Error: ${data.error}`, "error");
+        }
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: `Error: ${data.error}` },
         ]);
+      } else if (data.messagesTrace) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system")]);
       }
     } catch (err) {
+      showToast("Error processing request.", "error");
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Error processing request." },
@@ -199,12 +209,20 @@ export function MiniChat() {
           data.message,
         ]);
       } else if (data.error) {
+        if (res.status === 429 || data.error === "Quota exceeded") {
+          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+        } else {
+          showToast(`Error: ${data.error}`, "error");
+        }
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: `Error: ${data.error}` },
         ]);
+      } else if (data.messagesTrace) {
+        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system")]);
       }
     } catch (err) {
+      showToast("Error processing request.", "error");
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Error processing request." },

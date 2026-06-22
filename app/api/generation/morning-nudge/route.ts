@@ -63,7 +63,7 @@ export async function POST(): Promise<Response> {
     todayDate,
     timezone: prefs.timezone,
   });
-  const nudgeText = await callGroq(prompt, 200);
+  const nudgeText = await callGroq(prompt, 200, userId);
 
   return Response.json({ data: { nudge: nudgeText, projects: top2 } });
 }

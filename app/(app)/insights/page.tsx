@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { InsightsDashboard } from "@/components/insights/InsightsDashboard";
 import { ErrorBanner, LoadingScreen } from "@/components/ui";
-import { listDayLogs, listProjects, listTasks } from "@/lib/api-client";
+import { listDayLogs, listProjects, listTasks, getTodayUsage } from "@/lib/api-client";
 import type { DayLog, Project, Task } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
 
@@ -17,6 +17,7 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
+  const [usage, setUsage] = useState<{ dayCost: number; maxCost: number } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -24,12 +25,14 @@ export default function InsightsPage() {
     try {
       const today = todayUnixDay();
       const from = today - days + 1;
-      const [logData, projs, allTasksData] = await Promise.all([
+      const [logData, projs, allTasksData, usageData] = await Promise.all([
         listDayLogs(from, today),
         listProjects(),
         listTasks({}),
+        getTodayUsage(),
       ]);
       setLogs(logData);
+      setUsage(usageData);
       const filteredProjects = projs.filter((p) => !p.isDefault);
       setProjects(filteredProjects);
       setAllTasks(allTasksData);
@@ -79,6 +82,7 @@ export default function InsightsPage() {
       projectTaskCounts={projectTaskCounts}
       days={days}
       setDays={setDays}
+      usage={usage}
     />
   );
 }

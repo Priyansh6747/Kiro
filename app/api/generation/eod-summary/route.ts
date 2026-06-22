@@ -68,7 +68,7 @@ export async function POST(): Promise<Response> {
   // ── Build prompt and call Groq ───────────────────────────────────────────
   const prompt = buildEodSummaryPrompt(payload);
   console.log("EOD summary prompt:", prompt);
-  const summaryText = await callGroq(prompt, 300);
+  const summaryText = await callGroq(prompt, 300, userId);
   console.log("EOD summary:", summaryText);
 
   return Response.json({ data: { summary: summaryText, stats: payload } });

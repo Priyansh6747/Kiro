@@ -118,7 +118,7 @@ export const taskHandlers: Record<string, Function> = {
         .filter((d) => d.taskId === t.id)
         .map((d) => {
           const pred = tasks.find((pt) => pt.id === d.predecessorId);
-          return pred ? pred.title : d.predecessorId;
+          return pred ? pred.title : "Unknown task";
         });
 
       const scheduledDateStr = t.scheduledDate
@@ -130,10 +130,12 @@ export const taskHandlers: Record<string, Function> = {
         : null;
 
       return {
-        ...t,
+        title: t.title,
+        estimateMin: t.estimateMin,
+        status: t.status,
+        scheduledDate: scheduledDateStr,
+        deadline: deadlineStr,
         blockedBy: blockedByTitles,
-        scheduledDateStr,
-        deadlineStr,
       };
     });
   },
@@ -165,7 +167,15 @@ export const taskHandlers: Record<string, Function> = {
     });
 
     await insertTaskClosureSelf(newTaskId);
-    return task;
+    return {
+      success: true,
+      title: task.title,
+      estimateMin: task.estimateMin,
+      status: task.status,
+      scheduledDate: task.scheduledDate
+        ? new Date(task.scheduledDate * 86400000).toISOString().split("T")[0]
+        : null,
+    };
   },
   updateTask: async (args: any) => {
     const { userId } = await auth();
@@ -189,7 +199,16 @@ export const taskHandlers: Record<string, Function> = {
 
     updates.updatedAt = nowSec();
 
-    return await updateTask(args.id, updates);
+    const updated = await updateTask(args.id, updates);
+    return {
+      success: true,
+      title: updated.title,
+      status: updated.status,
+      estimateMin: updated.estimateMin,
+      scheduledDate: updated.scheduledDate
+        ? new Date(updated.scheduledDate * 86400000).toISOString().split("T")[0]
+        : null,
+    };
   },
   unscheduleToBucket: async (args: any) => {
     const { userId } = await auth();
