@@ -1,26 +1,36 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import type { Project, Task } from "@/lib/types";
-import { formatTimestamp } from "@/lib/types";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
 import {
+  ArrowRight,
+  Calendar,
+  Check,
+  ChevronLeft,
+  Filter,
+  Pencil,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Line, LineChart, ResponsiveContainer } from "recharts";
+import { ProjectWorkspace } from "@/components/ProjectWorkspace";
+import {
+  CreateProjectForm,
+  EmptyState,
+  ErrorBanner,
+  LoadingScreen,
+  TypeBadge,
+} from "@/components/ui";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useToast } from "@/hooks/useToast";
+import {
+  archiveProject,
   listProjects,
   listTasks,
   updateProject,
-  archiveProject,
 } from "@/lib/api-client";
-import {
-  LoadingScreen,
-  ErrorBanner,
-  EmptyState,
-  TypeBadge,
-  CreateProjectForm,
-} from "@/components/ui";
-import { ProjectWorkspace } from "@/components/ProjectWorkspace";
-import { Search, Filter, ArrowRight, ChevronLeft, Pencil, Trash2, Calendar, Check, X } from "lucide-react";
-import { useToast } from "@/hooks/useToast";
-import { useConfirm } from "@/hooks/useConfirm";
+import type { Project, Task } from "@/lib/types";
+import { formatTimestamp } from "@/lib/types";
 
 // ── Project Card ──────────────────────────────────────────────────────────────
 
@@ -52,7 +62,9 @@ function ProjectCard({
     >
       <div className="flex flex-col gap-2 min-w-0">
         <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-          <p className="font-semibold text-primary text-base lg:text-lg truncate tracking-tight">{project.name}</p>
+          <p className="font-semibold text-primary text-base lg:text-lg truncate tracking-tight">
+            {project.name}
+          </p>
           <div className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-tertiary px-1.5 py-0.5 bg-surface-raised border border-border-subtle rounded-full uppercase tracking-wider">
             <span>P{project.importance}</span>
           </div>
@@ -61,22 +73,31 @@ function ProjectCard({
           </div>
         </div>
         <p className="text-xs text-secondary font-medium">
-          {project.deadlineAt ? `Deadline: ${formatTimestamp(project.deadlineAt)}` : `Created at: ${formatTimestamp(project.createdAt)}`}
+          {project.deadlineAt
+            ? `Deadline: ${formatTimestamp(project.deadlineAt)}`
+            : `Created at: ${formatTimestamp(project.createdAt)}`}
         </p>
       </div>
 
       <div className="flex items-center gap-3 lg:gap-8 shrink-0 pl-2 lg:pl-4 border-l border-border-subtle">
         {/* Sparkline */}
-        {activity && activity.length > 0 && activity.some((a) => a.completed > 0) ? (
+        {activity &&
+        activity.length > 0 &&
+        activity.some((a) => a.completed > 0) ? (
           <div className="h-6 w-16 sm:h-8 sm:w-20 lg:h-10 lg:w-28 shrink-0">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={1}
+              minHeight={1}
+            >
               <LineChart data={activity}>
-                <Line 
-                  type="monotone" 
-                  dataKey="completed" 
-                  stroke="var(--status-done)" 
-                  strokeWidth={2} 
-                  dot={false} 
+                <Line
+                  type="monotone"
+                  dataKey="completed"
+                  stroke="var(--status-done)"
+                  strokeWidth={2}
+                  dot={false}
                   isAnimationActive={false}
                 />
               </LineChart>
@@ -84,7 +105,9 @@ function ProjectCard({
           </div>
         ) : (
           <div className="flex h-6 w-16 sm:h-8 sm:w-20 lg:h-10 lg:w-28 shrink-0 items-center justify-center">
-            <span className="text-[8px] lg:text-[10px] text-tertiary uppercase tracking-wider font-semibold">No Activity</span>
+            <span className="text-[8px] lg:text-[10px] text-tertiary uppercase tracking-wider font-semibold">
+              No Activity
+            </span>
           </div>
         )}
 
@@ -112,7 +135,9 @@ function ProjectCard({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[9px] lg:text-[10px] font-bold text-primary">{Math.round(pct)}%</span>
+            <span className="text-[9px] lg:text-[10px] font-bold text-primary">
+              {Math.round(pct)}%
+            </span>
           </div>
         </div>
       </div>
@@ -122,25 +147,30 @@ function ProjectCard({
 
 // ── Project Details Pane ──────────────────────────────────────────────────────
 
-function ProjectDetails({ 
-  project, 
+function ProjectDetails({
+  project,
   onOpenWorkspace,
   onUpdateProject,
-  onArchiveProject
-}: { 
+  onArchiveProject,
+}: {
   project: Project;
   onOpenWorkspace: () => void;
-  onUpdateProject: (id: string, updates: Parameters<typeof updateProject>[1]) => Promise<void>;
+  onUpdateProject: (
+    id: string,
+    updates: Parameters<typeof updateProject>[1],
+  ) => Promise<void>;
   onArchiveProject: (id: string) => Promise<void>;
 }) {
   const { confirm, ConfirmModal } = useConfirm();
-  
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(project.name);
-  
+
   const [isEditingDeadline, setIsEditingDeadline] = useState(false);
-  const [editDeadlineDate, setEditDeadlineDate] = useState(() => 
-    project.deadlineAt ? new Date(project.deadlineAt * 1000).toISOString().split('T')[0] : ""
+  const [editDeadlineDate, setEditDeadlineDate] = useState(() =>
+    project.deadlineAt
+      ? new Date(project.deadlineAt * 1000).toISOString().split("T")[0]
+      : "",
   );
 
   const [isEditingType, setIsEditingType] = useState(false);
@@ -148,7 +178,11 @@ function ProjectDetails({
 
   useEffect(() => {
     setEditName(project.name);
-    setEditDeadlineDate(project.deadlineAt ? new Date(project.deadlineAt * 1000).toISOString().split('T')[0] : "");
+    setEditDeadlineDate(
+      project.deadlineAt
+        ? new Date(project.deadlineAt * 1000).toISOString().split("T")[0]
+        : "",
+    );
     setIsEditingName(false);
     setIsEditingDeadline(false);
     setIsEditingType(false);
@@ -166,8 +200,10 @@ function ProjectDetails({
     let ts: number | null = null;
     if (dateStr) {
       // Create a Date object in local time and convert to unix timestamp
-      const [year, month, day] = dateStr.split('-');
-      ts = Math.floor(new Date(Number(year), Number(month) - 1, Number(day)).getTime() / 1000);
+      const [year, month, day] = dateStr.split("-");
+      ts = Math.floor(
+        new Date(Number(year), Number(month) - 1, Number(day)).getTime() / 1000,
+      );
     }
     setEditDeadlineDate(dateStr);
     await onUpdateProject(project.id, { deadline_at: ts });
@@ -177,7 +213,7 @@ function ProjectDetails({
   const handleDelete = async () => {
     const isConfirmed = await confirm(
       "Archive Project",
-      "Are you sure you want to archive this project? It will be removed from your active list."
+      "Are you sure you want to archive this project? It will be removed from your active list.",
     );
     if (isConfirmed) {
       await onArchiveProject(project.id);
@@ -190,31 +226,48 @@ function ProjectDetails({
         <div className="flex-1">
           {isEditingName ? (
             <div className="flex items-center gap-2">
-              <input 
+              <input
                 autoFocus
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
                 className="w-full text-xl lg:text-2xl font-bold bg-surface-raised border border-border-strong rounded px-2 py-1 text-primary focus:outline-none focus:border-accent"
               />
-              <button onClick={handleSaveName} className="p-1.5 rounded bg-surface-raised border border-border-default hover:text-status-done text-primary"><Check className="w-4 h-4" /></button>
-              <button onClick={() => { setIsEditingName(false); setEditName(project.name); }} className="p-1.5 rounded bg-surface-raised border border-border-default hover:text-status-missed text-primary"><X className="w-4 h-4" /></button>
+              <button
+                onClick={handleSaveName}
+                className="p-1.5 rounded bg-surface-raised border border-border-default hover:text-status-done text-primary"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingName(false);
+                  setEditName(project.name);
+                }}
+                className="p-1.5 rounded bg-surface-raised border border-border-default hover:text-status-missed text-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           ) : (
-            <div 
+            <div
               className="flex items-center gap-2 group cursor-pointer -ml-2 p-2 rounded hover:bg-surface-raised transition-colors"
               onClick={() => setIsEditingName(true)}
             >
-              <h3 className="text-xl lg:text-2xl font-bold text-primary tracking-tight">{project.name}</h3>
+              <h3 className="text-xl lg:text-2xl font-bold text-primary tracking-tight">
+                {project.name}
+              </h3>
               <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-tertiary transition-opacity">
                 <Pencil className="w-4 h-4" />
               </div>
             </div>
           )}
-          <p className="text-xs lg:text-sm text-secondary mt-1 lg:mt-1.5">Project details and meta information</p>
+          <p className="text-xs lg:text-sm text-secondary mt-1 lg:mt-1.5">
+            Project details and meta information
+          </p>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleDelete}
           className="p-2 text-tertiary hover:text-status-missed hover:bg-surface-raised rounded-full transition-colors flex-shrink-0"
           title="Delete Project"
@@ -225,13 +278,17 @@ function ProjectDetails({
 
       <div className="space-y-4 lg:space-y-5 flex-1">
         <div className="flex flex-col gap-1.5 pb-4 lg:pb-5 border-b border-border-subtle">
-          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">Type</span>
+          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">
+            Type
+          </span>
           {isEditingType ? (
             <div className="flex items-center gap-2 mt-1">
-              <select 
-                value={project.type} 
+              <select
+                value={project.type}
                 onChange={async (e) => {
-                  await onUpdateProject(project.id, { type: e.target.value as any });
+                  await onUpdateProject(project.id, {
+                    type: e.target.value as any,
+                  });
                   setIsEditingType(false);
                 }}
                 className="bg-surface-raised border border-border-strong rounded px-2 py-1 text-sm text-primary focus:outline-none focus:border-accent cursor-pointer"
@@ -241,10 +298,15 @@ function ProjectDetails({
                 <option value="habit">Habit</option>
                 <option value="nicetohave">Nice to have</option>
               </select>
-              <button onClick={() => setIsEditingType(false)} className="p-1 rounded text-tertiary hover:text-primary"><X className="w-4 h-4" /></button>
+              <button
+                onClick={() => setIsEditingType(false)}
+                className="p-1 rounded text-tertiary hover:text-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           ) : (
-            <div 
+            <div
               className="flex items-center gap-2 group mt-1 cursor-pointer -ml-2 p-2 rounded hover:bg-surface-raised transition-colors inline-flex"
               onClick={() => setIsEditingType(true)}
             >
@@ -257,13 +319,17 @@ function ProjectDetails({
         </div>
 
         <div className="flex flex-col gap-1.5 pb-4 lg:pb-5 border-b border-border-subtle">
-          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">Priority</span>
+          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">
+            Priority
+          </span>
           {isEditingPriority ? (
             <div className="flex items-center gap-2 mt-1">
-              <select 
-                value={project.importance} 
+              <select
+                value={project.importance}
                 onChange={async (e) => {
-                  await onUpdateProject(project.id, { importance: Number(e.target.value) });
+                  await onUpdateProject(project.id, {
+                    importance: Number(e.target.value),
+                  });
                   setIsEditingPriority(false);
                 }}
                 className="bg-surface-raised border border-border-strong rounded px-2 py-1 text-sm text-primary focus:outline-none focus:border-accent cursor-pointer"
@@ -274,16 +340,25 @@ function ProjectDetails({
                 <option value={4}>4</option>
                 <option value={5}>5 (Highest)</option>
               </select>
-              <button onClick={() => setIsEditingPriority(false)} className="p-1 rounded text-tertiary hover:text-primary"><X className="w-4 h-4" /></button>
+              <button
+                onClick={() => setIsEditingPriority(false)}
+                className="p-1 rounded text-tertiary hover:text-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           ) : (
-            <div 
+            <div
               className="flex items-center gap-2 group mt-1 cursor-pointer -ml-2 p-2 rounded hover:bg-surface-raised transition-colors inline-flex"
               onClick={() => setIsEditingPriority(true)}
             >
               <div className="flex items-center">
-                <span className="text-base lg:text-lg text-primary font-semibold">{project.importance}</span>
-                <span className="text-xs lg:text-sm text-tertiary ml-1">/ 5</span>
+                <span className="text-base lg:text-lg text-primary font-semibold">
+                  {project.importance}
+                </span>
+                <span className="text-xs lg:text-sm text-tertiary ml-1">
+                  / 5
+                </span>
               </div>
               <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-tertiary transition-opacity">
                 <Pencil className="w-3.5 h-3.5" />
@@ -293,24 +368,35 @@ function ProjectDetails({
         </div>
 
         <div className="flex flex-col gap-1.5 pb-4 lg:pb-5 border-b border-border-subtle">
-          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">Deadline</span>
-          
+          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">
+            Deadline
+          </span>
+
           {isEditingDeadline ? (
             <div className="flex items-center gap-2 mt-1">
-              <input 
+              <input
                 type="date"
                 value={editDeadlineDate}
                 onChange={(e) => handleSaveDeadline(e.target.value)}
                 className="bg-surface-raised border border-border-strong rounded px-2 py-1 text-sm text-primary focus:outline-none focus:border-accent"
               />
-              <button onClick={() => setIsEditingDeadline(false)} className="p-1 rounded text-tertiary hover:text-primary"><X className="w-4 h-4" /></button>
+              <button
+                onClick={() => setIsEditingDeadline(false)}
+                className="p-1 rounded text-tertiary hover:text-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           ) : (
-            <div 
+            <div
               className="flex items-center gap-2 group mt-1 cursor-pointer -ml-2 p-2 rounded hover:bg-surface-raised transition-colors inline-flex"
               onClick={() => setIsEditingDeadline(true)}
             >
-              <span className="text-sm lg:text-base text-primary font-semibold">{project.deadlineAt ? formatTimestamp(project.deadlineAt) : "No Deadline"}</span>
+              <span className="text-sm lg:text-base text-primary font-semibold">
+                {project.deadlineAt
+                  ? formatTimestamp(project.deadlineAt)
+                  : "No Deadline"}
+              </span>
               <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-tertiary transition-opacity">
                 <Pencil className="w-3.5 h-3.5" />
               </div>
@@ -319,8 +405,12 @@ function ProjectDetails({
         </div>
 
         <div className="flex flex-col gap-1.5 pb-4 lg:pb-5 border-b border-border-subtle">
-          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">Created At</span>
-          <span className="text-sm lg:text-base text-primary font-semibold">{formatTimestamp(project.createdAt)}</span>
+          <span className="text-[10px] lg:text-[11px] text-tertiary uppercase tracking-widest font-bold">
+            Created At
+          </span>
+          <span className="text-sm lg:text-base text-primary font-semibold">
+            {formatTimestamp(project.createdAt)}
+          </span>
         </div>
       </div>
 
@@ -333,7 +423,7 @@ function ProjectDetails({
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
-      
+
       <ConfirmModal />
     </div>
   );
@@ -344,18 +434,27 @@ function ProjectDetails({
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [taskStats, setTaskStats] = useState<
-    Record<string, { total: number; done: number; activity: { day: number; completed: number }[] }>
+    Record<
+      string,
+      {
+        total: number;
+        done: number;
+        activity: { day: number; completed: number }[];
+      }
+    >
   >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "deadline" | "created" | "priority">("created");
+  const [sortBy, setSortBy] = useState<
+    "name" | "deadline" | "created" | "priority"
+  >("created");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
 
@@ -372,15 +471,24 @@ export default function ProjectsPage() {
       const statsEntries = await Promise.all(
         projs.map(async (p) => {
           const tasks = await listTasks({ project_id: p.id });
-          
+
           const now = new Date();
-          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+          const todayStart =
+            new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            ).getTime() / 1000;
           const activity = [];
           for (let i = 13; i >= 0; i--) {
             const dayStart = todayStart - i * 86400;
             const dayEnd = dayStart + 86400;
             const completed = tasks.filter(
-              (t) => t.status === "done" && t.completedAt && t.completedAt >= dayStart && t.completedAt < dayEnd
+              (t) =>
+                t.status === "done" &&
+                t.completedAt &&
+                t.completedAt >= dayStart &&
+                t.completedAt < dayEnd,
             ).length;
             activity.push({ day: i, completed });
           }
@@ -409,17 +517,17 @@ export default function ProjectsPage() {
 
   // Client-side Elastic Search & Filter
   const filteredAndSortedProjects = useMemo(() => {
-    let result = projects.filter(p => !p.isDefault);
+    let result = projects.filter((p) => !p.isDefault);
 
     // 1. Filter by Type
     if (filterType !== "all") {
-      result = result.filter(p => p.type === filterType);
+      result = result.filter((p) => p.type === filterType);
     }
 
     // 2. Search by Name
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase();
-      result = result.filter(p => p.name.toLowerCase().includes(q));
+      result = result.filter((p) => p.name.toLowerCase().includes(q));
     }
 
     // 3. Sort
@@ -432,11 +540,12 @@ export default function ProjectsPage() {
         case "priority":
           cmp = b.importance - a.importance; // higher priority first by default
           break;
-        case "deadline":
+        case "deadline": {
           const deadlineA = a.deadlineAt ?? Infinity;
           const deadlineB = b.deadlineAt ?? Infinity;
           cmp = deadlineA - deadlineB;
           break;
+        }
         case "created":
         default:
           cmp = b.createdAt - a.createdAt; // newest first by default
@@ -478,10 +587,14 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col flex-1 h-full bg-base overflow-hidden relative">
       {/* Header Toolbar */}
-      <div className={`flex-col lg:flex-row items-start lg:items-center justify-between px-4 lg:px-8 py-4 lg:py-5 border-b border-border-default bg-surface shrink-0 gap-4 ${selectedProject ? 'hidden lg:flex' : 'flex'}`}>
+      <div
+        className={`flex-col lg:flex-row items-start lg:items-center justify-between px-4 lg:px-8 py-4 lg:py-5 border-b border-border-default bg-surface shrink-0 gap-4 ${selectedProject ? "hidden lg:flex" : "flex"}`}
+      >
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:gap-6 w-full lg:w-auto">
           <div className="flex items-center justify-between w-full sm:w-auto">
-            <h1 className="text-2xl font-bold text-primary tracking-tight">Projects</h1>
+            <h1 className="text-2xl font-bold text-primary tracking-tight">
+              Projects
+            </h1>
             <button
               onClick={() => setShowCreate(true)}
               className="sm:hidden rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -489,24 +602,24 @@ export default function ProjectsPage() {
               <span>+ New</span>
             </button>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             <div className="relative flex items-center w-full sm:w-auto">
               <Search className="absolute left-3 w-4 h-4 text-tertiary" />
-              <input 
-                type="text" 
-                placeholder="Search projects..." 
+              <input
+                type="text"
+                placeholder="Search projects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 w-full lg:w-64 text-sm bg-surface-raised border border-border-default rounded-full focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 text-primary transition-all placeholder:text-tertiary"
               />
             </div>
-            
+
             <div className="flex items-center justify-between sm:justify-start gap-1 sm:gap-2 bg-surface-raised p-1 rounded-full border border-border-default w-full sm:w-auto overflow-x-auto no-scrollbar">
               <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="pl-2 lg:pl-3 pr-6 py-1.5 text-xs lg:text-sm bg-transparent border-none focus:outline-none text-primary cursor-pointer font-medium"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="pl-2 lg:pl-3 pr-6 py-1.5 text-xs lg:text-sm bg-transparent border-none focus:outline-none text-primary cursor-pointer font-medium"
               >
                 <option value="all">All Types</option>
                 <option value="critical">Critical</option>
@@ -516,21 +629,23 @@ export default function ProjectsPage() {
               </select>
               <div className="w-px h-4 bg-border-strong mx-1 shrink-0"></div>
               <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="pl-2 lg:pl-3 pr-6 py-1.5 text-xs lg:text-sm bg-transparent border-none focus:outline-none text-primary cursor-pointer font-medium"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="pl-2 lg:pl-3 pr-6 py-1.5 text-xs lg:text-sm bg-transparent border-none focus:outline-none text-primary cursor-pointer font-medium"
               >
                 <option value="created">Sort: Created</option>
                 <option value="deadline">Sort: Deadline</option>
                 <option value="priority">Sort: Priority</option>
                 <option value="name">Sort: Name</option>
               </select>
-              <button 
+              <button
                 onClick={() => setSortAsc(!sortAsc)}
                 className="p-1.5 mx-1 shrink-0 text-tertiary hover:text-primary hover:bg-surface transition-all rounded-full"
                 title={sortAsc ? "Ascending" : "Descending"}
               >
-                <Filter className={`w-3 h-3 lg:w-4 lg:h-4 ${sortAsc ? 'rotate-180' : ''} transition-transform duration-300`} />
+                <Filter
+                  className={`w-3 h-3 lg:w-4 lg:h-4 ${sortAsc ? "rotate-180" : ""} transition-transform duration-300`}
+                />
               </button>
             </div>
           </div>
@@ -547,7 +662,9 @@ export default function ProjectsPage() {
       {/* Main Split View */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left List */}
-        <div className={`flex-1 overflow-y-auto p-4 lg:p-8 lg:pr-4 space-y-3 lg:space-y-4 ${selectedProject ? 'hidden lg:block' : 'block'}`}>
+        <div
+          className={`flex-1 overflow-y-auto p-4 lg:p-8 lg:pr-4 space-y-3 lg:space-y-4 ${selectedProject ? "hidden lg:block" : "block"}`}
+        >
           {filteredAndSortedProjects.length > 0 ? (
             filteredAndSortedProjects.map((p) => (
               <ProjectCard
@@ -565,23 +682,29 @@ export default function ProjectsPage() {
               <EmptyState
                 icon="🔍"
                 title="No projects found"
-                description={searchQuery ? "Try adjusting your search or filters." : "Create your first project using '+ New Project'."}
+                description={
+                  searchQuery
+                    ? "Try adjusting your search or filters."
+                    : "Create your first project using '+ New Project'."
+                }
               />
             </div>
           )}
         </div>
 
         {/* Right Details Pane - Mobile Overlay or Desktop Split */}
-        <div className={`
+        <div
+          className={`
           w-full lg:w-[420px] lg:shrink-0 
           bg-surface lg:border-l lg:border-border-default flex-col 
           shadow-2xl lg:shadow-[-4px_0_24px_rgba(0,0,0,0.02)]
-          ${selectedProject ? 'flex' : 'hidden lg:flex'}
-        `}>
+          ${selectedProject ? "flex" : "hidden lg:flex"}
+        `}
+        >
           {/* Mobile Header for Details */}
           <div className="flex lg:hidden px-4 py-4 border-b border-border-default bg-surface items-center shrink-0">
-            <button 
-              onClick={() => setSelectedProject(null)} 
+            <button
+              onClick={() => setSelectedProject(null)}
               className="text-primary hover:text-accent transition-colors p-2 -ml-2 rounded-full hover:bg-surface-raised flex items-center gap-2 font-medium"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -590,32 +713,42 @@ export default function ProjectsPage() {
           </div>
 
           <div className="hidden lg:block px-8 py-6 border-b border-border-default bg-surface shrink-0">
-            <h2 className="text-sm font-bold text-tertiary uppercase tracking-widest">Details</h2>
+            <h2 className="text-sm font-bold text-tertiary uppercase tracking-widest">
+              Details
+            </h2>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-6 lg:p-8">
             {selectedProject ? (
-              <ProjectDetails 
-                project={selectedProject} 
+              <ProjectDetails
+                project={selectedProject}
                 onOpenWorkspace={() => setShowWorkspace(true)}
                 onUpdateProject={async (id, updates) => {
                   try {
                     const updated = await updateProject(id, updates);
-                    setProjects(prev => prev.map(p => p.id === id ? updated : p));
+                    setProjects((prev) =>
+                      prev.map((p) => (p.id === id ? updated : p)),
+                    );
                     setSelectedProject(updated);
                     showToast("Project updated successfully");
                   } catch (err: any) {
-                    showToast(`Failed to update project: ${err.message}`, "error");
+                    showToast(
+                      `Failed to update project: ${err.message}`,
+                      "error",
+                    );
                   }
                 }}
                 onArchiveProject={async (id) => {
                   try {
                     await archiveProject(id);
-                    setProjects(prev => prev.filter(p => p.id !== id));
+                    setProjects((prev) => prev.filter((p) => p.id !== id));
                     setSelectedProject(null);
                     showToast("Project archived successfully");
                   } catch (err: any) {
-                    showToast(`Failed to archive project: ${err.message}`, "error");
+                    showToast(
+                      `Failed to archive project: ${err.message}`,
+                      "error",
+                    );
                   }
                 }}
               />
@@ -625,8 +758,12 @@ export default function ProjectsPage() {
                   <Search className="w-8 h-8 text-tertiary" />
                 </div>
                 <div>
-                  <p className="text-lg text-primary font-semibold tracking-tight">No project selected</p>
-                  <p className="text-sm text-tertiary mt-1.5 font-medium">Select a project to see details</p>
+                  <p className="text-lg text-primary font-semibold tracking-tight">
+                    No project selected
+                  </p>
+                  <p className="text-sm text-tertiary mt-1.5 font-medium">
+                    Select a project to see details
+                  </p>
                 </div>
               </div>
             )}

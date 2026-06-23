@@ -61,13 +61,23 @@ export function BottomMetricsRow({ data }: BottomMetricsRowProps) {
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b border-border-subtle pb-6">
           <div>
-            <h3 className="text-base font-extrabold text-primary tracking-tight">Productivity Heatmap</h3>
-            <p className="text-sm text-secondary mt-1">Task completions grouped by time of day</p>
+            <h3 className="text-base font-extrabold text-primary tracking-tight">
+              Productivity Heatmap
+            </h3>
+            <p className="text-sm text-secondary mt-1">
+              Task completions grouped by time of day
+            </p>
           </div>
           <div className="flex items-center gap-2 bg-surface px-4 py-2.5 rounded-lg border border-border-default shadow-sm">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--status-done)" }}></span>
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: "var(--status-done)" }}
+            ></span>
             <span className="text-sm font-semibold text-primary">
-              Peak Focus: <span className="text-secondary ml-1.5">{getDayName(orderedDays[2])} {formatHour(data.peakHour)}</span>
+              Peak Focus:{" "}
+              <span className="text-secondary ml-1.5">
+                {getDayName(orderedDays[2])} {formatHour(data.peakHour)}
+              </span>
             </span>
           </div>
         </div>
@@ -107,7 +117,10 @@ export function BottomMetricsRow({ data }: BottomMetricsRowProps) {
             <div className="flex gap-2.5 mt-3">
               <div className="w-20"></div> {/* Offset for Y labels */}
               {orderedDays.map((dayIdx) => (
-                <div key={`lbl-${dayIdx}`} className="flex-1 text-center text-[11px] font-bold text-secondary uppercase tracking-wider">
+                <div
+                  key={`lbl-${dayIdx}`}
+                  className="flex-1 text-center text-[11px] font-bold text-secondary uppercase tracking-wider"
+                >
                   {getDayName(dayIdx)}
                 </div>
               ))}

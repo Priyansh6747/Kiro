@@ -1,11 +1,17 @@
 "use client";
 
-import { RefObject, useState, useRef, useEffect, useLayoutEffect } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
-import type { Task } from "@/lib/types";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { StatusBadge } from "@/components/ui";
-import { formatDateShort, parseDateStr } from "./utils";
+import type { Task } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
+import { formatDateShort, parseDateStr } from "./utils";
 
 function ScheduledTask({
   task,
@@ -155,18 +161,28 @@ export function ScheduledTimelineColumn({
     }, 50);
   };
 
-  const scrollAnchorRef = useRef<{ offsetDays: number; rectTop: number } | null>(null);
+  const scrollAnchorRef = useRef<{
+    offsetDays: number;
+    rectTop: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
-    if (scrollAnchorRef.current && scrollContainerRef.current && timelineMode === "continuous") {
+    if (
+      scrollAnchorRef.current &&
+      scrollContainerRef.current &&
+      timelineMode === "continuous"
+    ) {
       const container = scrollContainerRef.current;
       const { offsetDays, rectTop } = scrollAnchorRef.current;
-      
-      const el = container.querySelector(`.timeline-day-item[data-date-offset="${offsetDays}"]`);
+
+      const el = container.querySelector(
+        `.timeline-day-item[data-date-offset="${offsetDays}"]`,
+      );
       if (el) {
         const containerRect = container.getBoundingClientRect();
-        const currentRectTop = el.getBoundingClientRect().top - containerRect.top;
-        container.scrollTop += (currentRectTop - rectTop);
+        const currentRectTop =
+          el.getBoundingClientRect().top - containerRect.top;
+        container.scrollTop += currentRectTop - rectTop;
       }
       scrollAnchorRef.current = null;
     }
@@ -179,15 +195,15 @@ export function ScheduledTimelineColumn({
       isAnimating.current
     )
       return;
-    
+
     const container = e.currentTarget;
     const containerRect = container.getBoundingClientRect();
     const centerY = containerRect.top + containerRect.height / 2;
-    
-    const elements = container.querySelectorAll('.timeline-day-item');
+
+    const elements = container.querySelectorAll(".timeline-day-item");
     let centerEl: Element | null = null;
     let minDistance = Infinity;
-    
+
     elements.forEach((el) => {
       const rect = el.getBoundingClientRect();
       const elCenterY = rect.top + rect.height / 2;
@@ -199,21 +215,21 @@ export function ScheduledTimelineColumn({
     });
 
     if (centerEl) {
-      const diffStr = centerEl.getAttribute('data-date-offset');
+      const diffStr = centerEl.getAttribute("data-date-offset");
       if (diffStr !== null) {
         const centerOffsetDays = parseInt(diffStr, 10);
         const targetOffsetDays = centerOffsetDays - 10;
-        
+
         if (Math.abs(windowOffsetDays - targetOffsetDays) >= 5) {
           isSliding.current = true;
-          
+
           scrollAnchorRef.current = {
             offsetDays: centerOffsetDays,
             rectTop: centerEl.getBoundingClientRect().top - containerRect.top,
           };
-          
+
           setWindowOffsetDays(targetOffsetDays);
-          
+
           setTimeout(() => {
             isSliding.current = false;
           }, 50);
@@ -256,7 +272,8 @@ export function ScheduledTimelineColumn({
       let dayIndex = 0;
       while (curr <= maxDate) {
         const dNum = Math.floor(
-          Date.UTC(curr.getFullYear(), curr.getMonth(), curr.getDate()) / 86400000
+          Date.UTC(curr.getFullYear(), curr.getMonth(), curr.getDate()) /
+            86400000,
         );
         const dayTasks = groupedScheduled[dNum] || [];
         const isToday = dNum === todayNum;
@@ -268,33 +285,35 @@ export function ScheduledTimelineColumn({
             className="w-full timeline-day-item"
             data-date-offset={windowOffsetDays + dayIndex}
           >
-            <div className={`dial-item-3d flex min-h-[120px] group relative w-full ${isToday ? "bg-accent-subtle/10" : ""}`}>
-            <div className="w-20 flex-shrink-0 flex flex-col items-center justify-center relative">
-              <TimelineTicks />
-              <div className="flex flex-col items-center justify-center bg-surface px-1 py-1 relative z-10 mt-[-10px]">
-                <span
-                  className={`text-sm tracking-wide ${isToday ? "text-accent font-bold" : "text-primary font-medium"}`}
-                >
-                  {formatDateShort(curr)}
-                </span>
-                {isToday && (
-                  <span className="text-[10px] text-accent uppercase font-bold mt-0.5">
-                    Today
+            <div
+              className={`dial-item-3d flex min-h-[120px] group relative w-full ${isToday ? "bg-accent-subtle/10" : ""}`}
+            >
+              <div className="w-20 flex-shrink-0 flex flex-col items-center justify-center relative">
+                <TimelineTicks />
+                <div className="flex flex-col items-center justify-center bg-surface px-1 py-1 relative z-10 mt-[-10px]">
+                  <span
+                    className={`text-sm tracking-wide ${isToday ? "text-accent font-bold" : "text-primary font-medium"}`}
+                  >
+                    {formatDateShort(curr)}
                   </span>
-                )}
+                  {isToday && (
+                    <span className="text-[10px] text-accent uppercase font-bold mt-0.5">
+                      Today
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 p-2 space-y-2 border-l border-border-default ml-[-1px]">
+                {dayTasks.map((t) => (
+                  <ScheduledTask
+                    key={t.id}
+                    task={t}
+                    onClick={() => onSelectTask(t)}
+                    isSelected={selectedTask?.id === t.id}
+                  />
+                ))}
               </div>
             </div>
-            <div className="flex-1 p-2 space-y-2 border-l border-border-default ml-[-1px]">
-              {dayTasks.map((t) => (
-                <ScheduledTask
-                  key={t.id}
-                  task={t}
-                  onClick={() => onSelectTask(t)}
-                  isSelected={selectedTask?.id === t.id}
-                />
-              ))}
-            </div>
-          </div>
           </div>,
         );
         curr = new Date(curr.getTime() + 24 * 60 * 60 * 1000);
@@ -313,10 +332,18 @@ export function ScheduledTimelineColumn({
         const nextObj = new Date(dateObj.getTime() + 24 * 60 * 60 * 1000);
 
         const prevNum = Math.floor(
-          Date.UTC(prevObj.getUTCFullYear(), prevObj.getUTCMonth(), prevObj.getUTCDate()) / 86400000
+          Date.UTC(
+            prevObj.getUTCFullYear(),
+            prevObj.getUTCMonth(),
+            prevObj.getUTCDate(),
+          ) / 86400000,
         );
         const nextNum = Math.floor(
-          Date.UTC(nextObj.getUTCFullYear(), nextObj.getUTCMonth(), nextObj.getUTCDate()) / 86400000
+          Date.UTC(
+            nextObj.getUTCFullYear(),
+            nextObj.getUTCMonth(),
+            nextObj.getUTCDate(),
+          ) / 86400000,
         );
 
         const renderDay = (n: number, isMain: boolean) => (
@@ -409,9 +436,11 @@ export function ScheduledTimelineColumn({
         <div
           ref={scrollContainerRef}
           className="h-full overflow-y-auto bg-surface relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          style={{ 
-            maskImage: "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)", 
-            WebkitMaskImage: "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)" 
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
           }}
           onScroll={handleScroll}
         >

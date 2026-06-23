@@ -1,18 +1,17 @@
 "use client";
 
-import { getPreferences, patchPreferences } from "@/lib/api-client";
+import {
+  BarChart2,
+  Bot,
+  CheckSquare,
+  FolderKanban,
+  Settings,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-
-import {
-  Zap,
-  CheckSquare,
-  FolderKanban,
-  BarChart2,
-  Settings,
-  Bot,
-} from "lucide-react";
+import { getPreferences, patchPreferences } from "@/lib/api-client";
 
 const NAV_ITEMS = [
   { href: "/today", label: "Today", Icon: Zap },

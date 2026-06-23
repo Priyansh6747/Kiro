@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { todayUnixDay } from "@/lib/types";
 
 interface ArcDialProps {
@@ -50,7 +50,7 @@ export function ArcDial({
       scrollRef.current.scrollLeft + scrollRef.current.clientWidth / 2;
     // Find closest date to center
     let closestDate = selectedDate;
-    let minDiff = Infinity;
+    const minDiff = Infinity;
 
     // We know each item is itemWidth wide
     // Left padding is 50%, so the first item's center is at scrollRef.current.clientWidth / 2
@@ -241,7 +241,7 @@ export function ArcDial({
               containerWidth > 0 ? distFromCenter / (containerWidth / 2) : 0;
 
             // Y offset: parabola. 0 at center, up to ~35px at edges
-            const translateY = Math.pow(normalizedDist, 2) * 35;
+            const translateY = normalizedDist ** 2 * 35;
 
             // Scale and opacity
             const scale = Math.max(1 - Math.abs(normalizedDist) * 0.2, 0.8);

@@ -5,8 +5,8 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { removeDayPlanBlock } from "@/lib/storage";
 import type { NextRequest } from "next/server";
+import { removeDayPlanBlock } from "@/lib/storage";
 
 export async function DELETE(
   request: NextRequest,

@@ -6,9 +6,9 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import { findPrefsByUserId, listDayLogs } from "@/lib/storage";
 import { todayUnixDay } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest): Promise<Response> {
   const { userId } = await auth();

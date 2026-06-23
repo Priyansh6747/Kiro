@@ -4,7 +4,9 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
+  autoRevertMissedProjectTasks,
   createTask,
   findProjectById,
   findTaskById,
@@ -12,10 +14,8 @@ import {
   listTasks,
   propagateTaskClosure,
   pullUnresolvedPredecessors,
-  autoRevertMissedProjectTasks,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 

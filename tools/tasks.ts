@@ -1,31 +1,32 @@
-import { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import { auth } from "@clerk/nextjs/server";
+import { randomUUID } from "crypto";
+import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import {
-  listTasks,
   createTask,
   findProjectById,
   findTaskById,
-  updateTask,
   insertTaskClosureSelf,
-  propagateTaskClosure,
   listTaskDependenciesForTasks,
+  listTasks,
+  propagateTaskClosure,
+  updateTask,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import { randomUUID } from "crypto";
 
 export const taskTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
       name: "listTasks",
-      description: "List tasks. Can filter by projectId, date (unix day), status (pending, completed, missed, archived), or bucket (true/false). Returns tasks with a 'blockedBy' array of predecessor IDs.",
+      description:
+        "List tasks. Can filter by projectId, date (unix day), status (pending, completed, missed, archived), or bucket (true/false). Returns tasks with a 'blockedBy' array of predecessor IDs.",
       parameters: {
         type: "object",
         properties: {
           projectId: { type: "string" },
           date: { type: "number", description: "Unix day integer" },
           status: { type: "string" },
-          bucket: { type: "boolean" }
+          bucket: { type: "boolean" },
         },
         required: [],
       },
@@ -52,12 +53,23 @@ export const taskTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "updateTask",
-      description: "Update a task's properties (e.g. mark as 'done', change scheduledDate, update estimate).",
+      description:
+        "Update a task's properties (e.g. mark as 'done', change scheduledDate, update estimate).",
       parameters: {
         type: "object",
         properties: {
           id: { type: "string" },
-          status: { type: "string", enum: ["pending", "done", "missed", "carried", "adjusted", "deleted"] },
+          status: {
+            type: "string",
+            enum: [
+              "pending",
+              "done",
+              "missed",
+              "carried",
+              "adjusted",
+              "deleted",
+            ],
+          },
           title: { type: "string" },
           estimateMin: { type: "integer" },
           scheduledDate: { type: "number", description: "Unix day integer" },
@@ -65,7 +77,25 @@ export const taskTools: ChatCompletionTool[] = [
         required: ["id"],
       },
     },
-  }
+  },
+  {
+    type: "function",
+    function: {
+      name: "unscheduleToBucket",
+      description:
+        "Unschedule a task, returning it to the bucket. This will automatically unschedule all of its dependent tasks as well.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: "The ID of the task to unschedule",
+          },
+        },
+        required: ["id"],
+      },
+    },
+  },
 ];
 
 export const taskHandlers: Record<string, Function> = {
@@ -79,38 +109,40 @@ export const taskHandlers: Record<string, Function> = {
       status: args.status,
       bucket: args.bucket,
     });
-    
-    const taskIds = tasks.map(t => t.id);
+
+    const taskIds = tasks.map((t) => t.id);
     const deps = await listTaskDependenciesForTasks(taskIds);
-    
-    return tasks.map(t => {
+
+    return tasks.map((t) => {
       const blockedByTitles = deps
-        .filter(d => d.taskId === t.id)
-        .map(d => {
-          const pred = tasks.find(pt => pt.id === d.predecessorId);
-          return pred ? pred.title : d.predecessorId;
+        .filter((d) => d.taskId === t.id)
+        .map((d) => {
+          const pred = tasks.find((pt) => pt.id === d.predecessorId);
+          return pred ? pred.title : "Unknown task";
         });
-        
-      const scheduledDateStr = t.scheduledDate 
-        ? new Date(t.scheduledDate * 86400000).toISOString().split('T')[0] 
-        : null;
-        
-      const deadlineStr = t.deadlineAt
-        ? new Date(t.deadlineAt * 1000).toISOString().split('T')[0]
+
+      const scheduledDateStr = t.scheduledDate
+        ? new Date(t.scheduledDate * 86400000).toISOString().split("T")[0]
         : null;
 
-      return { 
-        ...t, 
+      const deadlineStr = t.deadlineAt
+        ? new Date(t.deadlineAt * 1000).toISOString().split("T")[0]
+        : null;
+
+      return {
+        title: t.title,
+        estimateMin: t.estimateMin,
+        status: t.status,
+        scheduledDate: scheduledDateStr,
+        deadline: deadlineStr,
         blockedBy: blockedByTitles,
-        scheduledDateStr,
-        deadlineStr
       };
     });
   },
   createTask: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    
+
     const project = await findProjectById(args.projectId, userId);
     if (!project) throw new Error("Project not found");
 
@@ -135,12 +167,20 @@ export const taskHandlers: Record<string, Function> = {
     });
 
     await insertTaskClosureSelf(newTaskId);
-    return task;
+    return {
+      success: true,
+      title: task.title,
+      estimateMin: task.estimateMin,
+      status: task.status,
+      scheduledDate: task.scheduledDate
+        ? new Date(task.scheduledDate * 86400000).toISOString().split("T")[0]
+        : null,
+    };
   },
   updateTask: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    
+
     const task = await findTaskById(args.id, userId);
     if (!task) throw new Error("Task not found");
 
@@ -148,16 +188,84 @@ export const taskHandlers: Record<string, Function> = {
     if (args.status !== undefined) updates.status = args.status;
     if (args.title !== undefined) updates.title = args.title;
     if (args.estimateMin !== undefined) updates.estimateMin = args.estimateMin;
-    if (args.scheduledDate !== undefined) updates.scheduledDate = args.scheduledDate;
+    if (args.scheduledDate !== undefined)
+      updates.scheduledDate = args.scheduledDate;
 
     if (args.status === "done") {
       updates.completedAt = nowSec();
     } else if (args.status === "pending") {
       updates.completedAt = null;
     }
-    
+
     updates.updatedAt = nowSec();
 
-    return await updateTask(args.id, updates);
-  }
+    const updated = await updateTask(args.id, updates);
+    return {
+      success: true,
+      title: updated.title,
+      status: updated.status,
+      estimateMin: updated.estimateMin,
+      scheduledDate: updated.scheduledDate
+        ? new Date(updated.scheduledDate * 86400000).toISOString().split("T")[0]
+        : null,
+    };
+  },
+  unscheduleToBucket: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    const task = await findTaskById(args.id, userId);
+    if (!task) throw new Error("Task not found");
+
+    const { db } = await import("@/lib/db/client");
+    const { tasks, taskDependencies } = await import("@/lib/db/models");
+    const { inArray } = await import("drizzle-orm");
+
+    const allSuccessorsToUnschedule: string[] = [];
+    let currentLevelIds = [args.id];
+
+    while (currentLevelIds.length > 0) {
+      const depsRows = await db
+        .select({ taskId: taskDependencies.taskId })
+        .from(taskDependencies)
+        .where(inArray(taskDependencies.predecessorId, currentLevelIds));
+
+      const nextLevelIds = depsRows.map((r) => r.taskId);
+      if (nextLevelIds.length === 0) break;
+
+      const allNextSuccessors = await db
+        .select({ id: tasks.id, date: tasks.scheduledDate })
+        .from(tasks)
+        .where(inArray(tasks.id, nextLevelIds));
+
+      for (const s of allNextSuccessors) {
+        if (s.date !== null) {
+          allSuccessorsToUnschedule.push(s.id);
+        }
+      }
+
+      currentLevelIds = allNextSuccessors.map((s) => s.id);
+    }
+
+    if (allSuccessorsToUnschedule.length > 0) {
+      await db
+        .update(tasks)
+        .set({ scheduledDate: null, updatedAt: nowSec() })
+        .where(inArray(tasks.id, allSuccessorsToUnschedule));
+    }
+
+    await updateTask(args.id, { scheduledDate: null, updatedAt: nowSec() });
+
+    // Sync day log for the task's old date if any
+    if (task.scheduledDate !== null) {
+      const { syncDayLogStats } = await import("@/lib/storage");
+      await syncDayLogStats(userId, task.scheduledDate);
+    }
+
+    return {
+      success: true,
+      unscheduledTask: args.id,
+      unscheduledSuccessorsCount: allSuccessorsToUnschedule.length,
+    };
+  },
 };

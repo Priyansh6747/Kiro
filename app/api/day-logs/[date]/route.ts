@@ -4,9 +4,9 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import { findDayLog, updateDayLog } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 const VALID_DAY_TYPES = ["normal", "adjusted", "break"] as const;
 type DayType = (typeof VALID_DAY_TYPES)[number];

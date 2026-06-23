@@ -257,3 +257,46 @@ export type NewMemoryBaseline = typeof memoryBaseline.$inferInsert;
 
 export type DayPlan = typeof dayPlan.$inferSelect;
 export type NewDayPlan = typeof dayPlan.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// AI Usage
+// ---------------------------------------------------------------------------
+export const aiUsage = sqliteTable("ai_usage", {
+  uid: text("uid").notNull(),
+  datetime: integer("datetime").notNull(),
+  inputToken: integer("input_token").notNull(),
+  outputToken: integer("output_token").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.uid, table.datetime] }),
+]);
+
+// ---------------------------------------------------------------------------
+// User Cost
+// ---------------------------------------------------------------------------
+export const userCost = sqliteTable("user_cost", {
+  uid: text("uid").notNull(),
+  date: text("date").notNull(),
+  dayCost: real("day_cost").notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.uid, table.date] }),
+]);
+
+// ---------------------------------------------------------------------------
+// Artifacts
+// ---------------------------------------------------------------------------
+export const artifacts = sqliteTable("artifacts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  projectId: text("project_id")
+    .references(() => projects.id),
+  type: text("type").notNull(),
+  content: text("content").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export type Artifact = typeof artifacts.$inferSelect;
+export type NewArtifact = typeof artifacts.$inferInsert;
+

@@ -1,16 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import type { Project, Task } from "@/lib/types";
-import { listTasks } from "@/lib/api-client";
-import { QuickCapture } from "@/components/ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DependencyChart } from "@/components/DependencyChart";
+import { QuickCapture } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
-
+import { listTasks } from "@/lib/api-client";
+import type { Project, Task } from "@/lib/types";
+import { EmptyTaskDetail } from "./Project/EmptyTaskDetail";
 import { ProjectHeader } from "./Project/ProjectHeader";
 import { ProjectProgressBar } from "./Project/ProjectProgressBar";
-import { TaskListCategory } from "./Project/TaskListCategory";
 import { TaskDetailPanel } from "./Project/TaskDetailPanel";
-import { EmptyTaskDetail } from "./Project/EmptyTaskDetail";
+import { TaskListCategory } from "./Project/TaskListCategory";
 
 export function ProjectWorkspace({
   project,
@@ -31,8 +30,12 @@ export function ProjectWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [showCapture, setShowCapture] = useState(false);
   const [showGraphModal, setShowGraphModal] = useState(false);
-  const [capturePredecessorId, setCapturePredecessorId] = useState<string | undefined>();
-  const [dependencies, setDependencies] = useState<{ taskId: string; predecessorId: string }[]>([]);
+  const [capturePredecessorId, setCapturePredecessorId] = useState<
+    string | undefined
+  >();
+  const [dependencies, setDependencies] = useState<
+    { taskId: string; predecessorId: string }[]
+  >([]);
 
   const { showToast } = useToast();
 
@@ -73,136 +76,169 @@ export function ProjectWorkspace({
   };
 
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
-  
+  const todayStart =
+    new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+
   const activityData = useMemo(() => {
-      const activity = [];
-      for (let i = 13; i >= 0; i--) {
-          const dayStart = todayStart - i * 86400;
-          const dayEnd = dayStart + 86400;
-          const completed = tasks.filter(
-              (t) => t.status === "done" && t.completedAt && t.completedAt >= dayStart && t.completedAt < dayEnd
-          ).length;
-          activity.push({ day: i, completed });
-      }
-      return activity;
+    const activity = [];
+    for (let i = 13; i >= 0; i--) {
+      const dayStart = todayStart - i * 86400;
+      const dayEnd = dayStart + 86400;
+      const completed = tasks.filter(
+        (t) =>
+          t.status === "done" &&
+          t.completedAt &&
+          t.completedAt >= dayStart &&
+          t.completedAt < dayEnd,
+      ).length;
+      activity.push({ day: i, completed });
+    }
+    return activity;
   }, [tasks, todayStart]);
 
   const totalTasks = tasks.length;
-  const doneTasks = tasks.filter(t => t.status === "done");
-  const notDoneTasks = tasks.filter(t => t.status !== "done");
+  const doneTasks = tasks.filter((t) => t.status === "done");
+  const notDoneTasks = tasks.filter((t) => t.status !== "done");
 
   const lockedTaskIds = new Set<string>();
   for (const dep of dependencies) {
-      const pred = tasks.find(t => t.id === dep.predecessorId);
-      if (pred && pred.status !== "done") {
-          lockedTaskIds.add(dep.taskId);
-      }
+    const pred = tasks.find((t) => t.id === dep.predecessorId);
+    if (pred && pred.status !== "done") {
+      lockedTaskIds.add(dep.taskId);
+    }
   }
 
-  const lockedTasks = notDoneTasks.filter(t => lockedTaskIds.has(t.id));
-  const readyTasks = notDoneTasks.filter(t => !lockedTaskIds.has(t.id));
+  const lockedTasks = notDoneTasks.filter((t) => lockedTaskIds.has(t.id));
+  const readyTasks = notDoneTasks.filter((t) => !lockedTaskIds.has(t.id));
 
   const donePct = totalTasks > 0 ? (doneTasks.length / totalTasks) * 100 : 0;
   const readyPct = totalTasks > 0 ? (readyTasks.length / totalTasks) * 100 : 0;
-  const lockedPct = totalTasks > 0 ? (lockedTasks.length / totalTasks) * 100 : 0;
+  const lockedPct =
+    totalTasks > 0 ? (lockedTasks.length / totalTasks) * 100 : 0;
 
   return (
     <div className="flex flex-col flex-1 h-full bg-base overflow-hidden relative">
-      <ProjectHeader project={project} onBack={onBack} activityData={activityData} />
-      <ProjectProgressBar donePct={donePct} readyPct={readyPct} lockedPct={lockedPct} />
+      <ProjectHeader
+        project={project}
+        onBack={onBack}
+        activityData={activityData}
+      />
+      <ProjectProgressBar
+        donePct={donePct}
+        readyPct={readyPct}
+        lockedPct={lockedPct}
+      />
 
       <div className="flex flex-1 min-h-0">
-          {/* Left Tasks Column */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-base relative">
-               <button
-                 onClick={() => {
-                   setCapturePredecessorId(undefined);
-                   setShowCapture(true);
-                 }}
-                 className="absolute top-6 right-6 text-sm font-semibold text-accent hover:underline"
-               >
-                 + Add Task
-               </button>
+        {/* Left Tasks Column */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-base relative">
+          <button
+            onClick={() => {
+              setCapturePredecessorId(undefined);
+              setShowCapture(true);
+            }}
+            className="absolute top-6 right-6 text-sm font-semibold text-accent hover:underline"
+          >
+            + Add Task
+          </button>
 
-               <TaskListCategory
-                 title="Ready"
-                 tasks={readyTasks}
-                 state="ready"
-                 selectedTaskId={selectedTask?.id}
-                 onSelectTask={setSelectedTask}
-                 emptyMessage="No tasks ready to start."
-               />
-               <TaskListCategory
-                 title="Locked"
-                 tasks={lockedTasks}
-                 state="locked"
-                 selectedTaskId={selectedTask?.id}
-                 onSelectTask={setSelectedTask}
-               />
-               <TaskListCategory
-                 title="Done"
-                 tasks={doneTasks}
-                 state="done"
-                 selectedTaskId={selectedTask?.id}
-                 onSelectTask={setSelectedTask}
-               />
+          <TaskListCategory
+            title="Ready"
+            tasks={readyTasks}
+            state="ready"
+            selectedTaskId={selectedTask?.id}
+            onSelectTask={setSelectedTask}
+            emptyMessage="No tasks ready to start."
+          />
+          <TaskListCategory
+            title="Locked"
+            tasks={lockedTasks}
+            state="locked"
+            selectedTaskId={selectedTask?.id}
+            onSelectTask={setSelectedTask}
+          />
+          <TaskListCategory
+            title="Done"
+            tasks={doneTasks}
+            state="done"
+            selectedTaskId={selectedTask?.id}
+            onSelectTask={setSelectedTask}
+          />
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="w-full md:w-[420px] flex flex-col shrink-0 border-l border-border-default bg-surface shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+          {/* Dependency Chart Preview */}
+          <div className="h-[280px] border-b border-border-default p-4 shrink-0 relative bg-surface-raised/50 group">
+            <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-base/40 backdrop-blur-[2px]">
+              <button
+                onClick={() => setShowGraphModal(true)}
+                className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-lg shadow hover:bg-blue-700 transition-colors"
+              >
+                Expand Graph
+              </button>
+            </div>
+            <DependencyChart
+              tasks={tasks}
+              dependencies={dependencies}
+              preview
+            />
           </div>
 
-          {/* Right Sidebar */}
-          <div className="w-full md:w-[420px] flex flex-col shrink-0 border-l border-border-default bg-surface shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-              {/* Dependency Chart Preview */}
-              <div className="h-[280px] border-b border-border-default p-4 shrink-0 relative bg-surface-raised/50 group">
-                   <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-base/40 backdrop-blur-[2px]">
-                       <button
-                           onClick={() => setShowGraphModal(true)}
-                           className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-lg shadow hover:bg-blue-700 transition-colors"
-                       >
-                           Expand Graph
-                       </button>
-                   </div>
-                   <DependencyChart tasks={tasks} dependencies={dependencies} preview />
-              </div>
-              
-              {/* Task Details */}
-              <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-surface">
-                   <div className="p-4 border-b border-border-default shrink-0">
-                       <h2 className="text-sm font-bold text-primary tracking-wide">Details</h2>
-                   </div>
-                   {selectedTask ? (
-                       <TaskDetailPanel task={selectedTask} allTasks={tasks} dependencies={dependencies} onUpdated={handleTaskUpdated} onDependencyAdded={loadTasks} onDependencyRemoved={loadTasks} />
-                   ) : (
-                       <EmptyTaskDetail />
-                   )}
-              </div>
+          {/* Task Details */}
+          <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-surface">
+            <div className="p-4 border-b border-border-default shrink-0">
+              <h2 className="text-sm font-bold text-primary tracking-wide">
+                Details
+              </h2>
+            </div>
+            {selectedTask ? (
+              <TaskDetailPanel
+                task={selectedTask}
+                allTasks={tasks}
+                dependencies={dependencies}
+                onUpdated={handleTaskUpdated}
+                onDependencyAdded={loadTasks}
+                onDependencyRemoved={loadTasks}
+              />
+            ) : (
+              <EmptyTaskDetail />
+            )}
           </div>
+        </div>
       </div>
 
       {showGraphModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-sm p-8">
-            <div className="w-full h-full max-w-7xl max-h-[90vh] flex flex-col bg-surface border border-border-default rounded-xl shadow-2xl overflow-hidden">
-                <div className="flex justify-between items-center px-6 py-4 border-b border-border-default bg-surface-raised shrink-0">
-                    <h2 className="text-xl font-bold text-primary">Dependency Graph</h2>
-                    <button
-                        onClick={() => setShowGraphModal(false)}
-                        className="text-secondary hover:text-primary transition-colors text-sm font-semibold"
-                    >
-                        Close ✕
-                    </button>
-                </div>
-                <div className="flex-1 overflow-hidden p-6 bg-base">
-                    <DependencyChart tasks={tasks} dependencies={dependencies} onAddDependency={async (taskId, predecessorId) => {
-                        try {
-                          const { addDependency } = await import("@/lib/api-client");
-                          await addDependency(taskId, predecessorId);
-                          loadTasks();
-                          showToast("Dependency added", "success");
-                        } catch (e) {
-                          showToast((e as Error).message, "error");
-                        }
-                    }} />
-                </div>
+          <div className="w-full h-full max-w-7xl max-h-[90vh] flex flex-col bg-surface border border-border-default rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-border-default bg-surface-raised shrink-0">
+              <h2 className="text-xl font-bold text-primary">
+                Dependency Graph
+              </h2>
+              <button
+                onClick={() => setShowGraphModal(false)}
+                className="text-secondary hover:text-primary transition-colors text-sm font-semibold"
+              >
+                Close ✕
+              </button>
             </div>
+            <div className="flex-1 overflow-hidden p-6 bg-base">
+              <DependencyChart
+                tasks={tasks}
+                dependencies={dependencies}
+                onAddDependency={async (taskId, predecessorId) => {
+                  try {
+                    const { addDependency } = await import("@/lib/api-client");
+                    await addDependency(taskId, predecessorId);
+                    loadTasks();
+                    showToast("Dependency added", "success");
+                  } catch (e) {
+                    showToast((e as Error).message, "error");
+                  }
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -227,4 +263,3 @@ export function ProjectWorkspace({
     </div>
   );
 }
-

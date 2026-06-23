@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
-import type { Preference, RatioMode } from "@/lib/types";
-import { getPreferences, patchPreferences } from "@/lib/api-client";
-import { LoadingScreen, ErrorBanner, Spinner } from "@/components/ui";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { Contrast, Leaf, Moon, Sparkles, Sun } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { ErrorBanner, LoadingScreen, Spinner } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
-import { Sun, Moon, Sparkles, Leaf, Contrast } from "lucide-react";
+import { getPreferences, patchPreferences } from "@/lib/api-client";
+import type { Preference, RatioMode } from "@/lib/types";
 
 function Field({
   label,

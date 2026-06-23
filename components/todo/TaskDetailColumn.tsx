@@ -2,11 +2,11 @@
 
 import type { Task } from "@/lib/types";
 import {
-  formatTimestamp,
-  yyyymmddToDateString,
-  dateStringToYyyymmdd,
-  timestampToDateString,
   dateStringToTimestamp,
+  dateStringToYyyymmdd,
+  formatTimestamp,
+  timestampToDateString,
+  yyyymmddToDateString,
 } from "./utils";
 
 export function TaskDetailColumn({

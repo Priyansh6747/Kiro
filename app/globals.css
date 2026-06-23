@@ -386,7 +386,7 @@ body {
     transform-origin: center center;
     will-change: transform, opacity;
   }
-  
+
   @keyframes rotate-dial {
     0% {
       transform: perspective(800px) rotateX(40deg) scale(0.8) translateY(-10px);

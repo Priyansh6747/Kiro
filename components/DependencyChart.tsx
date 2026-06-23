@@ -1,22 +1,22 @@
 "use client";
 
-import { useMemo, useCallback, useEffect } from "react";
 import {
-  ReactFlow,
-  Controls,
   Background,
-  Edge,
-  Node,
-  MarkerType,
-  Position,
+  type Connection,
+  Controls,
+  type Edge,
   Handle,
-  Connection,
-  useNodesState,
+  MarkerType,
+  type Node,
+  Position,
+  ReactFlow,
   useEdgesState,
+  useNodesState,
 } from "@xyflow/react";
+import { useCallback, useEffect, useMemo } from "react";
 import "@xyflow/react/dist/style.css";
-import { Task } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
+import type { Task } from "@/lib/types";
 
 const TaskNode = ({ data, id }: any) => {
   return (

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
-import { listTaskDependenciesForProject } from "@/lib/storage";
 import type { NextRequest } from "next/server";
+import { listTaskDependenciesForProject } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,

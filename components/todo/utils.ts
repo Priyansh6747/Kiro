@@ -22,7 +22,7 @@ export function yyyymmddToDateString(d: number | null | undefined) {
 
 export function dateStringToYyyymmdd(str: string) {
   if (!str) return null;
-  const [y, m, d] = str.split('-').map(Number);
+  const [y, m, d] = str.split("-").map(Number);
   return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
 }
 

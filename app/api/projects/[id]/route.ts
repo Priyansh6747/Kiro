@@ -4,8 +4,8 @@
  */
 
 import { auth } from "@clerk/nextjs/server";
-import { archiveProject, findProjectById, updateProject } from "@/lib/storage";
 import type { NextRequest } from "next/server";
+import { archiveProject, findProjectById, updateProject } from "@/lib/storage";
 
 const VALID_TYPES = ["critical", "recurring", "habit", "nicetohave"] as const;
 type ProjectType = (typeof VALID_TYPES)[number];

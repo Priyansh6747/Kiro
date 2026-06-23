@@ -1,5 +1,5 @@
 import React from "react";
-import type { Task, DayPlan, Project } from "@/lib/types";
+import type { DayPlan, Project, Task } from "@/lib/types";
 
 interface DayViewProps {
   tasks: Task[];

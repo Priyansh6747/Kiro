@@ -2,10 +2,10 @@
 
 import React, {
   createContext,
+  type ReactNode,
+  useCallback,
   useContext,
   useState,
-  useCallback,
-  ReactNode,
 } from "react";
 
 export type ToastType = "success" | "error" | "info";
@@ -146,6 +146,6 @@ export function useSuccessToast() {
     (message: string) => {
       showToast(message, "success");
     },
-    [showToast]
+    [showToast],
   );
 }

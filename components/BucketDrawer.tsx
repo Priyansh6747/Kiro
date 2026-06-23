@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Task, Project } from "@/lib/types";
-import { formatTimestamp } from "@/lib/types";
+import { useRef, useState } from "react";
+import { formatTimestamp, type Project, type Task } from "@/lib/types";
 
 interface BucketDrawerProps {
   bucketTasksByProject: Record<string, Task[]>;
@@ -69,7 +68,9 @@ export function BucketDrawer({
                   {projectName}
                 </span>
                 <span className="text-xs text-secondary">
-                  {project?.deadlineAt ? formatTimestamp(project.deadlineAt) : "No Deadline"}
+                  {project?.deadlineAt
+                    ? formatTimestamp(project.deadlineAt)
+                    : "No Deadline"}
                 </span>
               </div>
 

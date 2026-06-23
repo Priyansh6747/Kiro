@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
-import type { Task, Project, TodayPlannerData } from "@/lib/types";
-import { todayUnixDay } from "@/lib/types";
-import {
-  getTodayPlan,
-  listTasks,
-  listProjects,
-  updateTask,
-  placeDayPlanBlock,
-  removeDayPlanBlock,
-  createTask,
-} from "@/lib/api-client";
-import { LoadingScreen, ErrorBanner, QuickCapture } from "@/components/ui";
-import { DayPlanner } from "@/components/DayPlanner";
-import { DayView } from "@/components/DayView";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
+import { DayPlanner } from "@/components/DayPlanner";
+import { DayView } from "@/components/DayView";
 import { TodaySkeleton } from "@/components/TodaySkeleton";
+import { ErrorBanner, LoadingScreen, QuickCapture } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
+import {
+  createTask,
+  getTodayPlan,
+  listProjects,
+  listTasks,
+  placeDayPlanBlock,
+  removeDayPlanBlock,
+  updateTask,
+} from "@/lib/api-client";
+import type { Project, Task, TodayPlannerData } from "@/lib/types";
+import { todayUnixDay } from "@/lib/types";
 
 export default function TodayPage() {
   return (

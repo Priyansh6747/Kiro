@@ -138,6 +138,9 @@ export const getProjectDependencies = (projectId: string) =>
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
+export const getTodayUsage = () =>
+  request<{ dayCost: number; maxCost: number }>("/api/usage/today");
+
 export const listProjects = () =>
   request<import("./types").Project[]>("/api/projects");
 

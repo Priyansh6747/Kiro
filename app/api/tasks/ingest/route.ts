@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import {
   createTask,
   findProjectById,
@@ -6,7 +7,6 @@ import {
   propagateTaskClosure,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
-import type { NextRequest } from "next/server";
 
 interface IngestTaskItem {
   id?: string;

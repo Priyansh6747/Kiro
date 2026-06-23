@@ -12,17 +12,26 @@ export function ProjectProgressBar({
       <div className="h-1.5 rounded-full bg-surface-raised w-full overflow-hidden flex">
         <div
           className="h-full transition-all"
-          style={{ width: `${donePct}%`, backgroundColor: "var(--status-done)" }}
+          style={{
+            width: `${donePct}%`,
+            backgroundColor: "var(--status-done)",
+          }}
           title={`Done: ${Math.round(donePct)}%`}
         />
         <div
           className="h-full transition-all"
-          style={{ width: `${readyPct}%`, backgroundColor: "var(--node-ready)" }}
+          style={{
+            width: `${readyPct}%`,
+            backgroundColor: "var(--node-ready)",
+          }}
           title={`Ready: ${Math.round(readyPct)}%`}
         />
         <div
           className="h-full transition-all"
-          style={{ width: `${lockedPct}%`, backgroundColor: "var(--border-strong)" }}
+          style={{
+            width: `${lockedPct}%`,
+            backgroundColor: "var(--border-strong)",
+          }}
           title={`Locked: ${Math.round(lockedPct)}%`}
         />
       </div>

@@ -10,13 +10,13 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { callGroq } from "@/lib/groq";
+import { buildEodSummaryPrompt, type EodSummaryPayload } from "@/lib/scoring";
 import {
   findDayLog,
   getOrCreatePreferences,
   latestTaskUpdateForDay,
   listTasks,
 } from "@/lib/storage";
-import { buildEodSummaryPrompt, type EodSummaryPayload } from "@/lib/scoring";
 import { nowSec, todayUnixDay } from "@/lib/utils";
 
 const STALE_THRESHOLD_SEC = 24 * 3600; // 24 hours
@@ -68,7 +68,7 @@ export async function POST(): Promise<Response> {
   // ── Build prompt and call Groq ───────────────────────────────────────────
   const prompt = buildEodSummaryPrompt(payload);
   console.log("EOD summary prompt:", prompt);
-  const summaryText = await callGroq(prompt, 300);
+  const summaryText = await callGroq(prompt, 300, userId);
   console.log("EOD summary:", summaryText);
 
   return Response.json({ data: { summary: summaryText, stats: payload } });
