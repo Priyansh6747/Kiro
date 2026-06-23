@@ -28,6 +28,9 @@ import {
   dayPlan,
   type MemoryBaseline,
   memoryBaseline,
+  artifacts,
+  type Artifact,
+  type NewArtifact,
   type NewDayLog,
   type NewDayPlan,
   type NewMemoryBaseline,
@@ -246,9 +249,14 @@ export async function countActiveNonDefaultProjects(
   return rows[0]?.cnt ?? 0;
 }
 
-export async function createProject(data: NewProject): Promise<Project> {
-  const rows = await db.insert(projects).values(data).returning();
-  return rows[0];
+export async function createProject(data: Omit<NewProject, "id" | "createdAt" | "type"> & Partial<NewProject>): Promise<Project> {
+  const [project] = await db.insert(projects).values({
+    ...data,
+    id: data.id || crypto.randomUUID(),
+    createdAt: data.createdAt || nowSec(),
+    type: data.type || "critical",
+  }).returning();
+  return project;
 }
 
 export async function updateProject(
@@ -417,9 +425,14 @@ export async function findTaskWithProject(
   return rows[0];
 }
 
-export async function createTask(data: NewTask): Promise<Task> {
-  const rows = await db.insert(tasks).values(data).returning();
-  return rows[0];
+export async function createTask(data: Omit<NewTask, "id" | "createdAt" | "updatedAt"> & Partial<NewTask>): Promise<Task> {
+  const [task] = await db.insert(tasks).values({
+    ...data,
+    id: data.id || crypto.randomUUID(),
+    createdAt: data.createdAt || nowSec(),
+    updatedAt: data.updatedAt || nowSec(),
+  }).returning();
+  return task;
 }
 
 export async function updateTask(
@@ -1147,4 +1160,43 @@ export async function removeDayPlanBlock(
   await db
     .delete(dayPlan)
     .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)));
+}
+
+// ---------------------------------------------------------------------------
+// Artifacts
+// ---------------------------------------------------------------------------
+
+export async function createArtifact(data: Omit<NewArtifact, "id" | "createdAt" | "updatedAt"> & Partial<NewArtifact>): Promise<Artifact> {
+  const [artifact] = await db.insert(artifacts).values({
+    ...data,
+    id: data.id || crypto.randomUUID(),
+    createdAt: data.createdAt || nowSec(),
+    updatedAt: data.updatedAt || nowSec(),
+  }).returning();
+  return artifact;
+}
+
+export async function getArtifactById(id: string): Promise<Artifact | undefined> {
+  const rows = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function getArtifactsByUser(userId: string, type?: string): Promise<Artifact[]> {
+  let query = db.select().from(artifacts).where(eq(artifacts.userId, userId));
+  if (type) {
+    query = db.select().from(artifacts).where(and(eq(artifacts.userId, userId), eq(artifacts.type, type)));
+  }
+  return query.orderBy(desc(artifacts.createdAt));
+}
+
+export async function updateArtifact(
+  id: string,
+  patch: Partial<Pick<Artifact, "content" | "type">>
+): Promise<Artifact> {
+  const [updated] = await db
+    .update(artifacts)
+    .set({ ...patch, updatedAt: nowSec() })
+    .where(eq(artifacts.id, id))
+    .returning();
+  return updated;
 }

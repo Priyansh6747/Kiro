@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CheckCircle2, Circle, Clock, TrendingUp, TrendingDown, AlertTriangle, Play, Pause, Square, Calendar, Folder } from "lucide-react";
+import { PlanningIntakeForm } from "./planning/PlanningIntakeForm";
+import { AiQuestions } from "./planning/AiQuestions";
+import { ArtifactPreview } from "./planning/ArtifactPreview";
+import { TaskDependencyGraph } from "./planning/TaskDependencyGraph";
+import { TaskManager } from "./planning/TaskManager";
 
 // --- Subcomponents ---
 
@@ -249,8 +254,8 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
   const defaultProse = "prose prose-sm md:prose-base prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none";
   const className = proseClassName || defaultProse;
 
-  // Regex to find any tag like |-TABLE-|, |-TASK-|, etc.
-  const tagRegex = /(\|-([A-Z]+)-\|)/;
+  // Regex to find any tag like |-TABLE-|, |-TASK-|, |-PLANNING-FORM-|, etc.
+  const tagRegex = /(\|-([A-Z-]+)-\|)/;
   
   const renderPart = (text: string, index: number) => {
     let currentText = text;
@@ -348,6 +353,11 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
             case "CONFIRM": Component = <ConfirmBox data={data} />; break;
             case "FORM": Component = <SmartForm data={data} />; break;
             case "TIMER": Component = <LiveTimer data={data} />; break;
+            case "PLANNING-FORM": Component = <PlanningIntakeForm data={data} />; break;
+            case "AI-QUESTIONS": Component = <AiQuestions data={data} />; break;
+            case "ARTIFACT-PREVIEW": Component = <ArtifactPreview data={data} />; break;
+            case "TASK-GRAPH": Component = <TaskDependencyGraph data={data} />; break;
+            case "TASK-MANAGER": Component = <TaskManager data={data} />; break;
             default: Component = <div className="p-2 bg-missed-subtle text-missed text-xs rounded border border-missed/30">Unknown Tag: {tagType}</div>;
           }
 

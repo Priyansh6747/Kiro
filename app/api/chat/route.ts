@@ -64,6 +64,11 @@ UI Component Rendering Rule:
 - |-CONFIRM-|{"action":"archiveProject", "params":{"name":"Todo"}, "message":"Are you sure you want to archive Todo?", "buttonText": "Yes, Archive"}
 - |-FORM-|{"type":"createProject", "title":"New Project", "fields": [{"name":"name", "type":"string", "label":"Name"}, {"name":"importance", "type":"number", "label":"Importance (1-5)"}]}
 - |-TIMER-|{"durationMin": 30, "label": "Deep Work"}
+- |-PLANNING-FORM-|{"phase":1}
+- |-AI-QUESTIONS-|{"artifactId":"<id>","questions":[{"id":"q1","question":"...","type":"text"}]}
+- |-ARTIFACT-PREVIEW-|{"artifactId":"<id>","markdown":"# Project Name\n## Overview\n..."}
+- |-TASK-GRAPH-|{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[{"id":"task_1","title":"...","estimate_min":60,"deadline":null,"depends_on":[]}]}]}
+- |-TASK-MANAGER-|{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[...]}]}
 
 Data Protection Rule:
 18. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables.

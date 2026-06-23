@@ -5,6 +5,7 @@ import { preferenceHandlers, preferenceTools } from "./preferences";
 import { projectHandlers, projectTools } from "./projects";
 import { taskHandlers, taskTools } from "./tasks";
 import { uiHandlers, uiTools } from "./ui";
+import { planningHandlers, planningTools, SAGE_PROMPT } from "./planning-workflow";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -45,12 +46,13 @@ const getTodayDateHandler = async () => {
 export const agentScopes = `
 Other agents and their scopes:
 - Yuki (Assistant): General orchestration, can delegate to anyone.
-- Nova (ProjectAgent): Projects — creation, importance, deadlines.
+- Nova (ProjectAgent): Projects — creation, importance, deadlines (NOT planning. Route 'plan a project' requests to Sage).
 - Quill (TaskAgent): Granular task ops — create, complete, reschedule.
 - Echo (PreferencesAgent): Background config — timezone, ratio mode, nudge time.
 - Iva (DayLogAgent): Records daily history — the append-only ledger.
 - Juno (PlannerAgent): Orchestrates the daily plan, enforces overload warnings.
 - Zef (UIAgent): Navigation/UI-state actions.
+- Sage (PlanningAgent): End-to-end project planning — intake → brief → tasks → graph.
 
 If the user asks you to do something outside your scope, DO NOT try to fulfill it or hallucinate tools. Instead, tell the user to ask the corresponding agent or use Yuki.`;
 
@@ -98,6 +100,12 @@ export const agents: Record<
     handlers: uiHandlers,
     prompt: "You are Zef, the Kiro UI Agent. Your scope is Navigation/UI-state actions. Only use the tools provided to answer the user's request.\n" + agentScopes,
     description: "Navigation/UI-state actions",
+  },
+  Sage: {
+    tools: planningTools,
+    handlers: planningHandlers,
+    prompt: SAGE_PROMPT,
+    description: "End-to-end project planning — intake, clarification, brief, tasks, graph.",
   },
 };
 
