@@ -210,6 +210,25 @@ export async function findProjectById(
   return rows[0];
 }
 
+/** Find an active project by its name (case-insensitive) for a user. */
+export async function findProjectByName(
+  name: string,
+  userId: string,
+): Promise<Project | undefined> {
+  const rows = await db
+    .select()
+    .from(projects)
+    .where(
+      and(
+        eq(projects.userId, userId),
+        sql`lower(${projects.name}) = lower(${name})`,
+        isNull(projects.archivedAt),
+      ),
+    )
+    .limit(1);
+  return rows[0];
+}
+
 /** Count of non-default active projects for a user. */
 export async function countActiveNonDefaultProjects(
   userId: string,
@@ -327,6 +346,26 @@ export async function findTaskById(
     .where(
       and(eq(tasks.id, id), eq(tasks.userId, userId), isNull(tasks.deletedAt)),
     )
+    .limit(1);
+  return rows[0];
+}
+
+/** Find a non-deleted task by title (case-insensitive), optionally scoped to a project. */
+export async function findTaskByTitle(
+  title: string,
+  userId: string,
+  projectId?: string,
+): Promise<Task | undefined> {
+  const conditions: any[] = [
+    eq(tasks.userId, userId),
+    isNull(tasks.deletedAt),
+    sql`lower(${tasks.title}) = lower(${title})`,
+  ];
+  if (projectId) conditions.push(eq(tasks.projectId, projectId));
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(and(...conditions))
     .limit(1);
   return rows[0];
 }

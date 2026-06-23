@@ -45,11 +45,11 @@ export const projectTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "archiveProject",
-      description: "Archive a project.",
+      description: "Archive a project by its human-readable name.",
       parameters: {
         type: "object",
-        properties: { id: { type: "string" } },
-        required: ["id"],
+        properties: { name: { type: "string", description: "Human-readable project name" } },
+        required: ["name"],
       },
     },
   },
@@ -98,9 +98,10 @@ export const projectHandlers: Record<string, Function> = {
   archiveProject: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    const project = await findProjectById(args.id, userId);
-    if (!project) throw new Error("Project not found");
-    await archiveProject(args.id);
+    const { findProjectByName } = await import("@/lib/storage");
+    const project = await findProjectByName(args.name, userId);
+    if (!project) throw new Error(`Project "${args.name}" not found`);
+    await archiveProject(project.id);
     return { success: true, archivedProject: project.name };
   },
 };
