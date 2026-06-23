@@ -30,11 +30,11 @@ export async function POST(req: NextRequest) {
             content: JSON.stringify({ phase: 1, ...phase1 }),
           });
           console.log("[Planning API] Artifact created:", artifact.id);
-          controller.enqueue(sseEvent("chunk", `|-PLANNING-FORM-|{"phase":1}`));
-          // Wait, the prompt says: Stream one chunk event containing { sessionId: artifact.id, tag: '|-PLANNING-FORM-|{"phase":1}' }
+          controller.enqueue(sseEvent("chunk", '<ui:planning-form>{"phase":1}</ui:planning-form>'));
+          // Wait, the prompt says: Stream one chunk event containing { sessionId: artifact.id, tag: '<ui:planning-form>{"phase":1}</ui:planning-form>' }
           // Ah, I need to send a JSON object with sessionId and tag! Let me fix this.
-          // I will send: { sessionId: artifact.id, tag: '|-PLANNING-FORM-|{"phase":1}' }
-          controller.enqueue(sseEvent("chunk", { sessionId: artifact.id, tag: `|-PLANNING-FORM-|{"phase":1}` }));
+          // I will send: { sessionId: artifact.id, tag: '<ui:planning-form>{"phase":1}</ui:planning-form>' }
+          controller.enqueue(sseEvent("chunk", { sessionId: artifact.id, tag: '<ui:planning-form>{"phase":1}</ui:planning-form>' }));
           controller.enqueue(sseEvent("done", {}));
           controller.close();
           console.log("[Planning API] Phase 1 stream closed.");
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
             });
           }
           
-          controller.enqueue(sseEvent("chunk", `|-AI-QUESTIONS-|${JSON.stringify({ artifactId: sessionId, questions })}`));
+          controller.enqueue(sseEvent("chunk", `<ui:ai-questions>${JSON.stringify({ artifactId: sessionId, questions })}</ui:ai-questions>`));
           controller.enqueue(sseEvent("done", {}));
           controller.close();
         }
@@ -89,31 +89,60 @@ export async function POST(req: NextRequest) {
              });
            }
            
-           controller.enqueue(sseEvent("chunk", `|-ARTIFACT-PREVIEW-|${JSON.stringify({ artifactId: sessionId, markdown })}`));
+           controller.enqueue(sseEvent("chunk", `<ui:artifact-preview>${JSON.stringify({ artifactId: sessionId, markdown })}</ui:artifact-preview>`));
            controller.enqueue(sseEvent("done", {}));
            controller.close();
         }
         else if (phase === 4) {
-           const prompt = `You are a senior engineering project manager. Given this project brief, produce a complete JSON breakdown of stages and tasks. Each stage has: \`stage\` (number), \`stageName\` (string), \`tasks\` (array). Each task has: \`id\` (unique string), \`title\`, \`estimate_min\`, \`deadline\` (ISO or null), \`depends_on\` (array of task ids), optional \`subtasks\`. 
-CRITICAL: Return ONLY a valid JSON array, starting with '[' and ending with ']'. Ensure all quotes inside strings are properly escaped. Do not include markdown code blocks or any other text.\nBrief:\n${markdownContent}`;
+           const outlinePrompt = `You are a senior engineering project manager. Given this project brief, break it down into exactly 4 chronological stages. Return a JSON array of 4 objects. Each object has: \`stage\` (number: 1, 2, 3, 4), \`stageName\` (string), and \`tasks\` (array of objects with \`id\` (a unique string like "task_1") and \`title\` (string)). Do not include any other fields yet. Return ONLY a valid JSON array starting with '['.\nBrief:\n${markdownContent}`;
            
-           let stages = [];
-           let attempts = 0;
-           while (attempts < 3) {
-             const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
-             const rawContent = completion.choices[0]?.message?.content || "[]";
-             
+           let stagesOutline: any[] = [];
+           let outlineAttempts = 0;
+           while (outlineAttempts < 3) {
+             const completion = await groqChat([{ role: "user", content: outlinePrompt }], [], userId);
+             const raw = completion.choices[0]?.message?.content || "[]";
              try {
-               const match = rawContent.match(/\[[\s\S]*\]/);
-               stages = JSON.parse(match ? match[0] : rawContent);
-               if (stages && Array.isArray(stages)) {
-                 break; // Success!
-               }
+               const match = raw.match(/\[[\s\S]*\]/);
+               stagesOutline = JSON.parse(match ? match[0] : raw);
+               if (stagesOutline && Array.isArray(stagesOutline) && stagesOutline.length > 0) break;
              } catch(e) {
-               console.error(`[Planning API] Failed to parse JSON breakdown on attempt ${attempts + 1}:`, e);
-               attempts++;
+               console.error(`[Planning API] Outline parse failed on attempt ${outlineAttempts + 1}:`, e);
+               outlineAttempts++;
              }
            }
+
+           if (!stagesOutline || stagesOutline.length === 0) {
+             throw new Error("Failed to generate task outline.");
+           }
+
+           // Run detail generation in parallel for all 4 stages to avoid massive JSON payloads
+           const detailPromises = stagesOutline.map(async (stageObj) => {
+             const detailPrompt = `You are detailing Stage ${stageObj.stage} (${stageObj.stageName}). Here is the full project outline with all task IDs: ${JSON.stringify(stagesOutline)}. For ONLY the tasks in Stage ${stageObj.stage}, generate their full details. Return a JSON array of task objects. Each task MUST have: \`id\` (must exactly match the outline), \`title\`, \`estimate_min\` (number), \`deadline\` (ISO string or null), \`depends_on\` (array of task IDs from previous stages or this stage that must be completed first), and \`subtasks\` (array of {title, estimate_min}). Return ONLY a valid JSON array starting with '['.`;
+             
+             let detailTasks = [];
+             let detailAttempts = 0;
+             while (detailAttempts < 3) {
+               const completion = await groqChat([{ role: "user", content: detailPrompt }], [], userId);
+               const raw = completion.choices[0]?.message?.content || "[]";
+               try {
+                 const match = raw.match(/\[[\s\S]*\]/);
+                 detailTasks = JSON.parse(match ? match[0] : raw);
+                 if (detailTasks && Array.isArray(detailTasks)) break;
+               } catch(e) {
+                 console.error(`[Planning API] Detail parse failed for stage ${stageObj.stage} on attempt ${detailAttempts + 1}:`, e);
+                 detailAttempts++;
+               }
+             }
+             
+             // Ensure fallback to outline if detailed generation completely fails
+             return {
+               stage: stageObj.stage,
+               stageName: stageObj.stageName,
+               tasks: detailTasks.length > 0 ? detailTasks : stageObj.tasks.map((t: any) => ({ ...t, estimate_min: 60, depends_on: [] }))
+             };
+           });
+
+           const stages = await Promise.all(detailPromises);
            
            if (sessionId) {
              await updateArtifact(sessionId, {
@@ -122,7 +151,7 @@ CRITICAL: Return ONLY a valid JSON array, starting with '[' and ending with ']'.
              });
            }
            
-           controller.enqueue(sseEvent("chunk", `|-TASK-MANAGER-|${JSON.stringify({ artifactId: sessionId, stages })}`));
+           controller.enqueue(sseEvent("chunk", `<ui:task-manager>${JSON.stringify({ artifactId: sessionId, stages })}</ui:task-manager>`));
            controller.enqueue(sseEvent("done", {}));
            controller.close();
         } else {

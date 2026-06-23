@@ -276,6 +276,24 @@ function LiveTimer({ data }: { data: any }) {
   );
 }
 
+function DelayedComponentRenderer({ children, type }: { children: React.ReactNode, type: string }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="my-4 p-4 rounded-xl border border-accent/20 bg-surface text-accent text-sm animate-pulse flex items-center justify-center gap-2 shadow-sm">
+        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        Rendering {type.toLowerCase()}...
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 // --- Parser ---
 
 export function ContentRenderer({ content, proseClassName }: { content: string, proseClassName?: string }) {
@@ -283,8 +301,9 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
   const defaultProse = "prose prose-sm md:prose-base prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none";
   const className = proseClassName || defaultProse;
 
-  // Regex to find any tag like |-TABLE-|, |-TASK-|, |-PLANNING-FORM-|, etc.
-  const tagRegex = /(\|-([A-Z-]+)-(\|)?)/;
+  // Regex to find any tag like <ui:table>{...}</ui:table>
+  // The (?:<\/ui:\1>|$) part makes the closing tag optional, so it matches even while streaming
+  const tagRegex = /<ui:([a-zA-Z-]+)>([\s\S]*?)(?:<\/ui:\1>|$)/i;
   
   const renderPart = (text: string, index: number) => {
     let currentText = text;
@@ -312,95 +331,50 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
         );
       }
 
-      // Now we are at the tag
-      const tagString = match[1];
-      const tagType = match[2];
-      const afterTagIndex = (match.index || 0) + tagString.length;
-      const textAfterTag = currentText.substring(afterTagIndex);
+      const tagString = match[0];
+      const tagType = match[1].toUpperCase();
+      const jsonStr = match[2].trim();
+      const hasClosingTag = currentText.substring(match.index || 0).includes(`</ui:${match[1]}>`);
 
-      // Find the JSON block after the tag
-      let braceCount = 0;
-      let jsonEndIndex = -1;
-      let inString = false;
-      let escape = false;
+      try {
+        const data = JSON.parse(jsonStr);
+        let Component: React.ReactNode = null;
+        switch (tagType) {
+          case "TABLE": Component = <ResponsiveTable {...data} />; break;
+          case "TASK": Component = <TaskCard data={data} />; break;
+          case "TIMELINE": Component = <TimelineView data={data} />; break;
+          case "METRICS":
+          case "CHART": Component = <MetricsChart data={data} />; break;
+          case "CONFIRM": Component = <ConfirmBox data={data} />; break;
+          case "FORM": Component = <SmartForm data={data} />; break;
+          case "TIMER": Component = <LiveTimer data={data} />; break;
+          case "PLANNING-FORM": Component = <PlanningIntakeForm data={data} />; break;
+          case "AI-QUESTIONS": Component = <AiQuestions data={data} />; break;
+          case "ARTIFACT-PREVIEW": Component = <ArtifactPreview data={data} />; break;
+          case "TASK-GRAPH": Component = <TaskDependencyGraph data={data} />; break;
+          case "TASK-MANAGER": Component = <TaskManager data={data} />; break;
+          default: Component = <div className="p-2 bg-missed-subtle text-missed text-xs rounded border border-missed/30">Unknown Tag: {tagType}</div>;
+        }
 
-      // Skip whitespace to find the opening brace
-      let jsonStartIndex = -1;
-      for (let i = 0; i < textAfterTag.length; i++) {
-        const char = textAfterTag[i];
-        if (char === "{") {
-          jsonStartIndex = i;
-          break;
-        } else if (char.trim() !== "" && char !== ":") {
-          break; // found non-whitespace and non-colon before '{', invalid JSON block
+        elements.push(
+          <DelayedComponentRenderer key={`${index}-${keyCounter++}`} type={tagType}>
+            {Component}
+          </DelayedComponentRenderer>
+        );
+      } catch (e) {
+        if (hasClosingTag) {
+          elements.push(<div key={`${index}-${keyCounter++}`} className="p-2 text-missed border">Invalid JSON for {tagType}</div>);
+        } else {
+          // If still streaming, render the raw tag string inside a custom pre block for high visibility hacker illusion
+          elements.push(
+            <pre key={`${index}-${keyCounter++}`} className="my-4 p-4 rounded-xl bg-surface-raised border border-accent/40 text-accent font-mono text-xs overflow-x-auto whitespace-pre-wrap shadow-sm">
+              {tagString}
+            </pre>
+          );
         }
       }
 
-      if (jsonStartIndex !== -1) {
-        for (let i = jsonStartIndex; i < textAfterTag.length; i++) {
-          const char = textAfterTag[i];
-          if (escape) {
-            escape = false;
-            continue;
-          }
-          if (char === '\\') {
-            escape = true;
-            continue;
-          }
-          if (char === '"') {
-            inString = !inString;
-          }
-          if (!inString) {
-            if (char === "{") braceCount++;
-            else if (char === "}") braceCount--;
-
-            if (braceCount === 0 && char === "}") {
-              jsonEndIndex = i;
-              break;
-            }
-          }
-        }
-      }
-
-      if (jsonEndIndex !== -1) {
-        // Successfully found a JSON block
-        const jsonStr = textAfterTag.substring(jsonStartIndex, jsonEndIndex + 1);
-        try {
-          const data = JSON.parse(jsonStr);
-          
-          let Component: React.ReactNode = null;
-          switch (tagType) {
-            case "TABLE": Component = <ResponsiveTable {...data} />; break;
-            case "TASK": Component = <TaskCard data={data} />; break;
-            case "TIMELINE": Component = <TimelineView data={data} />; break;
-            case "METRICS":
-            case "CHART": Component = <MetricsChart data={data} />; break;
-            case "CONFIRM": Component = <ConfirmBox data={data} />; break;
-            case "FORM": Component = <SmartForm data={data} />; break;
-            case "TIMER": Component = <LiveTimer data={data} />; break;
-            case "PLANNING-FORM": Component = <PlanningIntakeForm data={data} />; break;
-            case "AI-QUESTIONS": Component = <AiQuestions data={data} />; break;
-            case "ARTIFACT-PREVIEW": Component = <ArtifactPreview data={data} />; break;
-            case "TASK-GRAPH": Component = <TaskDependencyGraph data={data} />; break;
-            case "TASK-MANAGER": Component = <TaskManager data={data} />; break;
-            default: Component = <div className="p-2 bg-missed-subtle text-missed text-xs rounded border border-missed/30">Unknown Tag: {tagType}</div>;
-          }
-
-          elements.push(<React.Fragment key={`${index}-${keyCounter++}`}>{Component}</React.Fragment>);
-          
-          // Move currentText past the JSON block
-          currentText = textAfterTag.substring(jsonEndIndex + 1);
-          continue;
-        } catch (e) {
-          // JSON parsing failed, fallback to treating the tag as text
-        }
-      }
-
-      // If we got here, we couldn't parse the JSON or didn't find one. Just render the tag as text and move on.
-      elements.push(
-        <MarkdownRenderer key={`${index}-${keyCounter++}`} content={tagString} className={className} />
-      );
-      currentText = textAfterTag;
+      currentText = currentText.substring((match.index || 0) + tagString.length);
     }
 
     return <>{elements}</>;
@@ -426,10 +400,11 @@ export function StreamableContentRenderer({ content, proseClassName, isLast }: {
       return;
     }
 
-    const charsPerTick = Math.max(2, Math.floor(content.length / 50));
+    const charsPerTick = Math.max(1, Math.floor(content.length / 150));
     const timer = setInterval(() => {
       setVisibleLength(prev => {
-        const next = prev + charsPerTick;
+        let next = prev + charsPerTick;
+        
         if (next >= content.length) {
           clearInterval(timer);
           streamedMessages.add(content);
@@ -437,7 +412,7 @@ export function StreamableContentRenderer({ content, proseClassName, isLast }: {
         }
         return next;
       });
-    }, 20);
+    }, 25);
 
     return () => clearInterval(timer);
   }, [content, visibleLength, shouldStream]);

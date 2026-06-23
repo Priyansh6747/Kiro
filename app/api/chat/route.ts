@@ -54,25 +54,25 @@ async function fetchGroqWithRetry(
 
 // ─── Shared rules ────────────────────────────────────────────────────────────
 
-const SHARED_RULES = `
-UI Component Rendering Rule:
-17. You have access to powerful Generative UI tags. Whenever appropriate, output these exact tags on a new line followed IMMEDIATELY by their JSON payload. Do NOT add spaces, colons, or any other characters between the tag and the JSON.
-- |-TABLE-|{"headers":["H1"], "rows":[["R1"]], "caption":"..."}
-- |-TASK-|{"title":"Task Name", "projectName":"Project Name", "estimateMin":30, "status":"pending", "scheduledDate":"2023-10-25"}
-- |-TIMELINE-|{"items": [{"time":"14:00", "title":"Task", "durationMin":30}]}
-- |-METRICS-|{"title":"Title", "value":10.5, "unit":"$", "trend": "up", "percentage": 100}
-- |-CONFIRM-|{"action":"archiveProject", "params":{"name":"Todo"}, "message":"Are you sure you want to archive Todo?", "buttonText": "Yes, Archive"}
-- |-FORM-|{"type":"createProject", "title":"New Project", "fields": [{"name":"name", "type":"string", "label":"Name"}, {"name":"importance", "type":"number", "label":"Importance (1-5)"}]}
-- |-TIMER-|{"durationMin": 30, "label": "Deep Work"}
-- |-PLANNING-FORM-|{"phase":1}
-- |-AI-QUESTIONS-|{"artifactId":"<id>","questions":[{"id":"q1","question":"...","type":"text"}]}
-- |-ARTIFACT-PREVIEW-|{"artifactId":"<id>","markdown":"# Project Name\n## Overview\n..."}
-- |-TASK-GRAPH-|{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[{"id":"task_1","title":"...","estimate_min":60,"deadline":null,"depends_on":[]}]}]}
-- |-TASK-MANAGER-|{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[...]}]}
-
-Data Protection Rule:
-18. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables.
-`;
+const SHARED_RULES = [
+  "UI Component Rendering Rule:",
+  "17. You have access to powerful Generative UI tags. Whenever appropriate, output these exact XML tags containing ONLY their JSON payload inside. Do NOT add markdown code blocks around the XML.",
+  '<ui:table>{"headers":["H1"], "rows":[["R1"]], "caption":"..."}</ui:table>',
+  '<ui:task>{"title":"Task Name", "projectName":"Project Name", "estimateMin":30, "status":"pending", "scheduledDate":"2023-10-25"}</ui:task>',
+  '<ui:timeline>{"items": [{"time":"14:00", "title":"Task", "durationMin":30}]}</ui:timeline>',
+  '<ui:metrics>{"title":"Title", "value":10.5, "unit":"$", "trend": "up", "percentage": 100}</ui:metrics>',
+  '<ui:confirm>{"action":"archiveProject", "params":{"name":"Todo"}, "message":"Are you sure you want to archive Todo?", "buttonText": "Yes, Archive"}</ui:confirm>',
+  '<ui:form>{"type":"createProject", "title":"New Project", "fields": [{"name":"name", "type":"string", "label":"Name"}, {"name":"importance", "type":"number", "label":"Importance (1-5)"}]}</ui:form>',
+  '<ui:timer>{"durationMin": 30, "label": "Deep Work"}</ui:timer>',
+  '<ui:planning-form>{"phase":1}</ui:planning-form>',
+  '<ui:ai-questions>{"artifactId":"<id>","questions":[{"id":"q1","question":"...","type":"text"}]}</ui:ai-questions>',
+  '<ui:artifact-preview>{"artifactId":"<id>","markdown":"# Project Name\\n## Overview\\n..."}</ui:artifact-preview>',
+  '<ui:task-graph>{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[{"id":"task_1","title":"...","estimate_min":60,"deadline":null,"depends_on":[]}]}]}</ui:task-graph>',
+  '<ui:task-manager>{"artifactId":"<id>","stages":[{"stage":1,"stageName":"Foundation","tasks":[...]}]}</ui:task-manager>',
+  "",
+  "Data Protection Rule:",
+  "18. NEVER expose internal database IDs (like UUIDs) to the user. Always refer to projects, tasks, or entities by their human-readable names or titles. NEVER include ID columns in tables."
+].join("\n");
 
 const WRITE_TOOLS = [
   "createProject",
@@ -151,14 +151,17 @@ export async function POST(req: NextRequest) {
           let agentResMsg = agentResponse.choices[0]?.message;
           if (agentResMsg) (agentResMsg as any).name = agentName;
 
+          let accumulatedAgentContent = "";
+
           while (
             agentResMsg?.tool_calls &&
             agentResMsg.tool_calls.length > 0 &&
             iter < 10
           ) {
-            if (agentResMsg.tool_calls.length > 1) {
-              agentResMsg.tool_calls = [agentResMsg.tool_calls[0]];
+            if (agentResMsg.content) {
+              accumulatedAgentContent += agentResMsg.content + "\n\n";
             }
+
             agentMessages.push(agentResMsg);
 
             // Check if confirmation is needed for sub-agent write tools
@@ -176,7 +179,7 @@ export async function POST(req: NextRequest) {
               
               push("requires_confirmation", {
                 requiresConfirmation: true,
-                message: agentResMsg,
+                message: { ...agentResMsg, content: accumulatedAgentContent.trim() || agentResMsg.content },
                 // Flatten the trace so the frontend can resume it in the outer loop
                 messagesTrace: [...messages, fakeAssistantMsg, ...agentMessages.slice(2)],
                 debug: debugInfo,
@@ -191,6 +194,8 @@ export async function POST(req: NextRequest) {
               toolName: agentResMsg.tool_calls[0].function.name,
             });
 
+            let shortCircuitContent = "";
+
             for (const toolCall of agentResMsg.tool_calls) {
               const handler = agent.handlers[toolCall.function.name];
               let toolRes = "";
@@ -198,6 +203,12 @@ export async function POST(req: NextRequest) {
                 try {
                   const args = JSON.parse(toolCall.function.arguments || "{}");
                   const result = await handler(args);
+                  
+                  // Fast-forward optimization for getTodayAgenda
+                  if (toolCall.function.name === "getTodayAgenda" && result.preformattedTable) {
+                    shortCircuitContent = result.preformattedTable;
+                  }
+
                   toolRes = JSON.stringify(result) ?? "{}";
                 } catch (e: any) {
                   toolRes = JSON.stringify({ error: e.message });
@@ -212,6 +223,13 @@ export async function POST(req: NextRequest) {
                 content: toolRes,
               });
             }
+
+            if (shortCircuitContent) {
+              accumulatedAgentContent += shortCircuitContent.trim() + "\n\n";
+              agentResMsg = null; // We are done, skip the next LLM call
+              break;
+            }
+
             agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId);
             agentResMsg = agentResponse.choices[0]?.message;
             if (agentResMsg) (agentResMsg as any).name = agentName;
@@ -219,24 +237,57 @@ export async function POST(req: NextRequest) {
           }
 
           if (agentResMsg && agentResMsg.content) {
+            accumulatedAgentContent += agentResMsg.content;
             agentMessages.push(agentResMsg);
           }
 
+          let finalContent = accumulatedAgentContent.trim();
+          
+          if (agentName === "Sage") {
+            const hasZero = finalContent.includes("0");
+            const hasOne = finalContent.includes("1");
+            
+            if (hasOne && !hasZero) {
+              console.log("[Sage] Scheduler invoked (Not implemented yet)");
+              finalContent = "Scheduler invoked (Not implemented yet)";
+            } else {
+              // Default to planning (0) if confused, both, or empty
+              finalContent = '|-PLANNING-FORM-|{"phase":1}';
+            }
+          }
+
           // Emit the agent's final response as soon as it's ready
-          if (agentResMsg?.content) {
+          if (finalContent) {
+            const finalAgentMsg = {
+              role: "assistant",
+              name: agentName,
+              content: finalContent
+            };
+            
+            // Push to agentMessages so it's included in innerTrace and preserved on "done"
+            agentMessages.push(finalAgentMsg);
+
             push("agent_response", {
               agentName,
-              message: agentResMsg,
+              message: finalAgentMsg,
             });
           }
 
           const fakeAssistantMsg = {
             role: "assistant",
             content: snarkyComment || `Delegating to ${agentName}...`,
+            name: "Yuki",
+            tool_calls: [
+              {
+                id: "delegate_" + Date.now(),
+                type: "function",
+                function: { name: "delegateToAgent", arguments: "{}" },
+              }
+            ]
           };
 
           return {
-            result: agentResMsg?.content || "Agent finished without output.",
+            result: finalContent || "Agent finished without output.",
             innerTrace: [fakeAssistantMsg, ...agentMessages.slice(2)],
           };
         };
@@ -342,6 +393,7 @@ Delegation Rule:
 
         let iterations = 0;
         const MAX_ITERATIONS = 10;
+        let accumulatedYukiContent = "";
 
         // ── Tool call loop ────────────────────────────────────────────────
         while (
@@ -349,9 +401,8 @@ Delegation Rule:
           responseMessage.tool_calls.length > 0 &&
           iterations < MAX_ITERATIONS
         ) {
-          // Enforce sequential execution
-          if (responseMessage.tool_calls.length > 1) {
-            responseMessage.tool_calls = [responseMessage.tool_calls[0]];
+          if (responseMessage.content) {
+            accumulatedYukiContent += responseMessage.content + "\n\n";
           }
 
           // Check if confirmation is needed for write tools
@@ -365,7 +416,7 @@ Delegation Rule:
             debugInfo.requiresConfirmation = true;
             push("requires_confirmation", {
               requiresConfirmation: true,
-              message: responseMessage,
+              message: { ...responseMessage, content: accumulatedYukiContent.trim() || responseMessage.content },
               messagesTrace: messages,
               debug: debugInfo,
             });
@@ -400,7 +451,16 @@ Delegation Rule:
             // Emit Yuki's snarky comment as its own bubble BEFORE the agent starts,
             // so the user sees Yuki respond first, then the sub-agent skeleton appears.
             if (functionName === "delegateToAgent" && functionArgs.snarkyComment) {
-              push("yuki_comment", { content: functionArgs.snarkyComment });
+              push("yuki_comment", { 
+                content: functionArgs.snarkyComment,
+                tool_calls: [
+                  {
+                    id: "delegate_" + Date.now(),
+                    type: "function",
+                    function: { name: "delegateToAgent", arguments: "{}" },
+                  }
+                ]
+              });
             }
 
             const handler = requestToolHandlers[functionName];
@@ -447,7 +507,11 @@ Delegation Rule:
           if (delegated) {
             // Optimization: If Yuki delegated to an agent, the agent's response is already 
             // rendered to the UI. We can skip the redundant final LLM call.
-            responseMessage = null;
+            // We strip tool_calls so the UI doesn't render a pending tool sign.
+            const finalYukiContent = accumulatedYukiContent.trim();
+            responseMessage = finalYukiContent 
+              ? { role: "assistant", content: finalYukiContent, name: "Yuki" }
+              : null;
             break;
           }
 

@@ -165,6 +165,7 @@ function ChatUI() {
               role: "assistant",
               content: payload.content,
               name: "Yuki",
+              tool_calls: payload.tool_calls,
             };
             currentMessages = [...currentMessages, yukiMsg];
             setMessages([...currentMessages]);
@@ -440,70 +441,35 @@ function ChatUI() {
           <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-4 bg-base">
             {(() => {
               const visibleMessages = messages.filter((m) => m.role !== "tool");
-              const grouped = [];
-              let currentTools: any[] = [];
 
-              for (let i = 0; i < visibleMessages.length; i++) {
-                const m = visibleMessages[i];
-                const isLastMessage = i === visibleMessages.length - 1;
-                const isPending =
-                  isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
-
-                if (m.role === "assistant" && m.tool_calls && !isPending) {
-                  currentTools.push(...m.tool_calls);
-                } else {
-                  grouped.push({ m, isPending, tools: currentTools });
-                  currentTools = [];
-                }
-              }
-
-              // If there are dangling tools without a response yet
-              if (currentTools.length > 0) {
-                grouped.push({
-                  m: null,
-                  isPending: false,
-                  tools: currentTools,
-                });
-              }
-
-              return grouped.map((group, idx) => {
-                const { m, isPending, tools } = group;
+              return visibleMessages.map((m, idx) => {
+                const isLastMessage = idx === visibleMessages.length - 1;
+                const isPending = isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
+                const tools = m.tool_calls || [];
 
                 return (
                   <div
                     key={idx}
-                    className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
+                    className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${m.role !== "user" ? "items-start" : "items-end"}`}
                   >
-                    {/* Render grouped tools horizontally above the bubble */}
-                    {tools.length > 0 && (
-                      <div className="flex flex-row flex-wrap items-center gap-2 mb-1.5 ml-2">
-                        {tools.map((tc) => (
-                          <div
-                            key={tc.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-xs font-semibold text-accent tracking-wide shadow-sm"
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                            {tc.function.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Render the actual message bubble if it exists */}
-                    {m && (m.content || (m.tool_calls && isPending)) && (
+                    {(m.content || tools.length > 0) && (
                       <>
                         {m.role === "assistant" && (
                           <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
                             {m.name ? `@${m.name}` : `@Yuki`}
                           </div>
                         )}
-                        <div
-                          className={`max-w-[85%] md:max-w-[70%] ${m.role === "user" ? "p-4 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
-                        >
-                        {m.content ? (
-                          <StreamableContentRenderer content={m.content} isLast={m === visibleMessages[visibleMessages.length - 1] && m.role === "assistant"} />
-                        ) : m.tool_calls && isPending ? (
-                          <div className="flex flex-col gap-3 p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default">
+                        
+                        {m.content && (
+                          <div
+                            className={`max-w-[85%] md:max-w-[70%] ${m.role === "user" ? "p-4 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
+                          >
+                            <StreamableContentRenderer content={m.content} isLast={isLastMessage && m.role === "assistant"} />
+                          </div>
+                        )}
+
+                        {isPending ? (
+                          <div className="max-w-[85%] md:max-w-[70%] mt-2 flex flex-col gap-3 p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default">
                             <span className="font-semibold text-sm">
                               Action Required:
                             </span>
@@ -511,7 +477,7 @@ function ChatUI() {
                               The assistant wants to run the following tools:
                             </p>
                             <ul className="text-xs bg-surface p-2 rounded border border-border-subtle font-mono space-y-1 text-primary">
-                              {m.tool_calls.map((tc) => (
+                              {tools.map((tc: any) => (
                                 <li key={tc.id}>👉 {tc.function.name}</li>
                               ))}
                             </ul>
@@ -529,9 +495,20 @@ function ChatUI() {
                                 Deny
                               </button>
                             </div>
-                            </div>
-                          ) : null}
-                        </div>
+                          </div>
+                        ) : tools.length > 0 && (
+                          <div className="flex flex-row flex-wrap items-center gap-2 mt-1.5 ml-2">
+                            {tools.map((tc: any) => (
+                              <div
+                                key={tc.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-xs font-semibold text-accent tracking-wide shadow-sm"
+                              >
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                                {tc.function.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

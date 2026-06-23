@@ -79,9 +79,34 @@ export const plannerHandlers: Record<string, Function> = {
       };
     };
 
+    const enrichedAgenda = agenda.map(enrich);
+    const enrichedBucket = bucket.map(enrich);
+
+    const rows: string[][] = [];
+    
+    enrichedAgenda.forEach((t: any) => {
+      rows.push([t.scheduledDate || 'Unscheduled', t.title, t.projectName, t.estimateMin ? t.estimateMin + ' min' : '-']);
+    });
+    
+    enrichedBucket.forEach((t: any) => {
+      rows.push(['Unscheduled', t.title, t.projectName, t.estimateMin ? t.estimateMin + ' min' : '-']);
+    });
+
+    let markdown = "Here's your agenda for today:\n";
+    if (rows.length === 0) {
+      markdown = "Your agenda and bucket are completely empty for today!";
+    } else {
+      const tableData = {
+        headers: ["Time / Status", "Title", "Project", "Estimate"],
+        rows: rows,
+      };
+      markdown += `\n<ui:table>${JSON.stringify(tableData)}</ui:table>`;
+    }
+
     return { 
-      agenda: agenda.map(enrich), 
-      bucket: bucket.map(enrich) 
+      agenda: enrichedAgenda, 
+      bucket: enrichedBucket,
+      preformattedTable: markdown
     };
   },
 };

@@ -314,78 +314,44 @@ export function MiniChat() {
                 const visibleMessages = messages.filter(
                   (m) => m.role !== "tool",
                 );
-                const grouped: any[] = [];
-                let currentTools: any[] = [];
 
-                for (let i = 0; i < visibleMessages.length; i++) {
-                  const m = visibleMessages[i];
-                  const isLastMessage = i === visibleMessages.length - 1;
-                  const isPending =
-                    isLastMessage &&
-                    m.tool_calls &&
-                    pendingToolCalls.length > 0;
-
-                  if (m.role === "assistant" && m.tool_calls && !isPending) {
-                    currentTools.push(...m.tool_calls);
-                  } else {
-                    grouped.push({ m, isPending, tools: currentTools });
-                    currentTools = [];
-                  }
-                }
-
-                if (currentTools.length > 0) {
-                  grouped.push({
-                    m: null,
-                    isPending: false,
-                    tools: currentTools,
-                  });
-                }
-
-                return grouped.map((group, idx) => {
-                  const { m, isPending, tools } = group;
+                return visibleMessages.map((m, idx) => {
+                  const isLastMessage = idx === visibleMessages.length - 1;
+                  const isPending = isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
+                  const tools = m.tool_calls || [];
 
                   return (
                     <div
                       key={idx}
-                      className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${!m || m.role !== "user" ? "items-start" : "items-end"}`}
+                      className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${m.role !== "user" ? "items-start" : "items-end"}`}
                     >
-                      {tools.length > 0 && (
-                        <div className="flex flex-row flex-wrap items-center gap-1.5 mb-1 ml-1">
-                          {tools.map((tc: any) => (
-                            <div
-                              key={tc.id}
-                              className="flex items-center gap-1 px-2 py-1 rounded bg-accent/10 border border-accent/20 text-[10px] font-semibold text-accent shadow-sm"
-                            >
-                              <div className="w-1 h-1 rounded-full bg-accent" />
-                              {tc.function.name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {m && (m.content || (m.tool_calls && isPending)) && (
+                      {(m.content || tools.length > 0) && (
                         <>
                           {m.role === "assistant" && (
                             <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
                               {m.name ? `@${m.name}` : `@Yuki`}
                             </div>
                           )}
-                          <div
-                          className={`max-w-[90%] ${m.role === "user" ? "p-3 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
-                        >
-                          {m.content ? (
-                            <StreamableContentRenderer 
-                              content={m.content} 
-                              isLast={m === visibleMessages[visibleMessages.length - 1] && m.role === "assistant"}
-                              proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" 
-                            />
-                          ) : m.tool_calls && isPending ? (
-                            <div className="flex flex-col gap-2 p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default">
+
+                          {m.content && (
+                            <div
+                              className={`max-w-[90%] ${m.role === "user" ? "p-3 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
+                            >
+                              <StreamableContentRenderer 
+                                content={m.content} 
+                                isLast={isLastMessage && m.role === "assistant"}
+                                proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" 
+                              />
+                            </div>
+                          )}
+
+                          {isPending ? (
+                            <div className="flex flex-col gap-2 p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default mt-1">
                               <span className="font-semibold text-xs">
                                 Action Required:
                               </span>
                               <ul className="text-[11px] bg-surface p-1.5 rounded border border-border-subtle font-mono space-y-1 text-primary">
-                                {m.tool_calls.map((tc: any) => (
+                                {tools.map((tc: any) => (
                                   <li key={tc.id}>👉 {tc.function.name}</li>
                                 ))}
                               </ul>
@@ -404,10 +370,21 @@ export function MiniChat() {
                                 </button>
                               </div>
                             </div>
-                          ) : null}
-                        </div>
-                      </>
-                    )}
+                          ) : tools.length > 0 && (
+                            <div className="flex flex-row flex-wrap items-center gap-1.5 mt-1 ml-1">
+                              {tools.map((tc: any) => (
+                                <div
+                                  key={tc.id}
+                                  className="flex items-center gap-1 px-2 py-1 rounded bg-accent/10 border border-accent/20 text-[10px] font-semibold text-accent shadow-sm"
+                                >
+                                  <div className="w-1 h-1 rounded-full bg-accent" />
+                                  {tc.function.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   );
                 });
