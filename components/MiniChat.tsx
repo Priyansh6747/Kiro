@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@/components/ThemeProvider";
-import { ContentRenderer } from "@/components/ResponsiveTable";
+import { ContentRenderer } from "@/components/GenerativeUI";
 import { useToast } from "@/hooks/useToast";
 
 interface ChatMessage {
@@ -72,6 +72,7 @@ export function MiniChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
+  const [streamingAgents, setStreamingAgents] = useState<{agentName: string; snarkyComment?: string}[]>([]);
   const { showToast } = useToast();
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,121 @@ export function MiniChat() {
 
   if (pathname === "/chat") return null;
 
+  const consumeSseStream = async (
+    fetchBody: object,
+    baseMessages: ChatMessage[],
+  ) => {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fetchBody),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let currentMessages: ChatMessage[] = [...baseMessages];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+
+      const frames = buf.split("\n\n");
+      buf = frames.pop() ?? "";
+
+      for (const frame of frames) {
+        const eventMatch = frame.match(/^event: (\S+)/);
+        const dataMatch = frame.match(/^data: (.+)$/m);
+        if (!eventMatch || !dataMatch) continue;
+
+        const event = eventMatch[1];
+        let payload: any;
+        try {
+          payload = JSON.parse(dataMatch[1]);
+        } catch {
+          continue;
+        }
+
+        switch (event) {
+          case "yuki_comment": {
+            const yukiMsg: ChatMessage = {
+              role: "assistant",
+              content: payload.content,
+              name: "Yuki",
+            };
+            currentMessages = [...currentMessages, yukiMsg];
+            setMessages([...currentMessages]);
+            break;
+          }
+
+          case "agent_start":
+            setStreamingAgents((prev) => [...prev, { agentName: payload.agentName }]);
+            setLoadingText(`${payload.agentName} is thinking...`);
+            break;
+
+          case "agent_tool_call":
+            setLoadingText(`${payload.agentName}: ${payload.toolName}...`);
+            break;
+
+          case "agent_response": {
+            const agentMsg: ChatMessage = { ...payload.message, role: "assistant" };
+            currentMessages = [...currentMessages, agentMsg];
+            setMessages([...currentMessages]);
+            setStreamingAgents((prev) => prev.filter((a) => a.agentName !== payload.agentName));
+            break;
+          }
+
+          case "tool_call":
+            setLoadingText(`Running ${payload.toolName}...`);
+            break;
+
+          case "theme_change":
+            setTheme(payload.theme);
+            break;
+
+          case "requires_confirmation":
+            setMessages([
+              ...payload.messagesTrace.filter((m: any) => m.role !== "system"),
+              payload.message,
+            ]);
+            setPendingToolCalls(payload.message.tool_calls);
+            setStreamingAgents([]);
+            break;
+
+          case "done": {
+            const visibleFromTrace = (payload.messagesTrace ?? []).filter(
+              (m: any) =>
+                (m.role === "user" || m.role === "assistant") &&
+                typeof m.content === "string" &&
+                m.content.trim() !== "",
+            );
+            const finalMsg = payload.message;
+            setMessages(finalMsg ? [...visibleFromTrace, finalMsg] : visibleFromTrace);
+            setStreamingAgents([]);
+            break;
+          }
+
+          case "error": {
+            const errMsg = payload.error ?? "Unknown error";
+            if (payload.statusCode === 429 || errMsg === "Quota exceeded") {
+              showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+            } else {
+              showToast(`Error: ${errMsg}`, "error");
+            }
+            setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errMsg}` }]);
+            setStreamingAgents([]);
+            break;
+          }
+        }
+      }
+    }
+  };
+
   const handleSend = async () => {
     if (!text.trim()) return;
 
@@ -95,63 +211,20 @@ export function MiniChat() {
     setText("");
     setShowMentionMenu(false);
     setLoadingText("Thinking...");
+    setStreamingAgents([]);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages,
-          isMiniChat: true,
-          pageContext: pathname,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.messagesTrace) {
-        for (const msg of data.messagesTrace) {
-          if (msg.role === "tool" && msg.name === "changeTheme") {
-            try {
-              const resObj = JSON.parse(msg.content);
-              if (resObj.success && resObj.theme) setTheme(resObj.theme);
-            } catch (e) {}
-          }
-        }
-      }
-
-      if (data.requiresConfirmation) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-        setPendingToolCalls(data.message.tool_calls);
-      } else if (data.message) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-      } else if (data.error) {
-        if (res.status === 429 || data.error === "Quota exceeded") {
-          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
-        } else {
-          showToast(`Error: ${data.error}`, "error");
-        }
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `Error: ${data.error}` },
-        ]);
-      } else if (data.messagesTrace) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system")]);
-      }
+      await consumeSseStream(
+        { messages: newMessages, isMiniChat: true, pageContext: pathname },
+        newMessages,
+      );
     } catch (err) {
       showToast("Error processing request.", "error");
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error processing request." },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Error processing request." }]);
     } finally {
       setLoading(false);
+      setStreamingAgents([]);
     }
   };
 
@@ -174,61 +247,21 @@ export function MiniChat() {
     }
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await consumeSseStream(
+        {
           messages: currentMessages,
           confirmedToolCallIds: approved ? toolsToProcess.map((t) => t.id) : [],
           isMiniChat: true,
           pageContext: pathname,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.messagesTrace) {
-        for (const msg of data.messagesTrace) {
-          if (msg.role === "tool" && msg.name === "changeTheme") {
-            try {
-              const resObj = JSON.parse(msg.content);
-              if (resObj.success && resObj.theme) setTheme(resObj.theme);
-            } catch (e) {}
-          }
-        }
-      }
-
-      if (data.requiresConfirmation) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-        setPendingToolCalls(data.message.tool_calls);
-      } else if (data.message) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-      } else if (data.error) {
-        if (res.status === 429 || data.error === "Quota exceeded") {
-          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
-        } else {
-          showToast(`Error: ${data.error}`, "error");
-        }
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `Error: ${data.error}` },
-        ]);
-      } else if (data.messagesTrace) {
-        setMessages([...data.messagesTrace.filter((m: any) => m.role !== "system")]);
-      }
+        },
+        currentMessages,
+      );
     } catch (err) {
       showToast("Error processing request.", "error");
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error processing request." },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Error processing request." }]);
     } finally {
       setLoading(false);
+      setStreamingAgents([]);
     }
   };
 
@@ -338,12 +371,12 @@ export function MiniChat() {
                             </div>
                           )}
                           <div
-                            className={`max-w-[90%] p-3 rounded-xl shadow-sm text-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
-                          >
+                          className={`max-w-[90%] ${m.role === "user" ? "p-3 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
+                        >
                           {m.content ? (
                             <ContentRenderer content={m.content} proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" />
                           ) : m.tool_calls && isPending ? (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2 p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default">
                               <span className="font-semibold text-xs">
                                 Action Required:
                               </span>
@@ -376,16 +409,34 @@ export function MiniChat() {
                 });
               })()
             )}
-            {loading && (
+            {streamingAgents.map((agent) => (
+              <div key={agent.agentName} className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+                <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
+                  @{agent.agentName}
+                </div>
+                <div className="max-w-[90%] py-2 bg-transparent min-w-[150px]">
+                  <div className="flex gap-1.5 items-center mt-2 h-6">
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {loading && streamingAgents.length === 0 && (
               <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
                 <div className="text-[10px] font-semibold px-1 mb-0.5 text-accent/80">
                   @Yuki
                 </div>
-                <div className="max-w-[90%] p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default min-w-[150px]">
-                  <div className="flex flex-col gap-2">
-                    <div className="h-3 bg-border-default/50 rounded w-3/4 animate-pulse" />
-                    <div className="h-3 bg-border-default/50 rounded w-1/2 animate-pulse" />
-                    <div className="h-3 bg-border-default/50 rounded w-5/6 animate-pulse" />
+                <div className="max-w-[90%] py-2 bg-transparent min-w-[150px]">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                    <span className="text-[10px] text-secondary italic">{loadingText}</span>
+                  </div>
+                  <div className="flex gap-1.5 items-center mt-1 h-6">
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>

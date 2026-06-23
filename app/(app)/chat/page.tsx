@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useRef } from "react";
-import { ContentRenderer } from "@/components/ResponsiveTable";
+import { ContentRenderer } from "@/components/GenerativeUI";
 import { useTheme } from "@/components/ThemeProvider";
 
 interface ChatMessage {
@@ -45,6 +45,7 @@ function ChatUI() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
+  const [streamingAgents, setStreamingAgents] = useState<{agentName: string; snarkyComment?: string}[]>([]);
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const { setTheme } = useTheme();
   
@@ -86,17 +87,19 @@ function ChatUI() {
       }
     }, 0);
   };
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { showToast } = useToast();
-  const [showDebug, setShowDebug] = useState(false);
-
-  const copyDebugJson = () => {
-    if (!debugInfo) return;
-    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
-  };
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading, streamingAgents]);
 
   useEffect(() => {
     const msg = searchParams.get("msg");
@@ -111,6 +114,141 @@ function ChatUI() {
     }
   }, [searchParams]);
 
+  const consumeSseStream = async (
+    fetchBody: object,
+    baseMessages: ChatMessage[],
+  ) => {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fetchBody),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+
+    // Optimistically start with the messages we already have
+    let currentMessages: ChatMessage[] = [...baseMessages];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+
+      // SSE frames are separated by double newlines
+      const frames = buf.split("\n\n");
+      buf = frames.pop() ?? "";
+
+      for (const frame of frames) {
+        const eventMatch = frame.match(/^event: (\S+)/);
+        const dataMatch = frame.match(/^data: (.+)$/m);
+        if (!eventMatch || !dataMatch) continue;
+
+        const event = eventMatch[1];
+        let payload: any;
+        try {
+          payload = JSON.parse(dataMatch[1]);
+        } catch {
+          continue;
+        }
+
+        switch (event) {
+          case "yuki_comment": {
+            // Yuki's snarky comment arrives the instant delegation is decided —
+            // before any sub-agent even starts, so the order is always: Yuki → Agent
+            const yukiMsg: ChatMessage = {
+              role: "assistant",
+              content: payload.content,
+              name: "Yuki",
+            };
+            currentMessages = [...currentMessages, yukiMsg];
+            setMessages([...currentMessages]);
+            break;
+          }
+
+          case "agent_start":
+            setStreamingAgents((prev) => [...prev, { agentName: payload.agentName }]);
+            setLoadingText(`${payload.agentName} is thinking...`);
+            break;
+
+          case "agent_tool_call":
+            setLoadingText(`${payload.agentName}: ${payload.toolName}...`);
+            break;
+
+          case "agent_response": {
+            // Render this agent's reply immediately, before all agents finish.
+            // Use functional update to avoid stale closure issues with concurrent agents.
+            const agentMsg: ChatMessage = {
+              ...payload.message,
+              role: "assistant",
+            };
+            currentMessages = [...currentMessages, agentMsg];
+            setMessages([...currentMessages]);
+            setStreamingAgents((prev) =>
+              prev.filter((a) => a.agentName !== payload.agentName),
+            );
+            break;
+          }
+
+          case "tool_call":
+            setLoadingText(`Running ${payload.toolName}...`);
+            break;
+
+          case "theme_change":
+            setTheme(payload.theme);
+            break;
+
+          case "requires_confirmation":
+            setMessages([
+              ...payload.messagesTrace.filter((m: any) => m.role !== "system"),
+              payload.message,
+            ]);
+            setPendingToolCalls(payload.message.tool_calls);
+            setStreamingAgents([]);
+            break;
+
+          case "done": {
+            // The raw messagesTrace contains tool messages, bare tool-call messages,
+            // and inner-trace debris. We DON'T dump it directly — that would cause a
+            // flash reorder. Instead, build the visible list the same way streaming did:
+            // keep only messages that have actual text content (user or assistant).
+            // The final Yuki message (if any content remains after stripping <DONE>) is appended.
+            const visibleFromTrace = (payload.messagesTrace ?? []).filter(
+              (m: any) =>
+                (m.role === "user" || m.role === "assistant") &&
+                typeof m.content === "string" &&
+                m.content.trim() !== "",
+            );
+            const finalMsg = payload.message; // null if Yuki only said <DONE>
+            setMessages(finalMsg ? [...visibleFromTrace, finalMsg] : visibleFromTrace);
+            setStreamingAgents([]);
+            break;
+          }
+
+          case "error": {
+            const errMsg = payload.error ?? "Unknown error";
+            if (payload.statusCode === 429 || errMsg === "Quota exceeded") {
+              showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
+            } else {
+              showToast(`Error: ${errMsg}`, "error");
+            }
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: `Error: ${errMsg}` },
+            ]);
+            setStreamingAgents([]);
+            break;
+          }
+        }
+      }
+    }
+  };
+
   const handleSendDirect = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
@@ -122,60 +260,20 @@ function ChatUI() {
     setInput("");
     setShowMentionMenu(false);
     setLoadingText("Thinking...");
+    setStreamingAgents([]);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
-      });
-      const data = await res.json();
-      
-      if (data.debug) setDebugInfo(data.debug);
-
-      if (data.messagesTrace) {
-        for (const msg of data.messagesTrace) {
-          if (msg.role === "tool" && msg.name === "changeTheme") {
-            try {
-              const resObj = JSON.parse(msg.content);
-              if (resObj.success && resObj.theme) setTheme(resObj.theme);
-            } catch (e) {}
-          }
-        }
-      }
-
-      if (data.requiresConfirmation) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-        setPendingToolCalls(data.message.tool_calls);
-      } else if (data.messagesTrace) {
-        const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
-        setMessages(data.message ? [...trace, data.message] : trace);
-      } else if (data.error) {
-        if (res.status === 429 || data.error === "Quota exceeded") {
-          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
-        } else {
-          showToast(`Error: ${data.error}`, "error");
-        }
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `Error: ${data.error}` },
-        ]);
-      }
+      await consumeSseStream({ messages: newMessages }, newMessages);
     } catch (err) {
       showToast("Sorry, there was an error processing your request.", "error");
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your request.",
-        },
+        { role: "assistant", content: "Sorry, there was an error processing your request." },
       ]);
     } finally {
       setLoading(false);
+      setStreamingAgents([]);
     }
   };
 
@@ -206,60 +304,22 @@ function ChatUI() {
     }
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await consumeSseStream(
+        {
           messages: currentMessages,
           confirmedToolCallIds: approved ? toolsToProcess.map((t) => t.id) : [],
-        }),
-      });
-      const data = await res.json();
-      
-      if (data.debug) setDebugInfo(data.debug);
-
-      if (data.messagesTrace) {
-        for (const msg of data.messagesTrace) {
-          if (msg.role === "tool" && msg.name === "changeTheme") {
-            try {
-              const resObj = JSON.parse(msg.content);
-              if (resObj.success && resObj.theme) setTheme(resObj.theme);
-            } catch (e) {}
-          }
-        }
-      }
-
-      if (data.requiresConfirmation) {
-        setMessages([
-          ...data.messagesTrace.filter((m: any) => m.role !== "system"),
-          data.message,
-        ]);
-        setPendingToolCalls(data.message.tool_calls);
-      } else if (data.messagesTrace) {
-        const trace = data.messagesTrace.filter((m: any) => m.role !== "system");
-        setMessages(data.message ? [...trace, data.message] : trace);
-      } else if (data.error) {
-        if (res.status === 429 || data.error === "Quota exceeded") {
-          showToast("Daily usage quota exceeded. Please try again tomorrow.", "error");
-        } else {
-          showToast(`Error: ${data.error}`, "error");
-        }
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `Error: ${data.error}` },
-        ]);
-      }
+        },
+        currentMessages,
+      );
     } catch (err) {
       showToast("Sorry, there was an error processing your request.", "error");
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your request.",
-        },
+        { role: "assistant", content: "Sorry, there was an error processing your request." },
       ]);
     } finally {
       setLoading(false);
+      setStreamingAgents([]);
     }
   };
 
@@ -373,13 +433,6 @@ function ChatUI() {
               <Bot className="w-6 h-6 mr-3 text-accent" />
               <span className="text-2xl font-bold tracking-tight text-primary">Yuki (Assistant)</span>
             </div>
-            <button 
-              onClick={() => setShowDebug(!showDebug)}
-              className={`p-2 rounded-lg transition-colors ${showDebug ? "bg-accent text-white" : "bg-surface-raised text-secondary hover:text-primary"}`}
-              title="Toggle Debug Sidebar"
-            >
-              <Bug className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Messages */}
@@ -444,12 +497,12 @@ function ChatUI() {
                           </div>
                         )}
                         <div
-                          className={`max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface-raised border border-border-default text-primary"}`}
+                          className={`max-w-[85%] md:max-w-[70%] ${m.role === "user" ? "p-4 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
                         >
                         {m.content ? (
                           <ContentRenderer content={m.content} />
                         ) : m.tool_calls && isPending ? (
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-3 p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default">
                             <span className="font-semibold text-sm">
                               Action Required:
                             </span>
@@ -484,20 +537,41 @@ function ChatUI() {
                 );
               });
             })()}
-            {loading && (
+            {/* Per-agent streaming skeletons — one bubble per in-flight agent */}
+            {streamingAgents.map((agent) => (
+              <div key={agent.agentName} className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+                <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
+                  @{agent.agentName}
+                </div>
+                <div className="max-w-[85%] md:max-w-[70%] py-2 bg-transparent min-w-[200px]">
+                  <div className="flex gap-1.5 items-center mt-2 h-6">
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* Generic thinking skeleton when no specific agents are streaming yet */}
+            {loading && streamingAgents.length === 0 && (
               <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
                 <div className="text-xs font-semibold px-2 mb-1 text-accent/80">
                   @Yuki
                 </div>
-                <div className="max-w-[85%] md:max-w-[70%] p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default min-w-[200px]">
-                  <div className="flex flex-col gap-3">
-                    <div className="h-4 bg-border-default/50 rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-border-default/50 rounded w-1/2 animate-pulse" />
-                    <div className="h-4 bg-border-default/50 rounded w-5/6 animate-pulse" />
+                <div className="max-w-[85%] md:max-w-[70%] py-2 bg-transparent min-w-[200px]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                    <span className="text-xs text-secondary italic">{loadingText}</span>
+                  </div>
+                  <div className="flex gap-1.5 items-center mt-1 h-6">
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-accent/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Bottom Input */}
@@ -540,53 +614,6 @@ function ChatUI() {
         </div>
       </div>
 
-      {/* Debug Sidebar */}
-      {showDebug && (
-        <div className="w-80 lg:w-96 shrink-0 bg-surface h-full flex flex-col border-l border-border-default z-10">
-          <div className="px-6 py-5 border-b border-border-default shrink-0 flex items-center justify-between">
-            <div className="flex items-center">
-              <Code className="w-5 h-5 mr-2 text-accent" />
-              <h2 className="text-lg font-bold text-primary">Debug Inspector</h2>
-            </div>
-            {debugInfo && (
-              <button 
-                onClick={copyDebugJson}
-                className="text-xs px-2 py-1 bg-surface-raised rounded text-secondary hover:text-primary transition-colors"
-              >
-                Copy JSON
-              </button>
-            )}
-          </div>
-          
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-            {!debugInfo ? (
-              <p className="text-sm text-tertiary italic text-center mt-10">Send a message to see debug info...</p>
-            ) : (
-              <>
-                {debugInfo.fullTrace?.map((msg: any, idx: number) => {
-                  let title = `Message ${idx + 1} (${msg.role})`;
-                  if (msg.role === "tool") title = `Tool Result: ${msg.name}`;
-                  if (msg.tool_calls) title = `Tool Call(s) by ${msg.role}`;
-                  return <DebugSection key={idx} title={title} data={msg} />;
-                })}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Helper component for debug sections
-function DebugSection({ title, data }: { title: string, data: any }) {
-  if (!data) return null;
-  return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{title}</h3>
-      <pre className="max-h-96 overflow-y-auto bg-surface-raised border border-border-subtle p-3 rounded-lg text-xs text-primary overflow-x-auto whitespace-pre-wrap">
-        {JSON.stringify(data, null, 2)}
-      </pre>
     </div>
   );
 }

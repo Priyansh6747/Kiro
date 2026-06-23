@@ -266,11 +266,26 @@ export async function updateProject(
 }
 
 export async function archiveProject(id: string): Promise<Project | undefined> {
+  const t = nowSec();
   const rows = await db
     .update(projects)
-    .set({ archivedAt: nowSec() })
+    .set({ archivedAt: t })
     .where(eq(projects.id, id))
     .returning();
+    
+  if (rows[0]) {
+    await db
+      .update(tasks)
+      .set({ deletedAt: t, status: "deleted" })
+      .where(
+        and(
+          eq(tasks.projectId, id),
+          isNull(tasks.deletedAt),
+          inArray(tasks.status, ["pending", "carried"])
+        )
+      );
+  }
+  
   return rows[0];
 }
 
