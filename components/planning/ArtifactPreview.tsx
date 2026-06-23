@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ContentRenderer, MarkdownRenderer } from "../GenerativeUI";
 
 interface Props {
   data: {
@@ -17,38 +16,75 @@ export function ArtifactPreview({ data }: Props) {
   const [editContent, setEditContent] = useState(markdown);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [nextContent, setNextContent] = useState("");
+  const [loadingStep, setLoadingStep] = useState(0);
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setConfirmed(true); // Transition immediately
+
+    // Step animation logic
+    const stepInterval = setInterval(() => {
+      setLoadingStep(prev => (prev < 2 ? prev + 1 : prev));
+    }, 4000); // Progress through steps every 4s
+
     try {
       const sessionId = localStorage.getItem("kiro_plan_session");
 
       const res = await fetch("/api/planning", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase: 3, sessionId, markdownContent: editContent }),
+        body: JSON.stringify({ phase: 4, sessionId, markdownContent: editContent }),
       });
 
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let done = false;
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
+      let fullStr = "";
+      let buffer = "";
+      
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
         if (value) {
-           decoder.decode(value);
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+          for (const part of parts) {
+            const lines = part.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                let dataStr = line.replace("data: ", "").trim();
+                if (dataStr) {
+                  try {
+                    const parsed = JSON.parse(dataStr);
+                    if (typeof parsed === "string") {
+                      fullStr += parsed;
+                      setNextContent(fullStr);
+                    }
+                  } catch(e) {}
+                }
+              }
+            }
+          }
         }
       }
 
-      setConfirmed(true);
+      clearInterval(stepInterval);
     } catch (e) {
       console.error(e);
       setSubmitting(false);
+      setConfirmed(false);
+      clearInterval(stepInterval);
     }
   };
+
+  const loadingSteps = [
+    "Crafting tasks...",
+    "Resolving dependencies...",
+    "Rendering graphs..."
+  ];
 
   const cardStyle: React.CSSProperties = {
     background: "var(--surface-raised)",
@@ -73,7 +109,7 @@ export function ArtifactPreview({ data }: Props) {
     outline: "none",
     fontFamily: "monospace",
     resize: "vertical",
-    minHeight: "420px",
+    minHeight: "600px",
   };
 
   const buttonStyle = (primary: boolean, disabled: boolean): React.CSSProperties => ({
@@ -87,9 +123,14 @@ export function ArtifactPreview({ data }: Props) {
   });
 
   if (confirmed) {
+    if (nextContent) {
+      return <ContentRenderer content={nextContent} />;
+    }
     return (
       <div style={{ ...cardStyle, display: "flex", alignItems: "center", justifyItems: "center", minHeight: "120px" }}>
-        <p style={{ margin: 0, fontWeight: 500, color: "var(--text-secondary)", textAlign: "center", width: "100%" }}>Generating your task breakdown…</p>
+        <p style={{ margin: 0, fontWeight: 500, color: "var(--text-secondary)", textAlign: "center", width: "100%", transition: "all 0.3s ease-in-out" }}>
+          {loadingSteps[loadingStep]}
+        </p>
       </div>
     );
   }
@@ -109,7 +150,7 @@ export function ArtifactPreview({ data }: Props) {
       {editing ? (
         <div>
           <textarea 
-            rows={16} 
+            rows={24} 
             style={inputStyle} 
             value={editContent} 
             onChange={(e) => setEditContent(e.target.value)} 
@@ -132,12 +173,8 @@ export function ArtifactPreview({ data }: Props) {
         </div>
       ) : (
         <div>
-          <div style={{ maxHeight: "420px", overflowY: "auto", paddingRight: "16px" }} className="custom-scrollbar">
-            <div className="prose">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {editContent}
-              </ReactMarkdown>
-            </div>
+          <div style={{ maxHeight: "600px", overflowY: "auto", paddingRight: "16px" }} className="custom-scrollbar">
+            <MarkdownRenderer content={editContent} />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border-default)" }}>
             <button 

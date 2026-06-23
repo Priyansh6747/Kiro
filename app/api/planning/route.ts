@@ -43,16 +43,23 @@ export async function POST(req: NextRequest) {
           console.log("[Planning API] Processing Phase 2. phase1 data:", phase1);
           const prompt = `Based on this project brief: ${JSON.stringify(phase1 || {})}, generate 3-6 clarifying questions to deeply understand the scope. Return them as a JSON array exactly matching this schema: [{ "id": "q1", "question": "string", "type": "text" | "choice", "choices": ["string"] }]`;
           
-          const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
-          const rawContent = completion.choices[0]?.message?.content || "[]";
-          console.log("[Planning API] Phase 2 LLM output:", rawContent);
-          
           let questions = [];
-          try {
-             const match = rawContent.match(/\[[\s\S]*\]/);
-             questions = JSON.parse(match ? match[0] : rawContent);
-          } catch(e) {
-             console.error("Failed to parse AI questions", e);
+          let attempts = 0;
+          while (attempts < 3) {
+            const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
+            const rawContent = completion.choices[0]?.message?.content || "[]";
+            
+            try {
+               const match = rawContent.match(/\[[\s\S]*\]/);
+               questions = JSON.parse(match ? match[0] : rawContent);
+               if (questions && Array.isArray(questions)) {
+                 console.log("[Planning API] Phase 2 LLM output successfully parsed on attempt", attempts + 1);
+                 break; // Success!
+               }
+            } catch(e) {
+               console.error(`[Planning API] Failed to parse AI questions on attempt ${attempts + 1}:`, e);
+               attempts++;
+            }
           }
           
           if (sessionId) {
@@ -72,13 +79,8 @@ export async function POST(req: NextRequest) {
            const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
            const markdown = completion.choices[0]?.message?.content || "";
            
-           // Stream raw markdown as progressive chunk events
-           const chunkSize = 20;
-           for (let i = 0; i < markdown.length; i += chunkSize) {
-             const chunk = markdown.slice(i, i + chunkSize);
-             controller.enqueue(sseEvent("chunk", chunk));
-             await new Promise(r => setTimeout(r, 20)); // Small delay to simulate streaming
-           }
+           // Do not stream raw markdown chunks to avoid duplicate UI rendering.
+           // The ArtifactPreview component handles displaying the markdown.
            
            if (sessionId) {
              await updateArtifact(sessionId, {
@@ -92,17 +94,25 @@ export async function POST(req: NextRequest) {
            controller.close();
         }
         else if (phase === 4) {
-           const prompt = `You are a senior engineering project manager. Given this project brief, produce a complete JSON breakdown of stages and tasks. Each stage has: \`stage\` (number), \`stageName\` (string), \`tasks\` (array). Each task has: \`id\` (unique string), \`title\`, \`estimate_min\`, \`deadline\` (ISO or null), \`depends_on\` (array of task ids), optional \`subtasks\`. Return ONLY valid JSON.\nBrief:\n${markdownContent}`;
-           
-           const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
-           const rawContent = completion.choices[0]?.message?.content || "[]";
+           const prompt = `You are a senior engineering project manager. Given this project brief, produce a complete JSON breakdown of stages and tasks. Each stage has: \`stage\` (number), \`stageName\` (string), \`tasks\` (array). Each task has: \`id\` (unique string), \`title\`, \`estimate_min\`, \`deadline\` (ISO or null), \`depends_on\` (array of task ids), optional \`subtasks\`. 
+CRITICAL: Return ONLY a valid JSON array, starting with '[' and ending with ']'. Ensure all quotes inside strings are properly escaped. Do not include markdown code blocks or any other text.\nBrief:\n${markdownContent}`;
            
            let stages = [];
-           try {
-             const match = rawContent.match(/\[[\s\S]*\]/);
-             stages = JSON.parse(match ? match[0] : rawContent);
-           } catch(e) {
-             console.error("Failed to parse JSON breakdown", e);
+           let attempts = 0;
+           while (attempts < 3) {
+             const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
+             const rawContent = completion.choices[0]?.message?.content || "[]";
+             
+             try {
+               const match = rawContent.match(/\[[\s\S]*\]/);
+               stages = JSON.parse(match ? match[0] : rawContent);
+               if (stages && Array.isArray(stages)) {
+                 break; // Success!
+               }
+             } catch(e) {
+               console.error(`[Planning API] Failed to parse JSON breakdown on attempt ${attempts + 1}:`, e);
+               attempts++;
+             }
            }
            
            if (sessionId) {
@@ -112,7 +122,6 @@ export async function POST(req: NextRequest) {
              });
            }
            
-           controller.enqueue(sseEvent("chunk", `|-TASK-GRAPH-|${JSON.stringify({ artifactId: sessionId, stages })}`));
            controller.enqueue(sseEvent("chunk", `|-TASK-MANAGER-|${JSON.stringify({ artifactId: sessionId, stages })}`));
            controller.enqueue(sseEvent("done", {}));
            controller.close();

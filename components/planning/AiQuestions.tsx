@@ -51,6 +51,7 @@ export function AiQuestions({ data }: Props) {
   const handleSubmit = async () => {
     console.log("[AiQuestions] Submitting phase 2 answers...", answers);
     setSubmitting(true);
+    setSubmitted(true); // Transition immediately to the loading screen
     try {
       const sessionId = localStorage.getItem("kiro_plan_session");
       const phase1Str = localStorage.getItem("kiro_plan_phase1");
@@ -104,56 +105,11 @@ export function AiQuestions({ data }: Props) {
         }
       }
 
-      console.log("[AiQuestions] Stream done. Setting submitted=true");
-      setSubmitted(true);
-      
-      // Automatically fetch Phase 4
-      try {
-        if (sessionId) {
-          console.log("[AiQuestions] Automatically fetching phase 4...");
-          const res4 = await fetch("/api/planning", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phase: 4, sessionId, markdownContent: fullStr })
-          });
-
-          const reader4 = res4.body?.getReader();
-          const decoder4 = new TextDecoder();
-          let buffer4 = "";
-          
-          while (reader4) {
-            const { value, done } = await reader4.read();
-            if (done) break;
-            if (value) {
-              buffer4 += decoder4.decode(value, { stream: true });
-              const parts = buffer4.split("\n\n");
-              buffer4 = parts.pop() || "";
-              for (const part of parts) {
-                const lines = part.split("\n");
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    let dataStr = line.replace("data: ", "").trim();
-                    if (dataStr) {
-                      try {
-                        const parsed = JSON.parse(dataStr);
-                        if (typeof parsed === "string") {
-                          fullStr += parsed;
-                          setNextContent(fullStr);
-                        }
-                      } catch(e) {}
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error("[AiQuestions] Error fetching phase 4:", e);
-      }
+      console.log("[AiQuestions] Stream done.");
     } catch (e) {
       console.error("[AiQuestions] Error during submit:", e);
       setSubmitting(false);
+      setSubmitted(false); // Revert UI if it failed completely
     }
   };
 
@@ -199,7 +155,9 @@ export function AiQuestions({ data }: Props) {
     }
     return (
       <div style={{ ...cardStyle, display: "flex", alignItems: "center", justifyItems: "center", minHeight: "120px" }}>
-        <p style={{ margin: 0, fontWeight: 500, color: "var(--text-secondary)", textAlign: "center", width: "100%" }}>Generating your project brief…</p>
+        <div style={{ width: "100%", textAlign: "center" }}>
+          <p style={{ margin: 0, fontWeight: 500, color: "var(--text-secondary)" }}>Crafting your Project Artifact...</p>
+        </div>
       </div>
     );
   }

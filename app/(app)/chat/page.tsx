@@ -192,6 +192,7 @@ function ChatUI() {
             setStreamingAgents((prev) =>
               prev.filter((a) => a.agentName !== payload.agentName),
             );
+            setLoadingText(""); // Reset loading text to prevent stale tool call strings
             break;
           }
 

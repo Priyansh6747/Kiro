@@ -385,8 +385,11 @@ Delegation Rule:
             push("tool_call", { toolName: toolCallName });
           }
 
+          let delegated = false;
           for (const toolCall of responseMessage.tool_calls) {
             const functionName = toolCall.function.name;
+            if (functionName === "delegateToAgent") delegated = true;
+
             let functionArgs: any = {};
             try {
               functionArgs = JSON.parse(toolCall.function.arguments || "{}");
@@ -439,6 +442,13 @@ Delegation Rule:
                 }
               } catch (e) {}
             }
+          }
+
+          if (delegated) {
+            // Optimization: If Yuki delegated to an agent, the agent's response is already 
+            // rendered to the UI. We can skip the redundant final LLM call.
+            responseMessage = null;
+            break;
           }
 
           debugInfo.finalPrompt = JSON.parse(JSON.stringify(messages));

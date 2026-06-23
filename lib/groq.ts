@@ -109,5 +109,6 @@ export async function groqChat(
     model: "openai/gpt-oss-120b",
     tools,
     tool_choice: tools && tools.length > 0 ? "auto" : "none",
+    max_tokens: 4000,
   }));
 }

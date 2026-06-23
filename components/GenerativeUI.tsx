@@ -10,6 +10,35 @@ import { TaskManager } from "./planning/TaskManager";
 
 // --- Subcomponents ---
 
+export function MarkdownRenderer({ content, className = "prose" }: { content: string, className?: string }) {
+  // Clean up malformed markdown tables (remove blank lines between table rows)
+  const cleanContent = content.replace(/(\|[^\n]+\|)\n\n+(?=\|)/g, "$1\n");
+
+  return (
+    <div className={className}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ node, ...props }) => (
+            <div className="w-full my-4 rounded-xl border border-border-default bg-surface overflow-hidden shadow-sm">
+              <div className="overflow-x-auto w-full max-w-full custom-scrollbar">
+                <table className="w-full text-left text-sm whitespace-nowrap min-w-max" {...props} />
+              </div>
+            </div>
+          ),
+          thead: ({ node, ...props }) => <thead className="bg-surface-raised text-secondary border-b border-border-default" {...props} />,
+          th: ({ node, ...props }) => <th className="px-4 py-3 font-medium" {...props} />,
+          tbody: ({ node, ...props }) => <tbody className="divide-y divide-border-subtle text-primary" {...props} />,
+          tr: ({ node, ...props }) => <tr className="hover:bg-accent/5 transition-colors" {...props} />,
+          td: ({ node, ...props }) => <td className="px-4 py-3 whitespace-normal" {...props} />,
+        }}
+      >
+        {cleanContent}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export interface TableProps {
   headers: string[];
   rows: string[][];
@@ -255,7 +284,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
   const className = proseClassName || defaultProse;
 
   // Regex to find any tag like |-TABLE-|, |-TASK-|, |-PLANNING-FORM-|, etc.
-  const tagRegex = /(\|-([A-Z-]+)-\|)/;
+  const tagRegex = /(\|-([A-Z-]+)-(\|)?)/;
   
   const renderPart = (text: string, index: number) => {
     let currentText = text;
@@ -269,9 +298,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
         // No more tags, render remaining text
         if (currentText.trim()) {
           elements.push(
-            <div key={`${index}-${keyCounter++}`} className={className}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentText}</ReactMarkdown>
-            </div>
+            <MarkdownRenderer key={`${index}-${keyCounter++}`} content={currentText} className={className} />
           );
         }
         break;
@@ -281,9 +308,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
       const preText = currentText.substring(0, match.index);
       if (preText.trim()) {
         elements.push(
-          <div key={`${index}-${keyCounter++}`} className={className}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{preText}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer key={`${index}-${keyCounter++}`} content={preText} className={className} />
         );
       }
 
@@ -373,9 +398,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
 
       // If we got here, we couldn't parse the JSON or didn't find one. Just render the tag as text and move on.
       elements.push(
-        <div key={`${index}-${keyCounter++}`} className={className}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{tagString}</ReactMarkdown>
-        </div>
+        <MarkdownRenderer key={`${index}-${keyCounter++}`} content={tagString} className={className} />
       );
       currentText = textAfterTag;
     }

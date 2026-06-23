@@ -156,30 +156,31 @@ export function TaskManager({ data }: Props) {
 
   return (
     <div style={{ margin: "16px 0", color: "var(--text-primary)", fontFamily: "inherit" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", minWidth: 0 }}>
-        {/* Left Panel */}
-        <div style={{ flex: "1 1 340px", maxWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px", minWidth: 0 }}>
+        {/* Top Panel: Task List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {stages.map((stage, sIdx) => (
             <div key={stage.stage} style={{ border: "1px solid var(--border-default)", borderRadius: "12px", overflow: "hidden" }}>
               <div style={{ background: "var(--surface-raised)", padding: "12px 16px", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>{stage.stageName}</span>
                 <span style={{ fontSize: "12px", background: "var(--surface-input)", padding: "2px 8px", borderRadius: "12px" }}>{stage.tasks.length} tasks</span>
               </div>
-              <div style={{ padding: "8px" }}>
+              <div style={{ padding: "16px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
                 {stage.tasks.map((task, tIdx) => {
                   const isExcluded = deselected.has(task.id);
                   return (
-                    <div key={task.id} style={{ padding: "8px", borderBottom: "1px solid var(--border-default)", opacity: isExcluded ? 0.5 : 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input type="checkbox" checked={!isExcluded} onChange={() => toggleSelect(task.id)} style={{ cursor: "pointer" }} />
-                        <input 
+                    <div key={task.id} style={{ padding: "12px", border: "1px solid var(--border-default)", borderRadius: "8px", background: "var(--surface-raised)", opacity: isExcluded ? 0.5 : 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                        <input type="checkbox" checked={!isExcluded} onChange={() => toggleSelect(task.id)} style={{ cursor: "pointer", marginTop: "4px" }} />
+                        <textarea 
                           value={task.title}
                           onChange={e => updateTask(sIdx, tIdx, { title: e.target.value })}
-                          style={{ background: "transparent", border: "none", color: "var(--text-primary)", flex: 1, outline: "none" }}
+                          rows={2}
+                          style={{ background: "transparent", border: "none", color: "var(--text-primary)", flex: 1, outline: "none", resize: "none", fontSize: "14px", fontWeight: 500 }}
                         />
                         <button onClick={() => removeTask(sIdx, tIdx)} style={{ background: "none", border: "none", color: "var(--text-tertiary)", cursor: "pointer" }}>✕</button>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", paddingLeft: "24px", fontSize: "12px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", fontSize: "12px" }}>
                         <div style={{ background: "var(--surface-input)", padding: "2px 6px", borderRadius: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                           Est: 
                           <input 
@@ -202,7 +203,7 @@ export function TaskManager({ data }: Props) {
                         <select 
                           value="" 
                           onChange={e => addDependency(sIdx, tIdx, e.target.value)}
-                          style={{ background: "var(--surface-input)", border: "none", color: "var(--text-primary)", borderRadius: "4px", fontSize: "12px", outline: "none", cursor: "pointer" }}
+                          style={{ background: "var(--surface-input)", border: "none", color: "var(--text-primary)", borderRadius: "4px", fontSize: "12px", outline: "none", cursor: "pointer", padding: "2px 4px" }}
                         >
                           <option value="" disabled>＋ dep</option>
                           {allTasks.filter(t => t.id !== task.id).map(t => (
@@ -215,7 +216,7 @@ export function TaskManager({ data }: Props) {
                 })}
                 <button 
                   onClick={() => addTask(sIdx)}
-                  style={{ width: "100%", padding: "8px", background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "13px", marginTop: "4px" }}
+                  style={{ padding: "12px", background: "var(--surface-input)", border: "1px dashed var(--border-default)", borderRadius: "8px", color: "var(--text-secondary)", cursor: "pointer", fontSize: "13px", height: "100%", minHeight: "100px" }}
                 >
                   ＋ Add Task
                 </button>
@@ -229,8 +230,8 @@ export function TaskManager({ data }: Props) {
           )}
         </div>
 
-        {/* Right Panel */}
-        <div style={{ flex: "2 1 400px", minWidth: 0 }}>
+        {/* Bottom Panel: Graph */}
+        <div style={{ minWidth: 0, height: "600px", border: "1px solid var(--border-default)", borderRadius: "12px", overflow: "hidden" }}>
           <TaskDependencyGraph data={{ artifactId: data.artifactId, stages }} />
         </div>
       </div>
