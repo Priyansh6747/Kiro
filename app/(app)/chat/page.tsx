@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useRef } from "react";
-import { ContentRenderer } from "@/components/GenerativeUI";
+import { ContentRenderer, StreamableContentRenderer } from "@/components/GenerativeUI";
 import { useTheme } from "@/components/ThemeProvider";
 
 interface ChatMessage {
@@ -500,7 +500,7 @@ function ChatUI() {
                           className={`max-w-[85%] md:max-w-[70%] ${m.role === "user" ? "p-4 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
                         >
                         {m.content ? (
-                          <ContentRenderer content={m.content} />
+                          <StreamableContentRenderer content={m.content} isLast={m === visibleMessages[visibleMessages.length - 1] && m.role === "assistant"} />
                         ) : m.tool_calls && isPending ? (
                           <div className="flex flex-col gap-3 p-4 rounded-xl shadow-sm bg-surface-raised border border-border-default">
                             <span className="font-semibold text-sm">

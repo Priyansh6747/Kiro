@@ -13,7 +13,7 @@ export interface TableProps {
 
 export function ResponsiveTable({ headers, rows, caption }: TableProps) {
   return (
-    <div className="w-full my-4 rounded-xl border border-border-default bg-surface overflow-hidden shadow-sm">
+    <div className="w-full my-4 rounded-xl border border-border-default bg-surface overflow-hidden shadow-sm animate-in fade-in zoom-in-95 duration-500">
       {caption && (
         <div className="px-4 py-3 bg-surface-raised border-b border-border-default font-semibold text-sm text-primary">
           {caption}
@@ -57,7 +57,7 @@ export function ResponsiveTable({ headers, rows, caption }: TableProps) {
 function TaskCard({ data }: { data: any }) {
   const [done, setDone] = useState(data.status === "done");
   return (
-    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm flex flex-col gap-3">
+    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex items-start gap-3">
         <button onClick={() => setDone(!done)} className="mt-0.5 text-accent hover:text-accent-hover transition-colors">
           {done ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
@@ -102,7 +102,7 @@ function TimelineView({ data }: { data: any }) {
   }
 
   return (
-    <div className="my-4 rounded-xl border border-border-default bg-surface shadow-sm p-4">
+    <div className="my-4 rounded-xl border border-border-default bg-surface shadow-sm p-4 animate-in fade-in zoom-in-95 duration-500">
       <div className="text-sm font-semibold mb-4 text-primary">Schedule Timeline</div>
       {items.length === 0 ? (
         <div className="text-sm text-tertiary italic">No timeline events found.</div>
@@ -129,7 +129,7 @@ function TimelineView({ data }: { data: any }) {
 
 function MetricsChart({ data }: { data: any }) {
   return (
-    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm flex items-center justify-between">
+    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm flex items-center justify-between animate-in fade-in zoom-in-95 duration-500">
       <div>
         <div className="text-xs text-secondary font-medium uppercase tracking-wider mb-1">{data.title}</div>
         <div className="text-2xl font-bold text-primary flex items-center gap-2">
@@ -165,7 +165,7 @@ function ConfirmBox({ data }: { data: any }) {
   if (status === "cancelled") return <div className="my-2 text-sm text-tertiary font-medium">✗ Action cancelled</div>;
   
   return (
-    <div className="my-4 p-4 rounded-xl border border-missed/30 bg-missed-subtle shadow-sm">
+    <div className="my-4 p-4 rounded-xl border border-missed/30 bg-missed-subtle shadow-sm animate-in fade-in zoom-in-95 duration-500">
       <div className="flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-missed mt-0.5" />
         <div>
@@ -190,7 +190,7 @@ function SmartForm({ data }: { data: any }) {
   if (submitted) return <div className="my-2 text-sm text-done font-medium">✓ Form submitted</div>;
   
   return (
-    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm">
+    <div className="my-4 p-4 rounded-xl border border-border-default bg-surface shadow-sm animate-in fade-in zoom-in-95 duration-500">
       <div className="text-sm font-semibold mb-4 text-primary">{data.title || "Form"}</div>
       <div className="space-y-3">
         {data.fields?.map((f: any, i: number) => (
@@ -225,7 +225,7 @@ function LiveTimer({ data }: { data: any }) {
   const secs = (timeLeft % 60).toString().padStart(2, "0");
 
   return (
-    <div className="my-4 p-4 rounded-xl border border-accent/30 bg-accent-subtle shadow-sm flex items-center justify-between">
+    <div className="my-4 p-4 rounded-xl border border-accent/30 bg-accent-subtle shadow-sm flex items-center justify-between animate-in fade-in zoom-in-95 duration-500">
       <div>
         <div className="text-xs font-semibold text-accent uppercase tracking-wider mb-1">{data.label || "Focus Timer"}</div>
         <div className="text-3xl font-mono font-bold text-primary">{mins}:{secs}</div>
@@ -374,4 +374,45 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
   };
 
   return <>{renderPart(content, 0)}</>;
+}
+
+const streamedMessages = new Set<string>();
+
+export function StreamableContentRenderer({ content, proseClassName, isLast }: { content: string, proseClassName?: string, isLast?: boolean }) {
+  const shouldStream = isLast && !streamedMessages.has(content);
+  const [visibleLength, setVisibleLength] = useState(shouldStream ? 0 : content.length);
+
+  useEffect(() => {
+    if (!shouldStream) {
+      setVisibleLength(content.length);
+      return;
+    }
+    
+    if (visibleLength >= content.length) {
+      streamedMessages.add(content);
+      return;
+    }
+
+    const charsPerTick = Math.max(2, Math.floor(content.length / 50));
+    const timer = setInterval(() => {
+      setVisibleLength(prev => {
+        const next = prev + charsPerTick;
+        if (next >= content.length) {
+          clearInterval(timer);
+          streamedMessages.add(content);
+          return content.length;
+        }
+        return next;
+      });
+    }, 20);
+
+    return () => clearInterval(timer);
+  }, [content, visibleLength, shouldStream]);
+
+  // Ensure that if content changes entirely, we reset (though shouldn't happen often)
+  useEffect(() => {
+    if (!shouldStream) setVisibleLength(content.length);
+  }, [content, shouldStream]);
+
+  return <ContentRenderer content={content.substring(0, visibleLength)} proseClassName={proseClassName} />;
 }

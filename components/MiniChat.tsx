@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@/components/ThemeProvider";
-import { ContentRenderer } from "@/components/GenerativeUI";
+import { ContentRenderer, StreamableContentRenderer } from "@/components/GenerativeUI";
 import { useToast } from "@/hooks/useToast";
 
 interface ChatMessage {
@@ -374,7 +374,11 @@ export function MiniChat() {
                           className={`max-w-[90%] ${m.role === "user" ? "p-3 rounded-xl shadow-sm bg-accent text-white" : "py-2 bg-transparent text-primary"}`}
                         >
                           {m.content ? (
-                            <ContentRenderer content={m.content} proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" />
+                            <StreamableContentRenderer 
+                              content={m.content} 
+                              isLast={m === visibleMessages[visibleMessages.length - 1] && m.role === "assistant"}
+                              proseClassName="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-pre:bg-base prose-pre:border prose-pre:border-border-default prose-headings:text-primary prose-a:text-accent prose-strong:text-primary max-w-none" 
+                            />
                           ) : m.tool_calls && isPending ? (
                             <div className="flex flex-col gap-2 p-3 rounded-xl shadow-sm bg-surface-raised border border-border-default">
                               <span className="font-semibold text-xs">
