@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
     "@clerk/nextjs": "^7.5.3",
+    "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.17.4",
     "@tursodatabase/database": "^0.6.1",
     "@xyflow/react": "^12.11.0",

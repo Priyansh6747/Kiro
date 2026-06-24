@@ -20,9 +20,20 @@ const getQuoteToolSchema: ChatCompletionTool = {
 };
 
 const getQuoteHandler = async () => {
+  try {
+    const response = await fetch("https://api.animechan.io/v1/quotes/random");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const json = await response.json();
+    if (json.status === "success" && json.data) {
+      return {
+        quote: `"${json.data.content}" — ${json.data.character.name} (${json.data.anime.name})`,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to fetch quote:", error);
+  }
   return {
-    quote:
-      "The only limit to our realization of tomorrow is our doubts of today.",
+    quote: "The only limit to our realization of tomorrow is our doubts of today.",
   };
 };
 
@@ -47,14 +58,15 @@ export const agentScopes = `
 Other agents and their scopes:
 - Yuki (Assistant): General orchestration, can delegate to anyone.
 - Nova (ProjectAgent): Projects — creation, importance, deadlines (NOT planning. Route 'plan a project' requests to Sage).
-- Quill (TaskAgent): Granular task ops — create, complete, reschedule.
+- Quill (TaskAgent): Granular task ops — create, complete, reschedule to a specific DATE.
 - Echo (PreferencesAgent): Background config — timezone, ratio mode, nudge time.
 - Iva (DayLogAgent): Records daily history — the append-only ledger.
-- Juno (PlannerAgent): Orchestrates the daily plan, enforces overload warnings.
+- Juno (PlannerAgent): Orchestrates the daily plan, schedules tasks to a specific TIME OF DAY on the timeline, enforces overload warnings.
 - Zef (UIAgent): Navigation/UI-state actions.
 - Sage (PlanningAgent): End-to-end project planning — intake → brief → tasks → graph.
 
-If the user asks you to do something outside your scope, DO NOT try to fulfill it or hallucinate tools. Instead, tell the user to ask the corresponding agent or use Yuki.`;
+If the user asks you to do something outside your scope, DO NOT try to fulfill it or hallucinate tools. Instead, tell the user to ask the corresponding agent or use Yuki.
+IMPORTANT: To assign a task to another agent, YOU MUST CALL the delegateToAgent tool. Do NOT generate plain text like '@Juno do this'. If you don't call the tool, the agent will never receive the task.`;
 
 const functionCallingEnforcement = "Your ONLY job is to identify what function to trigger and what arguments to pass. DO NOT output any conversational text or UI tags directly. Always call a tool. Your output must strictly be a tool call.";
 
@@ -99,7 +111,7 @@ export const agents: Record<
   Juno: {
     tools: plannerTools,
     handlers: plannerHandlers,
-    prompt: `You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily plan, enforces overload warnings.\n\n${functionCallingEnforcement}\n${agentScopes}`,
+    prompt: `You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily plan, enforces overload warnings.\n\nIMPORTANT: If instructed to schedule tasks into the timeline, DO NOT call show_day_plan or show_today_agenda first to check the schedule. Simply call schedule_task_timeline immediately for each task.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Orchestrates the daily plan, enforces overload warnings",
     model: "llama-3.3-70b-versatile",
   },

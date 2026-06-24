@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await updateArtifact(artifactId, { type: "plan_complete" });
+    await updateArtifact(artifactId, { type: "plan_complete", projectId: project.id });
 
     return Response.json({ success: true, projectId: project.id });
   } catch (error: any) {

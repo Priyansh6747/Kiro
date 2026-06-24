@@ -36,6 +36,24 @@ export const plannerTools: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "schedule_task_timeline",
+      description:
+        "Schedule a task into a specific time block on the daily timeline.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskTitle: { type: "string", description: "Title of the task to schedule" },
+          projectName: { type: "string", description: "Project name to disambiguate" },
+          date: { type: ["number", "string"], description: "Unix day integer OR YYYY-MM-DD string" },
+          timeOfDay: { type: "string", description: "Time of day in HH:MM format (24-hour) local time" },
+        },
+        required: ["taskTitle", "date", "timeOfDay"],
+      },
+    },
+  },
 ];
 
 export const plannerHandlers: Record<string, Function> = {
@@ -44,7 +62,12 @@ export const plannerHandlers: Record<string, Function> = {
     if (!userId) throw new Error("Unauthorized");
     
     let targetDate = args.date;
-    if (typeof targetDate === "string") {
+    if (targetDate === "today" || targetDate === "now") {
+      const { getOrCreatePreferences } = await import("@/lib/storage");
+      const { todayUnixDay } = await import("@/lib/utils");
+      const prefs = await getOrCreatePreferences(userId);
+      targetDate = todayUnixDay(prefs.timezone);
+    } else if (typeof targetDate === "string") {
       const parts = targetDate.split("-");
       if (parts.length === 3) {
         const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -139,5 +162,95 @@ export const plannerHandlers: Record<string, Function> = {
       bucket: enrichedBucket,
       preformattedUi: markdown
     };
+  },
+  schedule_task_timeline: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    let targetDate = args.date;
+    if (targetDate === "today" || targetDate === "now") {
+      const { getOrCreatePreferences } = await import("@/lib/storage");
+      const { todayUnixDay } = await import("@/lib/utils");
+      const prefs = await getOrCreatePreferences(userId);
+      targetDate = todayUnixDay(prefs.timezone);
+    } else if (typeof targetDate === "string") {
+      const parts = targetDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        targetDate = Math.floor(d.getTime() / 86400000);
+      } else {
+        let parsed = Date.parse(targetDate);
+        if (!isNaN(parsed)) {
+          const d = new Date(parsed);
+          if (d.getFullYear() === 2001) d.setFullYear(new Date().getFullYear());
+          targetDate = Math.floor(d.getTime() / 86400000);
+        }
+      }
+    }
+
+    const { findProjectByName, findTaskByTitle, placeDayPlanBlock, OverlapConflictError, getOrCreatePreferences } = await import("@/lib/storage");
+    
+    let projectId: string | undefined;
+    if (args.projectName) {
+      const project = await findProjectByName(args.projectName, userId);
+      if (project) projectId = project.id;
+    }
+    
+    const task = await findTaskByTitle(args.taskTitle, userId, projectId);
+    if (!task) return { preformattedUi: `Task "${args.taskTitle}" not found.` };
+
+    let timeStr = args.timeOfDay.toLowerCase().replace(/\s+/g, '');
+    let isPM = timeStr.includes("pm");
+    let isAM = timeStr.includes("am");
+    timeStr = timeStr.replace(/[a-z]/g, '');
+    
+    const timeParts = timeStr.split(":");
+    let hh = parseInt(timeParts[0] || "0", 10);
+    let mm = parseInt(timeParts[1] || "0", 10);
+    
+    if (isPM && hh < 12) hh += 12;
+    if (isAM && hh === 12) hh = 0;
+
+    const prefs = await getOrCreatePreferences(userId);
+    const tz = prefs.timezone;
+
+    const utcDate = new Date(targetDate * 86400000);
+    const isoStr = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth()+1).padStart(2, '0')}-${String(utcDate.getUTCDate()).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`;
+    const approxDate = new Date(isoStr + 'Z'); 
+    
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    });
+    
+    const parts = formatter.formatToParts(approxDate);
+    const offsetPart = parts.find(p => p.type === 'timeZoneName')?.value;
+    
+    let offsetMs = 0;
+    if (offsetPart && offsetPart.startsWith('GMT')) {
+      const sign = offsetPart.includes('+') ? 1 : -1;
+      const match = offsetPart.match(/\d+:\d+/);
+      if (match) {
+        const [oH, oM] = match[0].split(':').map(Number);
+        offsetMs = sign * (oH * 3600000 + oM * 60000);
+      }
+    }
+    
+    const exactTimeMs = approxDate.getTime() - offsetMs;
+    const startTime = Math.floor(exactTimeMs / 1000);
+
+    try {
+      const { updateTask } = await import("@/lib/storage");
+      await placeDayPlanBlock(userId, task.id, targetDate, startTime);
+      await updateTask(task.id, { scheduledDate: targetDate });
+      return {
+        preformattedUi: `✓ Scheduled **${task.title}** at ${args.timeOfDay}`
+      };
+    } catch (e: any) {
+      if (e instanceof OverlapConflictError) {
+        return { preformattedUi: `⚠️ Cannot schedule **${task.title}** at ${args.timeOfDay} due to an overlap conflict with another task.` };
+      }
+      return { preformattedUi: `❌ Failed to schedule: ${e.message}` };
+    }
   },
 };
