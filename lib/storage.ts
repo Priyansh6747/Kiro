@@ -1191,7 +1191,7 @@ export async function getArtifactsByUser(userId: string, type?: string): Promise
 
 export async function updateArtifact(
   id: string,
-  patch: Partial<Pick<Artifact, "content" | "type">>
+  patch: Partial<Pick<Artifact, "content" | "type" | "projectId">>
 ): Promise<Artifact> {
   const [updated] = await db
     .update(artifacts)

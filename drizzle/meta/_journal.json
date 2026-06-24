@@ -36,6 +36,13 @@
       "when": 1782133115393,
       "tag": "0004_familiar_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782325839337,
+      "tag": "0005_yellow_namora",
+      "breakpoints": true
     }
   ]
 }

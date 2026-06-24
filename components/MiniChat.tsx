@@ -3,13 +3,14 @@
 import { Bot, Maximize2, Send, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTheme } from "@/components/ThemeProvider";
 import { ContentRenderer, StreamableContentRenderer } from "@/components/GenerativeUI";
 import { useToast } from "@/hooks/useToast";
 
 interface ChatMessage {
+  id?: string;
   role: "user" | "assistant" | "tool";
   content?: string;
   name?: string;
@@ -78,11 +79,109 @@ export function MiniChat() {
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const isFetchingOlder = useRef(false);
+
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && !isFetchingOlder.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, loading]);
+
+  const [hasMoreOlder, setHasMoreOlder] = useState(true);
+  const [topOffset, setTopOffset] = useState(0);
+  const [bottomOffset, setBottomOffset] = useState(0);
+
+  // Load initial history when chat opens
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setLoading(true);
+      fetch("/api/chat?limit=30")
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setMessages(data);
+            setTopOffset(30);
+            setBottomOffset(0);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [isOpen, messages.length]);
+
+  const observerTopRef = useRef<IntersectionObserver | null>(null);
+  const observerBottomRef = useRef<IntersectionObserver | null>(null);
+
+  const topSentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading || !hasMoreOlder) return;
+      if (observerTopRef.current) observerTopRef.current.disconnect();
+
+      observerTopRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setLoading(true);
+          isFetchingOlder.current = true;
+          fetch(`/api/chat?limit=10&offset=${topOffset}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (Array.isArray(data) && data.length > 0) {
+                setMessages((prev) => {
+                  const newWindow = [...data, ...prev];
+                  if (newWindow.length > 40) return newWindow.slice(0, 40);
+                  return newWindow;
+                });
+                setTopOffset(topOffset + data.length);
+                setBottomOffset(bottomOffset + (data.length === 10 ? 10 : 0));
+              } else {
+                setHasMoreOlder(false);
+              }
+            })
+            .finally(() => {
+              setLoading(false);
+              setTimeout(() => isFetchingOlder.current = false, 500);
+            });
+        }
+      });
+      if (node) observerTopRef.current.observe(node);
+    },
+    [loading, hasMoreOlder, topOffset, bottomOffset]
+  );
+
+  const bottomSentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading || bottomOffset <= 0) return;
+      if (observerBottomRef.current) observerBottomRef.current.disconnect();
+
+      observerBottomRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setLoading(true);
+          const fetchOffset = Math.max(0, bottomOffset - 10);
+          const fetchLimit = bottomOffset - fetchOffset;
+          if (fetchLimit <= 0) {
+            setLoading(false);
+            return;
+          }
+
+          fetch(`/api/chat?limit=${fetchLimit}&offset=${fetchOffset}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (Array.isArray(data) && data.length > 0) {
+                setMessages((prev) => {
+                  const newWindow = [...prev, ...data];
+                  if (newWindow.length > 40) return newWindow.slice(newWindow.length - 40);
+                  return newWindow;
+                });
+                setBottomOffset(fetchOffset);
+                setTopOffset(topOffset - data.length);
+              }
+            })
+            .finally(() => setLoading(false));
+        }
+      });
+      if (node) observerBottomRef.current.observe(node);
+    },
+    [loading, bottomOffset, topOffset]
+  );
 
   if (pathname === "/chat") return null;
 
@@ -223,6 +322,7 @@ export function MiniChat() {
   const handleSend = async () => {
     if (!text.trim()) return;
 
+    isFetchingOlder.current = false;
     const newMessages: ChatMessage[] = [
       ...messages,
       { role: "user", content: text },
@@ -339,10 +439,17 @@ export function MiniChat() {
                   const isLastMessage = idx === visibleMessages.length - 1;
                   const isPending = isLastMessage && m.tool_calls && pendingToolCalls.length > 0;
                   const tools = m.tool_calls || [];
+                  
+                  const isTopSentinel = idx === 5;
+                  const isBottomSentinel = idx === visibleMessages.length - 5;
+                  let refToUse = null;
+                  if (isTopSentinel) refToUse = topSentinelRef;
+                  else if (isBottomSentinel) refToUse = bottomSentinelRef;
 
                   return (
                     <div
-                      key={idx}
+                      key={m.id || idx}
+                      ref={refToUse}
                       className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${m.role !== "user" ? "items-start" : "items-end"}`}
                     >
                       {(m.content || tools.length > 0) && (

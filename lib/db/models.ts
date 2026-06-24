@@ -300,3 +300,35 @@ export const artifacts = sqliteTable("artifacts", {
 export type Artifact = typeof artifacts.$inferSelect;
 export type NewArtifact = typeof artifacts.$inferInsert;
 
+// ---------------------------------------------------------------------------
+// messages
+// ---------------------------------------------------------------------------
+export const messages = sqliteTable("messages", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  role: text("role", { enum: ["user", "assistant", "system"] }).notNull(),
+  agentName: text("agent_name"), // 'Yuki', 'Nova', etc.
+  content: text("content").notNull(),
+  metadata: text("metadata", { mode: "json" }), // storing jsonb equivalent in sqlite
+  createdAt: integer("created_at").notNull(),
+});
+
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// user_context
+// ---------------------------------------------------------------------------
+export const userContext = sqliteTable("user_context", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  contextPyramid: text("context_pyramid", { mode: "json" }).notNull(),
+  updateDecay: integer("update_decay").notNull().default(20),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export type UserContext = typeof userContext.$inferSelect;
+export type NewUserContext = typeof userContext.$inferInsert;

@@ -20,9 +20,20 @@ const getQuoteToolSchema: ChatCompletionTool = {
 };
 
 const getQuoteHandler = async () => {
+  try {
+    const response = await fetch("https://api.animechan.io/v1/quotes/random");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const json = await response.json();
+    if (json.status === "success" && json.data) {
+      return {
+        quote: `"${json.data.content}" — ${json.data.character.name} (${json.data.anime.name})`,
+      };
+    }
+  } catch (error) {
+    console.error("Failed to fetch quote:", error);
+  }
   return {
-    quote:
-      "The only limit to our realization of tomorrow is our doubts of today.",
+    quote: "The only limit to our realization of tomorrow is our doubts of today.",
   };
 };
 

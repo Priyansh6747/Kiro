@@ -44,6 +44,8 @@ function ChatUI() {
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
+  const [chatActive, setChatActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Thinking...");
   const [streamingAgents, setStreamingAgents] = useState<{agentName: string; snarkyComment?: string}[]>([]);
@@ -94,13 +96,29 @@ function ChatUI() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (messagesEndRef.current) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading, streamingAgents]);
+    const isFirstInject = chatActive && messages.length > 2 && messages.length <= dbMessages.length + 2;
+    scrollToBottom(isFirstInject ? "auto" : "smooth");
+  }, [messages, loading, streamingAgents, chatActive]);
+
+  useEffect(() => {
+    fetch("/api/chat?limit=30")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDbMessages(data);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const msg = searchParams.get("msg");
@@ -272,8 +290,14 @@ function ChatUI() {
   const handleSendDirect = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
+    setChatActive(true);
+
+    // If it's the first message of the session, inject the db history
+    const isFirstOfSession = messages.length === 0;
+    const baseMessages = isFirstOfSession ? [...dbMessages] : [...messages];
+
     const newMessages: ChatMessage[] = [
-      ...messages,
+      ...baseMessages,
       { role: "user", content: textToSend },
     ];
     setMessages(newMessages);
@@ -349,7 +373,7 @@ function ChatUI() {
         {/* --- EMPTY DASHBOARD STATE --- */}
         <div 
           className={`absolute inset-0 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto w-full transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-            messages.length > 0 ? 'opacity-0 -translate-y-12 pointer-events-none' : 'opacity-100 translate-y-0'
+            chatActive ? 'opacity-0 -translate-y-12 pointer-events-none' : 'opacity-100 translate-y-0'
           }`}
         >
           <div className="max-w-3xl w-full flex flex-col items-center gap-8 mt-[-10vh]">
@@ -444,7 +468,7 @@ function ChatUI() {
         {/* --- CHAT STATE --- */}
         <div 
           className={`absolute inset-0 flex flex-col h-full overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-            messages.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+            chatActive ? 'opacity-100 translate-y-0 delay-200' : 'opacity-0 translate-y-16 pointer-events-none'
           }`}
         >
           {/* Header */}
@@ -468,7 +492,9 @@ function ChatUI() {
                 return (
                   <div
                     key={idx}
-                    className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both ${m.role !== "user" ? "items-start" : "items-end"}`}
+                    className={`flex flex-col ${
+                      idx >= dbMessages.length ? "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both" : ""
+                    } ${m.role !== "user" ? "items-start" : "items-end"}`}
                   >
                     {(m.content || tools.length > 0) && (
                       <>

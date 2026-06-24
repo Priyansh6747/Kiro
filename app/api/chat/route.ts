@@ -3,7 +3,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { groqChat } from "@/lib/groq";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db/client";
-import { aiUsage } from "@/lib/db/models";
+import { aiUsage, messages as messagesTable } from "@/lib/db/models";
+import { pushMessageToDb, processContextDecay, getUserContext } from "@/lib/chat/pipeline";
+import { eq, desc, and } from "drizzle-orm";
 
 // ─── SSE helpers ────────────────────────────────────────────────────────────
 
@@ -84,7 +86,37 @@ const WRITE_TOOLS = [
   "updateDayLog",
 ];
 
-// ─── Main POST handler ────────────────────────────────────────────────────────
+// ─── Main GET & POST handlers ──────────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = new URL(req.url);
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const limit = parseInt(url.searchParams.get("limit") || "30");
+
+  const msgs = await db.select()
+    .from(messagesTable)
+    .where(eq(messagesTable.userId, userId))
+    .orderBy(desc(messagesTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+  
+  // Re-order to chronological for the UI
+  msgs.reverse();
+  
+  // Transform to ChatMessage format expected by UI
+  const formattedMsgs = msgs.map(m => ({
+    role: m.role,
+    content: m.content,
+    name: m.agentName || undefined,
+  }));
+
+  return NextResponse.json(formattedMsgs);
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -94,6 +126,16 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { messages, confirmedToolCallIds, isMiniChat, pageContext, selectedAgent } = body;
+
+  const lastUserMsg = messages.findLast((m: any) => m.role === "user");
+  // Only push new user message if this isn't just a tool confirmation pass
+  if (lastUserMsg && !(confirmedToolCallIds && confirmedToolCallIds.length > 0)) {
+    await pushMessageToDb(userId, "user", lastUserMsg.content);
+    await processContextDecay(userId);
+  }
+
+  const ctx = await getUserContext(userId);
+  const contextPyramidStr = JSON.stringify(ctx.contextPyramid, null, 2);
 
   // ── Build a ReadableStream that pushes SSE events ──────────────────────────
   const stream = new ReadableStream({
@@ -285,6 +327,8 @@ export async function POST(req: NextRequest) {
             // Push to agentMessages so it's included in innerTrace and preserved on "done"
             agentMessages.push(finalAgentMsg);
 
+            await pushMessageToDb(userId, "assistant", finalContent, agentName);
+
             push("agent_response", {
               agentName,
               message: finalAgentMsg,
@@ -363,7 +407,15 @@ Delegation Rule:
           finalSystemPrompt = agents[selectedAgent].prompt;
         }
 
-        finalSystemPrompt += "\n" + SHARED_RULES;
+        const recentUserMsgs = await db.select()
+          .from(messagesTable)
+          .where(and(eq(messagesTable.userId, userId), eq(messagesTable.role, "user")))
+          .orderBy(desc(messagesTable.createdAt))
+          .limit(10);
+        recentUserMsgs.reverse();
+        const recentUserMsgsStr = recentUserMsgs.map(m => `[User]: ${m.content}`).join("\n");
+
+        finalSystemPrompt += "\n" + SHARED_RULES + "\n\nHere is the User Context Pyramid (Standing Memory):\n" + contextPyramidStr + "\n\nRecent Past 10 User Messages:\n" + recentUserMsgsStr;
 
         // Inject system prompt
         if (messages.length > 0 && messages[0].role !== "system") {
@@ -469,6 +521,7 @@ Delegation Rule:
             // Emit Yuki's snarky comment as its own bubble BEFORE the agent starts,
             // so the user sees Yuki respond first, then the sub-agent skeleton appears.
             if (functionName === "delegateToAgent" && functionArgs.snarkyComment) {
+              await pushMessageToDb(userId, "assistant", functionArgs.snarkyComment, "Yuki");
               push("yuki_comment", { 
                 content: functionArgs.snarkyComment,
                 tool_calls: [
@@ -550,6 +603,13 @@ Delegation Rule:
 
         debugInfo.finalLlmResponse = responseMessage;
         debugInfo.fullTrace = [...messages, responseMessage].filter(Boolean);
+
+        if (responseMessage && responseMessage.content) {
+          await pushMessageToDb(userId, "assistant", responseMessage.content, responseMessage.name || "Yuki", {
+            toolCalls: debugInfo.toolCalls,
+            toolResults: debugInfo.toolResults,
+          });
+        }
 
         // Emit the final done event with everything the UI needs
         push("done", {
