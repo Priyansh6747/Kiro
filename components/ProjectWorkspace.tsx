@@ -132,6 +132,23 @@ export function ProjectWorkspace({
       <div className="flex flex-1 min-h-0">
         {/* Left Tasks Column */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-base relative">
+          {/* Mobile Graph Preview */}
+          <div className="md:hidden h-[240px] -mx-6 -mt-6 mb-2 border-b border-border-default p-4 relative bg-surface-raised/50 group">
+            <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-base/40 backdrop-blur-[2px]">
+              <button
+                onClick={() => setShowGraphModal(true)}
+                className="px-4 py-2 bg-accent text-white font-semibold text-sm rounded-lg shadow hover:bg-blue-700 transition-colors"
+              >
+                Expand Graph
+              </button>
+            </div>
+            <DependencyChart
+              tasks={tasks}
+              dependencies={dependencies}
+              preview
+            />
+          </div>
+
           <button
             onClick={() => {
               setCapturePredecessorId(undefined);
@@ -166,8 +183,45 @@ export function ProjectWorkspace({
           />
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-full md:w-[420px] flex flex-col shrink-0 border-l border-border-default bg-surface shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+        {/* Mobile Task Details Overlay */}
+        <div 
+          className={`
+            md:hidden fixed inset-0 z-50 flex flex-col bg-surface shadow-2xl transition-transform duration-300
+            ${selectedTask ? "translate-x-0" : "translate-x-full"}
+          `}
+        >
+          <div className="flex px-4 py-4 border-b border-border-default bg-surface items-center justify-between shrink-0">
+            <h2 className="text-sm font-bold text-tertiary uppercase tracking-widest">
+              Task Details
+            </h2>
+            <button
+              onClick={() => setSelectedTask(null)}
+              className="p-2 -mr-2 rounded-full hover:bg-surface-raised text-secondary hover:text-primary transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-surface">
+            {selectedTask ? (
+              <TaskDetailPanel
+                task={selectedTask}
+                allTasks={tasks}
+                dependencies={dependencies}
+                onUpdated={handleTaskUpdated}
+                onDependencyAdded={loadTasks}
+                onDependencyRemoved={loadTasks}
+              />
+            ) : (
+              <EmptyTaskDetail />
+            )}
+          </div>
+        </div>
+
+        {/* Right Sidebar (Desktop Only) */}
+        <div className="hidden md:flex w-[420px] flex-col shrink-0 border-l border-border-default bg-surface shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
           {/* Dependency Chart Preview */}
           <div className="h-[280px] border-b border-border-default p-4 shrink-0 relative bg-surface-raised/50 group">
             <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-base/40 backdrop-blur-[2px]">

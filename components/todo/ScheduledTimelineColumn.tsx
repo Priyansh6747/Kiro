@@ -56,6 +56,7 @@ export function ScheduledTimelineColumn({
   setTimelineMode,
   onSelectTask,
   todayRef,
+  className,
 }: {
   tasks: Task[];
   selectedTask: Task | null;
@@ -63,6 +64,7 @@ export function ScheduledTimelineColumn({
   setTimelineMode: (m: "compact" | "continuous") => void;
   onSelectTask: (t: Task) => void;
   todayRef: RefObject<HTMLDivElement | null>;
+  className?: string;
 }) {
   const [windowOffsetDays, setWindowOffsetDays] = useState(-10);
   const isSliding = useRef(false);
@@ -414,7 +416,7 @@ export function ScheduledTimelineColumn({
   };
 
   return (
-    <div className="w-1/3 border-r border-border-default flex flex-col bg-surface">
+    <div className={`border-r border-border-default flex flex-col bg-surface ${className || "w-1/3"}`}>
       <div className="p-4 border-b border-border-default bg-surface flex items-center justify-between shrink-0">
         <h2 className="font-semibold text-primary">Scheduled</h2>
         <div className="flex bg-surface-raised rounded-md p-0.5 border border-border-default">

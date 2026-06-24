@@ -53,6 +53,7 @@ export function UnscheduledColumn({
   onUpdateTask,
   onDeleteTask,
   onAddTask,
+  className,
 }: {
   tasks: Task[];
   selectedTask: Task | null;
@@ -61,13 +62,14 @@ export function UnscheduledColumn({
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   onAddTask: () => void;
+  className?: string;
 }) {
   const unscheduledTasks = tasks.filter(
     (t) => !t.scheduledDate && t.status !== "deleted",
   );
 
   return (
-    <div className="w-1/3 border-r border-border-default flex flex-col bg-surface">
+    <div className={`border-r border-border-default flex flex-col bg-surface ${className || "w-1/3"}`}>
       <div className="p-4 border-b border-border-default bg-surface flex items-center justify-between shrink-0">
         <h2 className="font-semibold text-primary">UnScheduled</h2>
         <span className="bg-accent-subtle text-accent text-xs font-bold px-2 py-1 rounded-full">

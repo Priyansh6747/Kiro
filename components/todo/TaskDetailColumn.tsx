@@ -16,6 +16,7 @@ export function TaskDetailColumn({
   onUpdateTask,
   onAddDep,
   onRemoveDep,
+  onClose,
 }: {
   selectedTask: Task | null;
   tasks: Task[];
@@ -23,12 +24,37 @@ export function TaskDetailColumn({
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onAddDep: (taskId: string, predecessorId: string) => void;
   onRemoveDep: (taskId: string, predecessorId: string) => void;
+  onClose: () => void;
 }) {
   return (
-    <div className="w-1/3 flex flex-col bg-surface-raised overflow-hidden">
-      <div className="p-4 border-b border-border-default bg-surface shrink-0">
-        <h2 className="font-semibold text-primary">Details</h2>
-      </div>
+    <>
+      {selectedTask && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity" 
+          onClick={onClose}
+        />
+      )}
+      <div 
+        className={`flex flex-col bg-surface-raised overflow-hidden transition-transform duration-300
+          md:w-1/3 md:relative md:z-auto md:rounded-none md:shadow-none md:h-full md:flex md:border-l md:border-border-default md:translate-y-0
+          ${selectedTask 
+            ? "fixed inset-x-0 bottom-0 h-[85vh] z-50 rounded-t-2xl shadow-2xl translate-y-0" 
+            : "fixed inset-x-0 bottom-0 h-[85vh] z-50 rounded-t-2xl shadow-2xl translate-y-full"
+          }
+        `}
+      >
+        <div className="p-4 border-b border-border-default bg-surface shrink-0 flex justify-between items-center">
+          <h2 className="font-semibold text-primary">Details</h2>
+          <button 
+            onClick={onClose} 
+            className="md:hidden text-secondary hover:text-primary rounded-full p-1 bg-surface-raised"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       <div className="flex-1 overflow-y-auto p-4">
         {!selectedTask ? (
           <div className="h-full flex items-center justify-center text-secondary text-sm">
@@ -206,6 +232,7 @@ export function TaskDetailColumn({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

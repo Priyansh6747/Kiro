@@ -30,6 +30,7 @@ export default function TodoPage() {
   const [timelineMode, setTimelineMode] = useState<"compact" | "continuous">(
     "continuous",
   );
+  const [activeTab, setActiveTab] = useState<"unscheduled" | "scheduled">("unscheduled");
 
   const todayRef = useRef<HTMLDivElement>(null);
 
@@ -160,34 +161,55 @@ export default function TodoPage() {
   if (!todoProject) return null;
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-surface text-primary">
-      <UnscheduledColumn
-        tasks={tasks}
-        selectedTask={selectedTask}
-        todoProject={todoProject}
-        onSelectTask={setSelectedTask}
-        onUpdateTask={handleUpdateTask}
-        onDeleteTask={handleDeleteTask}
-        onAddTask={handleAddTask}
-      />
+    <div className="flex flex-col md:flex-row h-full w-full overflow-hidden bg-surface text-primary">
+      {/* Mobile Tabs */}
+      <div className="md:hidden flex border-b border-border-default shrink-0">
+        <button
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "unscheduled" ? "text-primary border-b-2 border-accent" : "text-secondary"}`}
+          onClick={() => setActiveTab("unscheduled")}
+        >
+          Unscheduled
+        </button>
+        <button
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "scheduled" ? "text-primary border-b-2 border-accent" : "text-secondary"}`}
+          onClick={() => setActiveTab("scheduled")}
+        >
+          Scheduled
+        </button>
+      </div>
 
-      <ScheduledTimelineColumn
-        tasks={tasks}
-        selectedTask={selectedTask}
-        timelineMode={timelineMode}
-        setTimelineMode={setTimelineMode}
-        onSelectTask={setSelectedTask}
-        todayRef={todayRef}
-      />
+      <div className="flex flex-1 overflow-hidden relative">
+        <UnscheduledColumn
+          className={`${activeTab === "unscheduled" ? "flex" : "hidden"} md:flex w-full md:w-1/3 flex-none`}
+          tasks={tasks}
+          selectedTask={selectedTask}
+          todoProject={todoProject}
+          onSelectTask={setSelectedTask}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+          onAddTask={handleAddTask}
+        />
 
-      <TaskDetailColumn
-        selectedTask={selectedTask}
-        tasks={tasks}
-        dependencies={dependencies}
-        onUpdateTask={handleUpdateTask}
-        onAddDep={addDep}
-        onRemoveDep={removeDep}
-      />
+        <ScheduledTimelineColumn
+          className={`${activeTab === "scheduled" ? "flex" : "hidden"} md:flex w-full md:w-1/3 flex-none`}
+          tasks={tasks}
+          selectedTask={selectedTask}
+          timelineMode={timelineMode}
+          setTimelineMode={setTimelineMode}
+          onSelectTask={setSelectedTask}
+          todayRef={todayRef}
+        />
+
+        <TaskDetailColumn
+          selectedTask={selectedTask}
+          tasks={tasks}
+          dependencies={dependencies}
+          onUpdateTask={handleUpdateTask}
+          onAddDep={addDep}
+          onRemoveDep={removeDep}
+          onClose={() => setSelectedTask(null)}
+        />
+      </div>
     </div>
   );
 }

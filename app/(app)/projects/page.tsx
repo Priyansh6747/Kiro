@@ -663,7 +663,7 @@ export default function ProjectsPage() {
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left List */}
         <div
-          className={`flex-1 overflow-y-auto p-4 lg:p-8 lg:pr-4 space-y-3 lg:space-y-4 ${selectedProject ? "hidden lg:block" : "block"}`}
+          className={`flex-1 overflow-y-auto p-4 lg:p-8 lg:pr-4 space-y-3 lg:space-y-4`}
         >
           {filteredAndSortedProjects.length > 0 ? (
             filteredAndSortedProjects.map((p) => (
@@ -695,20 +695,21 @@ export default function ProjectsPage() {
         {/* Right Details Pane - Mobile Overlay or Desktop Split */}
         <div
           className={`
-          w-full lg:w-[420px] lg:shrink-0 
-          bg-surface lg:border-l lg:border-border-default flex-col 
-          shadow-2xl lg:shadow-[-4px_0_24px_rgba(0,0,0,0.02)]
-          ${selectedProject ? "flex" : "hidden lg:flex"}
-        `}
+            fixed inset-0 z-50 flex flex-col bg-surface shadow-2xl transition-transform duration-300
+            lg:relative lg:z-auto lg:w-[420px] lg:shrink-0 lg:border-l lg:border-border-default lg:shadow-[-4px_0_24px_rgba(0,0,0,0.02)] lg:translate-x-0
+            ${selectedProject ? "translate-x-0" : "translate-x-full lg:flex"}
+          `}
         >
           {/* Mobile Header for Details */}
-          <div className="flex lg:hidden px-4 py-4 border-b border-border-default bg-surface items-center shrink-0">
+          <div className="flex lg:hidden px-4 py-4 border-b border-border-default bg-surface items-center justify-between shrink-0">
+            <h2 className="text-sm font-bold text-tertiary uppercase tracking-widest">
+              Details
+            </h2>
             <button
               onClick={() => setSelectedProject(null)}
-              className="text-primary hover:text-accent transition-colors p-2 -ml-2 rounded-full hover:bg-surface-raised flex items-center gap-2 font-medium"
+              className="p-2 -mr-2 rounded-full hover:bg-surface-raised text-secondary hover:text-primary transition-colors"
             >
-              <ChevronLeft className="w-5 h-5" />
-              <span>Back to Projects</span>
+              <X className="w-5 h-5" />
             </button>
           </div>
 
