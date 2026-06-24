@@ -25,6 +25,8 @@ export function AiQuestions({ data }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [nextContent, setNextContent] = useState<string>("");
 
+  const [customModes, setCustomModes] = useState<Record<string, boolean>>({});
+
   if (!questions || questions.length === 0) {
     return <div className="text-secondary text-sm">No questions provided.</div>;
   }
@@ -42,6 +44,11 @@ export function AiQuestions({ data }: Props) {
   };
 
   const handleChoiceClick = (choice: string) => {
+    if (choice.toLowerCase().includes("something else")) {
+      setCustomModes({ ...customModes, [currentQuestion.id]: true });
+      handleAnswerChange(""); // Clear so they can type
+      return;
+    }
     handleAnswerChange(choice);
     setTimeout(() => {
       handleNext();
@@ -164,7 +171,8 @@ export function AiQuestions({ data }: Props) {
 
   const isLastQuestion = currentIndex === questions.length - 1;
   const currentAnswer = answers[currentQuestion?.id] || "";
-  const isNextDisabled = currentQuestion?.type === "text" && currentAnswer.trim() === "";
+  const isCustom = customModes[currentQuestion?.id];
+  const isNextDisabled = (currentQuestion?.type === "text" || isCustom) && currentAnswer.trim() === "";
 
   return (
     <div style={cardStyle}>
@@ -199,18 +207,21 @@ export function AiQuestions({ data }: Props) {
         <div key={currentIndex} className="fade-slide-up" style={{ marginTop: "12px" }}>
           <label style={{ fontWeight: 600, fontSize: "1.1rem" }}>{currentQuestion.question}</label>
           
-          {currentQuestion.type === "text" && (
-            <textarea 
-              rows={2} 
-              style={inputStyle} 
-              value={currentAnswer} 
-              onChange={(e) => handleAnswerChange(e.target.value)} 
-              placeholder="Your answer..."
-              autoFocus
-            />
+          {(currentQuestion.type === "text" || isCustom) && (
+            <div style={{ marginTop: "16px" }}>
+              {isCustom && <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "4px" }}>Please specify:</div>}
+              <textarea 
+                rows={2} 
+                style={inputStyle} 
+                value={currentAnswer} 
+                onChange={(e) => handleAnswerChange(e.target.value)} 
+                placeholder="Your answer..."
+                autoFocus
+              />
+            </div>
           )}
 
-          {currentQuestion.type === "choice" && currentQuestion.choices && (
+          {currentQuestion.type === "choice" && currentQuestion.choices && !isCustom && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
               {currentQuestion.choices.map((choice) => (
                 <button
@@ -244,7 +255,7 @@ export function AiQuestions({ data }: Props) {
                 {submitting ? "Submitting..." : "Submit Answers"}
               </button>
             ) : (
-              currentQuestion.type === "text" && (
+              (currentQuestion.type === "text" || isCustom) && (
                 <button 
                   style={buttonStyle(true, isNextDisabled)} 
                   onClick={handleNext}

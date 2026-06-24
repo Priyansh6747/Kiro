@@ -38,48 +38,56 @@ export function MiddleMetricsRow({ data }: MiddleMetricsRowProps) {
           </p>
         </div>
 
-        <div className="flex items-center mt-4">
-          <div className="w-32 h-32 relative">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-              minWidth={0}
-              minHeight={0}
-            >
-              <PieChart>
-                <Pie
-                  data={data.timeAllocation}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={60}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                  isAnimationActive={false}
+        <div className="flex items-center mt-4 flex-1">
+          {data.timeAllocation.length > 0 ? (
+            <>
+              <div className="w-32 h-32 relative">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={0}
+                  minHeight={0}
                 >
-                  {data.timeAllocation.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="flex flex-col justify-center ml-6 space-y-2">
-            {data.timeAllocation.map((entry, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-xs">
-                <span
-                  className="w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: getColor(entry.name) }}
-                />
-                <span className="text-secondary w-16">{entry.name}</span>
-                <span className="text-secondary font-medium">
-                  {entry.percentage}%
-                </span>
+                  <PieChart>
+                    <Pie
+                      data={data.timeAllocation}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={60}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {data.timeAllocation.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
+
+              <div className="flex flex-col justify-center ml-6 space-y-2">
+                {data.timeAllocation.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <span
+                      className="w-3 h-3 rounded-sm"
+                      style={{ backgroundColor: getColor(entry.name) }}
+                    />
+                    <span className="text-secondary w-16">{entry.name}</span>
+                    <span className="text-secondary font-medium">
+                      {entry.percentage}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 h-32 items-center justify-center text-tertiary text-sm italic bg-base/50 rounded-lg border border-border-default/50 border-dashed">
+              No completed tasks to display
+            </div>
+          )}
         </div>
       </motion.div>
 

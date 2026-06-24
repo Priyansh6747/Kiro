@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         } 
         else if (phase === 2) {
           console.log("[Planning API] Processing Phase 2. phase1 data:", phase1);
-          const prompt = `Based on this project brief: ${JSON.stringify(phase1 || {})}, generate 3-6 clarifying questions to deeply understand the scope. Return them as a JSON array exactly matching this schema: [{ "id": "q1", "question": "string", "type": "text" | "choice", "choices": ["string"] }]`;
+          const prompt = `Based on this project brief: ${JSON.stringify(phase1 || {})}, generate 3-6 clarifying questions to deeply understand the scope. ALL questions MUST be of type "choice". For each question, provide 3-5 specific options (e.g. "A. Option 1", "B. Option 2"), and ALWAYS include a final fallback option exactly named "Something else ... (Type)". Return them as a JSON array exactly matching this schema: [{ "id": "q1", "question": "string", "type": "choice", "choices": ["string"] }]`;
           
           let questions = [];
           let attempts = 0;
