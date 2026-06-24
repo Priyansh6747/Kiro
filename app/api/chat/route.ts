@@ -249,9 +249,9 @@ export async function POST(req: NextRequest) {
                   
                   // Fast-forward optimization for UI responses
                   if (result && result.preformattedUi) {
-                    shortCircuitContent = result.preformattedUi;
+                    shortCircuitContent += (shortCircuitContent ? "\n" : "") + result.preformattedUi;
                   } else if (toolCall.function.name === "getTodayAgenda" && result.preformattedTable) {
-                    shortCircuitContent = result.preformattedTable;
+                    shortCircuitContent += (shortCircuitContent ? "\n" : "") + result.preformattedTable;
                   }
 
                   toolRes = JSON.stringify(result) ?? "{}";
@@ -397,8 +397,9 @@ Crucial Rule on Tool Chaining:
 14. If a tool result is required as an input for another tool, you MUST wait for the first tool's response before calling the next tool. Do NOT call dependent tools together in the same turn.
 
 Delegation Rule:
-15. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
-16. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
+15. If you want to assign a task to another agent, you MUST use the delegateToAgent tool. Do NOT generate a text response like "@Juno do this" because the agent will not be invoked unless you actually call the tool.
+16. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
+17. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
 ` + agentScopes;
 
         if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
