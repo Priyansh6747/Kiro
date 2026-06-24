@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           let questions = [];
           let attempts = 0;
           while (attempts < 3) {
-            const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
+            const completion = await groqChat([{ role: "user", content: prompt }], [], userId, "llama-3.3-70b-versatile");
             const rawContent = completion.choices[0]?.message?.content || "[]";
             
             try {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         else if (phase === 3) {
            const prompt = `Given these project details: ${JSON.stringify(phase1)} and these clarifying answers: ${JSON.stringify(phase2Answers)}, write a detailed markdown project brief with the following sections: Overview, Goals, Scope, Technical Constraints, Key Decisions, Risks, Success Criteria. Output ONLY the markdown.`;
            
-           const completion = await groqChat([{ role: "user", content: prompt }], [], userId);
+           const completion = await groqChat([{ role: "user", content: prompt }], [], userId, "llama-3.3-70b-versatile");
            const markdown = completion.choices[0]?.message?.content || "";
            
            // Do not stream raw markdown chunks to avoid duplicate UI rendering.
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
            let stagesOutline: any[] = [];
            let outlineAttempts = 0;
            while (outlineAttempts < 3) {
-             const completion = await groqChat([{ role: "user", content: outlinePrompt }], [], userId);
+             const completion = await groqChat([{ role: "user", content: outlinePrompt }], [], userId, "llama-3.3-70b-versatile");
              const raw = completion.choices[0]?.message?.content || "[]";
              try {
                const match = raw.match(/\[[\s\S]*\]/);
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
              let detailTasks = [];
              let detailAttempts = 0;
              while (detailAttempts < 3) {
-               const completion = await groqChat([{ role: "user", content: detailPrompt }], [], userId);
+               const completion = await groqChat([{ role: "user", content: detailPrompt }], [], userId, "llama-3.3-70b-versatile");
                const raw = completion.choices[0]?.message?.content || "[]";
                try {
                  const match = raw.match(/\[[\s\S]*\]/);

@@ -102,11 +102,12 @@ export async function callGroq(
 export async function groqChat(
   messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
   tools?: Groq.Chat.Completions.ChatCompletionTool[],
-  userId?: string
+  userId?: string,
+  model?: string
 ) {
   return executeWithQuota(userId, () => groq.chat.completions.create({
     messages,
-    model: "openai/gpt-oss-120b",
+    model: model || "llama-3.3-70b-versatile",
     tools,
     tool_choice: tools && tools.length > 0 ? "auto" : "none",
     max_tokens: 4000,

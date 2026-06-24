@@ -9,13 +9,13 @@ export const plannerTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "getDayPlan",
+      name: "show_day_plan",
       description:
-        "Get the day plan for a specific date (the scheduled blocks/order).",
+        "Get and show the day plan for a specific date (the scheduled blocks/order).",
       parameters: {
         type: "object",
         properties: {
-          date: { type: "number", description: "Unix day integer" },
+          date: { type: ["number", "string"], description: "Unix day integer OR YYYY-MM-DD string" },
         },
         required: ["date"],
       },
@@ -24,25 +24,56 @@ export const plannerTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "getTodayAgenda",
+      name: "show_today_agenda",
       description:
-        "Get today's agenda including unconfirmed tasks, as well as the 'bucket' (pending tasks without a scheduled date).",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
+        "Get and show today's agenda including unconfirmed tasks, as well as the 'bucket' (pending tasks without a scheduled date).",
+      parameters: { 
+        type: "object", 
+        properties: { 
+          dummy: { type: "string", description: "Optional. Leave empty." } 
+        }, 
+        required: [] 
       },
     },
   },
 ];
 
 export const plannerHandlers: Record<string, Function> = {
-  getDayPlan: async (args: any) => {
+  show_day_plan: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    return await listDayPlansForDate(userId, args.date);
+    
+    let targetDate = args.date;
+    if (typeof targetDate === "string") {
+      const parts = targetDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        targetDate = Math.floor(d.getTime() / 86400000);
+      } else {
+        let parsed = Date.parse(targetDate);
+        if (!isNaN(parsed)) {
+          const d = new Date(parsed);
+          if (d.getFullYear() === 2001) d.setFullYear(new Date().getFullYear());
+          targetDate = Math.floor(d.getTime() / 86400000);
+        }
+      }
+    }
+    
+    const plans = await listDayPlansForDate(userId, targetDate);
+    
+    if (plans.length === 0) return { preformattedUi: `_No day plan found for this date._` };
+    
+    const rows = plans.map((p) => [
+      p.taskId.substring(0, 8) + "...",
+      new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      new Date(p.planDate).toLocaleDateString()
+    ]);
+
+    return {
+      preformattedUi: `<ui:table>${JSON.stringify({ headers: ["Task ID", "Start Time", "Plan Date"], rows, caption: "Day Plan" })}</ui:table>`
+    };
   },
-  getTodayAgenda: async (args: any) => {
+  show_today_agenda: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
     
@@ -59,7 +90,7 @@ export const plannerHandlers: Record<string, Function> = {
     });
     
     const userProjects = await db.select().from(projects).where(eq(projects.userId, userId));
-    const projectMap = Object.fromEntries(userProjects.map(p => [p.id, p.name]));
+    const projectMap = Object.fromEntries(userProjects.map((p: any) => [p.id, p.name]));
     
     const enrich = (t: any) => {
       return {
@@ -106,7 +137,7 @@ export const plannerHandlers: Record<string, Function> = {
     return { 
       agenda: enrichedAgenda, 
       bucket: enrichedBucket,
-      preformattedTable: markdown
+      preformattedUi: markdown
     };
   },
 };

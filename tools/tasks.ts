@@ -18,9 +18,9 @@ export const taskTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "listTasks",
+      name: "show_tasks",
       description:
-        "List tasks. Can filter by projectName (human-readable project name), date (unix day), status (pending, done, missed, archived), or bucket (true to see unscheduled backlog).",
+        "List and show tasks. Can filter by projectName (human-readable project name), date (unix day integer OR YYYY-MM-DD string), status (pending, done, missed, carried, adjusted), or bucket (true to see unscheduled backlog).",
       parameters: {
         type: "object",
         properties: {
@@ -28,7 +28,7 @@ export const taskTools: ChatCompletionTool[] = [
             type: "string",
             description: "Human-readable project name to filter by. Leave empty to list across all projects.",
           },
-          date: { type: "number", description: "Unix day integer" },
+          date: { type: ["number", "string"], description: "Unix day integer or YYYY-MM-DD string" },
           status: { type: "string", enum: ["pending", "done", "missed", "carried", "adjusted"] },
           bucket: { type: "boolean", description: "Set true to list the unscheduled backlog" },
         },
@@ -95,7 +95,7 @@ export const taskTools: ChatCompletionTool[] = [
 ];
 
 export const taskHandlers: Record<string, Function> = {
-  listTasks: async (args: any) => {
+  show_tasks: async (args: any) => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -106,17 +106,25 @@ export const taskHandlers: Record<string, Function> = {
         // Give helpful list of valid names
         const all = await listActiveProjects(userId);
         return {
-          error: `Project "${args.projectName}" not found.`,
-          availableProjects: all.map((p) => p.name),
+          preformattedUi: `Project "${args.projectName}" not found. Available: ${all.map((p) => p.name).join(", ")}`,
         };
       }
       projectId = project.id;
     }
 
+    let targetDate = args.date;
+    if (typeof targetDate === "string") {
+      const parts = targetDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        targetDate = Math.floor(d.getTime() / 86400000);
+      }
+    }
+
     const taskRows = await listTasks({
       userId,
       projectId,
-      date: args.date,
+      date: targetDate,
       status: args.status,
       bucket: args.bucket,
     });
@@ -128,7 +136,7 @@ export const taskHandlers: Record<string, Function> = {
     const allProjects = await listActiveProjects(userId);
     const projectMap = Object.fromEntries(allProjects.map((p) => [p.id, p.name]));
 
-    return taskRows.map((t) => {
+    const uiTasks = taskRows.map((t) => {
       const blockedByTitles = deps
         .filter((d) => d.taskId === t.id)
         .map((d) => {
@@ -136,20 +144,20 @@ export const taskHandlers: Record<string, Function> = {
           return pred ? pred.title : "Unknown task";
         });
 
-      return {
+      const dateStr = t.scheduledDate ? new Date(t.scheduledDate * 86400000).toISOString().split("T")[0] : null;
+
+      return `<ui:task>${JSON.stringify({
         title: t.title,
-        project: projectMap[t.projectId] ?? "Unknown",
+        projectName: projectMap[t.projectId] ?? "Unknown",
         estimateMin: t.estimateMin,
         status: t.status,
-        scheduledDate: t.scheduledDate
-          ? new Date(t.scheduledDate * 86400000).toISOString().split("T")[0]
-          : null,
-        deadline: t.deadlineAt
-          ? new Date(t.deadlineAt * 1000).toISOString().split("T")[0]
-          : null,
-        blockedBy: blockedByTitles,
-      };
+        scheduledDate: dateStr
+      })}</ui:task>`;
     });
+
+    return {
+      preformattedUi: uiTasks.length > 0 ? uiTasks.join("\n") : "_No tasks found._",
+    };
   },
 
   createTask: async (args: any) => {
@@ -160,8 +168,7 @@ export const taskHandlers: Record<string, Function> = {
     if (!project) {
       const all = await listActiveProjects(userId);
       return {
-        error: `Project "${args.projectName}" not found.`,
-        availableProjects: all.map((p) => p.name),
+        preformattedUi: `Project "${args.projectName}" not found. Available: ${all.map((p) => p.name).join(", ")}`,
       };
     }
 
@@ -186,15 +193,15 @@ export const taskHandlers: Record<string, Function> = {
     });
 
     await insertTaskClosureSelf(newTaskId);
+    const dateStr = task.scheduledDate ? new Date(task.scheduledDate * 86400000).toISOString().split("T")[0] : null;
     return {
-      success: true,
-      title: task.title,
-      project: project.name,
-      estimateMin: task.estimateMin,
-      status: task.status,
-      scheduledDate: task.scheduledDate
-        ? new Date(task.scheduledDate * 86400000).toISOString().split("T")[0]
-        : null,
+      preformattedUi: `✓ Created task **${task.title}**\n<ui:task>${JSON.stringify({
+        title: task.title,
+        projectName: project.name,
+        estimateMin: task.estimateMin,
+        status: task.status,
+        scheduledDate: dateStr
+      })}</ui:task>`
     };
   },
 
@@ -208,8 +215,7 @@ export const taskHandlers: Record<string, Function> = {
       if (!project) {
         const all = await listActiveProjects(userId);
         return {
-          error: `Project "${args.projectName}" not found.`,
-          availableProjects: all.map((p) => p.name),
+          preformattedUi: `Project "${args.projectName}" not found. Available: ${all.map((p) => p.name).join(", ")}`,
         };
       }
       projectId = project.id;
@@ -233,14 +239,15 @@ export const taskHandlers: Record<string, Function> = {
     updates.updatedAt = nowSec();
 
     const updated = await updateTask(task.id, updates);
+    const dateStr = updated.scheduledDate ? new Date(updated.scheduledDate * 86400000).toISOString().split("T")[0] : null;
     return {
-      success: true,
-      title: updated.title,
-      status: updated.status,
-      estimateMin: updated.estimateMin,
-      scheduledDate: updated.scheduledDate
-        ? new Date(updated.scheduledDate * 86400000).toISOString().split("T")[0]
-        : null,
+      preformattedUi: `✓ Updated task **${updated.title}**\n<ui:task>${JSON.stringify({
+        title: updated.title,
+        projectName: args.projectName || "Unknown",
+        estimateMin: updated.estimateMin,
+        status: updated.status,
+        scheduledDate: dateStr
+      })}</ui:task>`
     };
   },
 
@@ -300,9 +307,7 @@ export const taskHandlers: Record<string, Function> = {
     }
 
     return {
-      success: true,
-      unscheduledTask: task.title,
-      unscheduledSuccessorsCount: allSuccessorsToUnschedule.length,
+      preformattedUi: `✓ Unscheduled **${task.title}**${allSuccessorsToUnschedule.length > 0 ? ` and ${allSuccessorsToUnschedule.length} dependent tasks.` : '.'}`
     };
   },
 };

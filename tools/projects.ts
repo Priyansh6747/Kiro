@@ -14,9 +14,15 @@ export const projectTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "listProjects",
-      description: "Retrieve all active projects for the user.",
-      parameters: { type: "object", properties: {}, required: [] },
+      name: "show_projects",
+      description: "Retrieve and show all active projects for the user.",
+      parameters: { 
+        type: "object", 
+        properties: { 
+          dummy: { type: "string", description: "Optional. Leave empty." } 
+        }, 
+        required: [] 
+      },
     },
   },
   {
@@ -56,19 +62,18 @@ export const projectTools: ChatCompletionTool[] = [
 ];
 
 export const projectHandlers: Record<string, Function> = {
-  listProjects: async () => {
+  show_projects: async () => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
     const projects = await listActiveProjects(userId);
-    return projects.map((p) => ({
-      name: p.name,
-      importance: p.importance,
-      type: p.type,
-      deadline: p.deadlineAt
-        ? new Date(p.deadlineAt * 1000).toISOString().split("T")[0]
-        : null,
-      cadence: p.cadence,
-    }));
+    const rows = projects.map((p) => [
+      p.name,
+      p.importance.toString(),
+      p.deadlineAt ? new Date(p.deadlineAt * 1000).toISOString().split("T")[0] : "None"
+    ]);
+    return {
+      preformattedUi: `<ui:table>${JSON.stringify({ headers: ["Project Name", "Importance", "Deadline"], rows, caption: "Active Projects" })}</ui:table>`
+    };
   },
   createProject: async (args: any) => {
     const { userId } = await auth();
@@ -89,10 +94,7 @@ export const projectHandlers: Record<string, Function> = {
       archivedAt: null,
     });
     return {
-      success: true,
-      name: project.name,
-      importance: project.importance,
-      type: project.type,
+      preformattedUi: `✓ Project **${project.name}** created successfully.`
     };
   },
   archiveProject: async (args: any) => {
@@ -102,6 +104,8 @@ export const projectHandlers: Record<string, Function> = {
     const project = await findProjectByName(args.name, userId);
     if (!project) throw new Error(`Project "${args.name}" not found`);
     await archiveProject(project.id);
-    return { success: true, archivedProject: project.name };
+    return { 
+      preformattedUi: `✓ Project **${project.name}** archived successfully.`
+    };
   },
 };

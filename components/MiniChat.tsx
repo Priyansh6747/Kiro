@@ -25,6 +25,7 @@ const AGENTS = [
   { id: "Iva", name: "Iva (DayLog Agent)" },
   { id: "Juno", name: "Juno (Planner Agent)" },
   { id: "Zef", name: "Zef (UI Agent)" },
+  { id: "Sage", name: "Sage (Planning Agent)" },
 ];
 
 export function MiniChat() {
@@ -154,6 +155,20 @@ export function MiniChat() {
             break;
           }
 
+          case "planning_flow_start": {
+            const planningMsg: ChatMessage & { isCustomUI?: boolean } = {
+              role: "assistant",
+              name: "Sage",
+              content: `<ui:planning-form>{"phase":${payload.phase}}</ui:planning-form>`,
+              isCustomUI: true,
+            };
+            currentMessages = [...currentMessages, planningMsg];
+            setMessages([...currentMessages]);
+            setStreamingAgents((prev) => prev.filter((a) => a.agentName !== "Sage"));
+            setLoadingText("");
+            break;
+          }
+
           case "tool_call":
             setLoadingText(`Running ${payload.toolName}...`);
             break;
@@ -172,6 +187,7 @@ export function MiniChat() {
             break;
 
           case "done": {
+            const customMessages = currentMessages.filter((m: any) => m.isCustomUI);
             const visibleFromTrace = (payload.messagesTrace ?? []).filter(
               (m: any) =>
                 (m.role === "user" || m.role === "assistant") &&
@@ -179,7 +195,11 @@ export function MiniChat() {
                 m.content.trim() !== "",
             );
             const finalMsg = payload.message;
-            setMessages(finalMsg ? [...visibleFromTrace, finalMsg] : visibleFromTrace);
+            let finalArray = visibleFromTrace;
+            if (customMessages.length > 0) finalArray = [...finalArray, ...customMessages];
+            if (finalMsg) finalArray = [...finalArray, finalMsg];
+            
+            setMessages(finalArray);
             setStreamingAgents([]);
             break;
           }

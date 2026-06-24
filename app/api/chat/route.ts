@@ -19,11 +19,12 @@ async function fetchGroqWithRetry(
   messages: any[],
   tools: any[],
   userId: string,
+  model?: string,
   maxRetries = 3,
 ) {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const completion = await groqChat(messages, tools, userId);
+      const completion = await groqChat(messages, tools, userId, model);
       return completion;
     } catch (error: any) {
       if (error.message?.includes("tool_use_failed") && i < maxRetries - 1) {
@@ -141,13 +142,13 @@ export async function POST(req: NextRequest) {
           // separately as yuki_comment before this handler is called)
           push("agent_start", { agentName });
 
-          const agentMessages: any[] = [
+          let agentMessages: any[] = [
             { role: "system", content: agent.prompt + "\n" + SHARED_RULES },
             { role: "user", content: instruction },
           ];
 
           let iter = 0;
-          let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId);
+          let agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId, agent.model);
           let agentResMsg = agentResponse.choices[0]?.message;
           if (agentResMsg) (agentResMsg as any).name = agentName;
 
@@ -204,8 +205,10 @@ export async function POST(req: NextRequest) {
                   const args = JSON.parse(toolCall.function.arguments || "{}");
                   const result = await handler(args);
                   
-                  // Fast-forward optimization for getTodayAgenda
-                  if (toolCall.function.name === "getTodayAgenda" && result.preformattedTable) {
+                  // Fast-forward optimization for UI responses
+                  if (result && result.preformattedUi) {
+                    shortCircuitContent = result.preformattedUi;
+                  } else if (toolCall.function.name === "getTodayAgenda" && result.preformattedTable) {
                     shortCircuitContent = result.preformattedTable;
                   }
 
@@ -222,6 +225,16 @@ export async function POST(req: NextRequest) {
                 name: toolCall.function.name,
                 content: toolRes,
               });
+
+              // Handle changeTheme side-effect in inner loop
+              if (toolCall.function.name === "changeTheme") {
+                try {
+                  const resObj = JSON.parse(toolRes);
+                  if (resObj.success && resObj.theme) {
+                    push("theme_change", { theme: resObj.theme });
+                  }
+                } catch (e) {}
+              }
             }
 
             if (shortCircuitContent) {
@@ -230,7 +243,7 @@ export async function POST(req: NextRequest) {
               break;
             }
 
-            agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId);
+            agentResponse = await fetchGroqWithRetry(agentMessages, agent.tools, userId, agent.model);
             agentResMsg = agentResponse.choices[0]?.message;
             if (agentResMsg) (agentResMsg as any).name = agentName;
             iter++;
@@ -244,16 +257,21 @@ export async function POST(req: NextRequest) {
           let finalContent = accumulatedAgentContent.trim();
           
           if (agentName === "Sage") {
-            const hasZero = finalContent.includes("0");
-            const hasOne = finalContent.includes("1");
+            const stripped = finalContent.trim().toLowerCase();
+            // Only trigger scheduler if the model outputs EXACTLY "1" (or the word "schedule")
+            const isScheduler = stripped === "1" || stripped === "schedule";
             
-            if (hasOne && !hasZero) {
+            if (isScheduler) {
               console.log("[Sage] Scheduler invoked (Not implemented yet)");
               finalContent = "Scheduler invoked (Not implemented yet)";
             } else {
-              // Default to planning (0) if confused, both, or empty
-              finalContent = '|-PLANNING-FORM-|{"phase":1}';
+              // Trigger a custom event for the UI instead of rendering an XML tag
+              push("planning_flow_start", { phase: 1 });
+              finalContent = "";
             }
+            
+            // Remove the raw '0' or '1' from the inner trace so the UI doesn't render it
+            agentMessages = agentMessages.filter(m => m.content !== accumulatedAgentContent);
           }
 
           // Emit the agent's final response as soon as it's ready
@@ -386,7 +404,7 @@ Delegation Rule:
           responseMessage = lastMsg;
           messages.pop();
         } else {
-          response = await fetchGroqWithRetry(messages, requestTools, userId);
+          response = await fetchGroqWithRetry(messages, requestTools, userId, "openai/gpt-oss-120b");
           responseMessage = response.choices[0]?.message;
           debugInfo.firstLlmResponse = responseMessage;
         }
@@ -518,7 +536,7 @@ Delegation Rule:
           debugInfo.finalPrompt = JSON.parse(JSON.stringify(messages));
           debugInfo.newLlmCall = true;
 
-          response = await fetchGroqWithRetry(messages, requestTools, userId);
+          response = await fetchGroqWithRetry(messages, requestTools, userId, "openai/gpt-oss-120b");
           responseMessage = response.choices[0]?.message;
           iterations++;
         }

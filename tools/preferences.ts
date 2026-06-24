@@ -7,10 +7,16 @@ export const preferenceTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "getPreferences",
+      name: "show_preferences",
       description:
-        "Get user preferences like timezone, working hours, ratio mode, etc.",
-      parameters: { type: "object", properties: {}, required: [] },
+        "Get and show user preferences like timezone, working hours, ratio mode, etc.",
+      parameters: { 
+        type: "object", 
+        properties: { 
+          dummy: { type: "string", description: "Optional. Leave empty." } 
+        }, 
+        required: [] 
+      },
     },
   },
   {
@@ -34,10 +40,19 @@ export const preferenceTools: ChatCompletionTool[] = [
 ];
 
 export const preferenceHandlers: Record<string, Function> = {
-  getPreferences: async () => {
+  show_preferences: async () => {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    return await getOrCreatePreferences(userId);
+    const prefs = await getOrCreatePreferences(userId);
+    const rows = [
+      ["Timezone", prefs.timezone || "Not set"],
+      ["Morning Nudge", prefs.morningNudgeTime || "Not set"],
+      ["Ratio Mode", prefs.ratioMode],
+      ["Default Min", prefs.defaultAvailableMin.toString()],
+    ];
+    return {
+      preformattedUi: `<ui:table>${JSON.stringify({ headers: ["Preference", "Value"], rows, caption: "User Preferences" })}</ui:table>`
+    };
   },
   updatePreferences: async (args: any) => {
     const { userId } = await auth();
@@ -51,6 +66,9 @@ export const preferenceHandlers: Record<string, Function> = {
       updates.defaultAvailableMin = args.defaultAvailableMin;
     updates.updatedAt = nowSec();
 
-    return await updatePreferences(userId, updates);
+    await updatePreferences(userId, updates);
+    return {
+      preformattedUi: `✓ Preferences updated successfully.`
+    };
   },
 };

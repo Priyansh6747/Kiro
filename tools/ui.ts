@@ -22,6 +22,6 @@ export const uiTools: ChatCompletionTool[] = [
 
 export const uiHandlers: Record<string, Function> = {
   changeTheme: async (args: any) => {
-    return { success: true, theme: args.theme };
+    return { success: true, theme: args.theme, preformattedUi: `✓ Theme changed to **${args.theme}**.` };
   },
 };

@@ -56,6 +56,8 @@ Other agents and their scopes:
 
 If the user asks you to do something outside your scope, DO NOT try to fulfill it or hallucinate tools. Instead, tell the user to ask the corresponding agent or use Yuki.`;
 
+const functionCallingEnforcement = "Your ONLY job is to identify what function to trigger and what arguments to pass. DO NOT output any conversational text or UI tags directly. Always call a tool. Your output must strictly be a tool call.";
+
 export const agents: Record<
   string,
   {
@@ -63,43 +65,50 @@ export const agents: Record<
     handlers: Record<string, Function>;
     prompt: string;
     description: string;
+    model?: string;
   }
 > = {
   Nova: {
     tools: projectTools,
     handlers: projectHandlers,
-    prompt: "You are Nova, the Kiro Project Agent. Your scope is Projects — creation, importance, deadlines. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Nova, the Kiro Project Agent. Your scope is Projects — creation, importance, deadlines.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Projects — creation, importance, deadlines",
+    model: "llama-3.1-8b-instant",
   },
   Quill: {
     tools: taskTools,
     handlers: taskHandlers,
-    prompt: "You are Quill, the Kiro Task Agent. Your scope is Granular task ops — create, complete, reschedule. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Quill, the Kiro Task Agent. Your scope is Granular task ops — create, complete, reschedule.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Granular task ops — create, complete, reschedule",
+    model: "llama-3.1-8b-instant",
   },
   Echo: {
     tools: preferenceTools,
     handlers: preferenceHandlers,
-    prompt: "You are Echo, the Kiro Preferences Agent. Your scope is Background config — timezone, ratio mode, nudge time. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Echo, the Kiro Preferences Agent. Your scope is Background config — timezone, ratio mode, nudge time.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Background config — timezone, ratio mode, nudge time",
+    model: "llama-3.1-8b-instant",
   },
   Iva: {
     tools: dayLogTools,
     handlers: dayLogHandlers,
-    prompt: "You are Iva, the Kiro DayLog Agent. Your scope is Records daily history — the append-only ledger. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Iva, the Kiro DayLog Agent. Your scope is Records daily history — the append-only ledger.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Records daily history — the append-only ledger",
+    model: "llama-3.1-8b-instant",
   },
   Juno: {
     tools: plannerTools,
     handlers: plannerHandlers,
-    prompt: "You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily plan, enforces overload warnings. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily plan, enforces overload warnings.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Orchestrates the daily plan, enforces overload warnings",
+    model: "llama-3.3-70b-versatile",
   },
   Zef: {
     tools: uiTools,
     handlers: uiHandlers,
-    prompt: "You are Zef, the Kiro UI Agent. Your scope is Navigation/UI-state actions. Only use the tools provided to answer the user's request.\n" + agentScopes,
+    prompt: `You are Zef, the Kiro UI Agent. Your scope is Navigation/UI-state actions.\n\n${functionCallingEnforcement}\n${agentScopes}`,
     description: "Navigation/UI-state actions",
+    model: "llama-3.1-8b-instant",
   },
   Sage: {
     tools: planningTools,

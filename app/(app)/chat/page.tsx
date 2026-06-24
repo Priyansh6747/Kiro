@@ -33,6 +33,7 @@ const AGENTS = [
   { id: "Iva", name: "Iva (DayLog Agent)" },
   { id: "Juno", name: "Juno (Planner Agent)" },
   { id: "Zef", name: "Zef (UI Agent)" },
+  { id: "Sage", name: "Sage (Planning Agent)" },
 ];
 
 function ChatUI() {
@@ -197,6 +198,22 @@ function ChatUI() {
             break;
           }
 
+          case "planning_flow_start": {
+            const planningMsg: ChatMessage & { isCustomUI?: boolean } = {
+              role: "assistant",
+              name: "Sage",
+              content: `<ui:planning-form>{"phase":${payload.phase}}</ui:planning-form>`,
+              isCustomUI: true,
+            };
+            currentMessages = [...currentMessages, planningMsg];
+            setMessages([...currentMessages]);
+            setStreamingAgents((prev) =>
+              prev.filter((a) => a.agentName !== "Sage"),
+            );
+            setLoadingText("");
+            break;
+          }
+
           case "tool_call":
             setLoadingText(`Running ${payload.toolName}...`);
             break;
@@ -215,11 +232,7 @@ function ChatUI() {
             break;
 
           case "done": {
-            // The raw messagesTrace contains tool messages, bare tool-call messages,
-            // and inner-trace debris. We DON'T dump it directly — that would cause a
-            // flash reorder. Instead, build the visible list the same way streaming did:
-            // keep only messages that have actual text content (user or assistant).
-            // The final Yuki message (if any content remains after stripping <DONE>) is appended.
+            const customMessages = currentMessages.filter((m: any) => m.isCustomUI);
             const visibleFromTrace = (payload.messagesTrace ?? []).filter(
               (m: any) =>
                 (m.role === "user" || m.role === "assistant") &&
@@ -227,7 +240,12 @@ function ChatUI() {
                 m.content.trim() !== "",
             );
             const finalMsg = payload.message; // null if Yuki only said <DONE>
-            setMessages(finalMsg ? [...visibleFromTrace, finalMsg] : visibleFromTrace);
+            
+            let finalArray = visibleFromTrace;
+            if (customMessages.length > 0) finalArray = [...finalArray, ...customMessages];
+            if (finalMsg) finalArray = [...finalArray, finalMsg];
+            
+            setMessages(finalArray);
             setStreamingAgents([]);
             break;
           }

@@ -302,8 +302,8 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
   const className = proseClassName || defaultProse;
 
   // Regex to find any tag like <ui:table>{...}</ui:table>
-  // The (?:<\/ui:\1>|$) part makes the closing tag optional, so it matches even while streaming
-  const tagRegex = /<ui:([a-zA-Z-]+)>([\s\S]*?)(?:<\/ui:\1>|$)/i;
+  // The (?:<[/\\]ui:\1>|$) part makes the closing tag optional, so it matches even while streaming
+  const tagRegex = /<ui:([a-zA-Z-]+)>([\s\S]*?)(?:<[/\\]ui:\1>|$)/i;
   
   const renderPart = (text: string, index: number) => {
     let currentText = text;
@@ -334,7 +334,8 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
       const tagString = match[0];
       const tagType = match[1].toUpperCase();
       const jsonStr = match[2].trim();
-      const hasClosingTag = currentText.substring(match.index || 0).includes(`</ui:${match[1]}>`);
+      const closingTagRegex = new RegExp(`<[/\\\\]ui:${match[1]}>`, 'i');
+      const hasClosingTag = closingTagRegex.test(currentText.substring(match.index || 0));
 
       try {
         const data = JSON.parse(jsonStr);
