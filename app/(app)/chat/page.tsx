@@ -10,12 +10,17 @@ import {
   PenTool,
   Send,
   Bug,
-  Code
+  Code,
+  FileText,
+  Clock,
+  X
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { ContentRenderer, StreamableContentRenderer } from "@/components/GenerativeUI";
 import { useTheme } from "@/components/ThemeProvider";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
@@ -36,6 +41,107 @@ const AGENTS = [
   { id: "Sage", name: "Sage (Planning Agent)" },
 ];
 
+const PlanRenderer = ({ content }: { content: string }) => {
+  try {
+    const data = JSON.parse(content);
+    if (!data.stages) return <pre className="whitespace-pre-wrap font-mono text-sm">{JSON.stringify(data, null, 2)}</pre>;
+    
+    return (
+      <div className="space-y-6">
+        {data.stages.map((stage: any, sIdx: number) => (
+          <div key={sIdx} className="bg-surface rounded-xl border border-border-default overflow-hidden">
+            <div className="bg-surface-raised p-4 border-b border-border-default">
+              <h3 className="text-lg font-bold text-primary">
+                Stage {stage.stage}: {stage.stageName}
+              </h3>
+            </div>
+            <div className="p-4 space-y-4">
+              {stage.tasks?.map((task: any, tIdx: number) => (
+                <div key={tIdx} className="bg-base rounded-lg border border-border-subtle p-4">
+                  <div className="flex justify-between items-start mb-2 gap-4">
+                    <h4 className="font-semibold text-primary leading-tight">{task.title}</h4>
+                    {task.estimate_min != null && (
+                      <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-md font-medium shrink-0">
+                        ~{task.estimate_min} min
+                      </span>
+                    )}
+                  </div>
+                  {task.depends_on && task.depends_on.length > 0 && (
+                    <div className="text-xs text-secondary mb-3 flex gap-1">
+                      <span className="font-medium">Depends on:</span>
+                      {task.depends_on.join(", ")}
+                    </div>
+                  )}
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="mt-3 pl-4 border-l-2 border-border-subtle space-y-2">
+                      {task.subtasks.map((sub: any, subIdx: number) => (
+                        <div key={subIdx} className="flex justify-between items-center text-sm gap-4">
+                          <span className="text-secondary flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-border-strong shrink-0" />
+                            {sub.title}
+                          </span>
+                          {sub.estimate_min != null && (
+                            <span className="text-xs text-tertiary shrink-0">{sub.estimate_min} min</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  } catch (err) {
+    return <pre className="whitespace-pre-wrap font-mono text-sm">{content}</pre>;
+  }
+};
+
+const MarkdownRenderer = ({ content }: { content: string }) => {
+  let md = content;
+  try {
+    const data = JSON.parse(content);
+    if (data.markdown) {
+      md = data.markdown;
+    }
+  } catch {
+    // Not JSON, assume it's raw markdown
+  }
+
+  return (
+    <div className="prose prose-sm md:prose-base max-w-none 
+      text-secondary
+      prose-headings:text-primary 
+      prose-p:text-secondary 
+      prose-a:text-accent 
+      prose-strong:text-primary 
+      prose-em:text-secondary
+      prose-code:text-accent prose-code:bg-accent/10 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+      prose-pre:bg-surface-raised prose-pre:border prose-pre:border-border-default prose-pre:text-primary
+      prose-blockquote:text-tertiary prose-blockquote:border-l-border-strong
+      prose-ul:text-secondary prose-ol:text-secondary prose-li:text-secondary
+      prose-table:text-secondary prose-th:text-primary prose-td:text-secondary
+      prose-tr:border-border-subtle prose-thead:border-border-default
+      prose-hr:border-border-default
+      dark:prose-invert"
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{md}</ReactMarkdown>
+    </div>
+  );
+};
+
+const ArtifactContent = ({ content }: { content: string }) => {
+  // If it's valid JSON but not a plan, format it nicely
+  try {
+    const data = JSON.parse(content);
+    return <pre className="whitespace-pre-wrap font-mono text-sm">{JSON.stringify(data, null, 2)}</pre>;
+  } catch {
+    return <>{content}</>;
+  }
+};
+
 function ChatUI() {
   const { user } = useUser();
   const [input, setInput] = useState("");
@@ -52,6 +158,10 @@ function ChatUI() {
   const [pendingToolCalls, setPendingToolCalls] = useState<any[]>([]);
   const { setTheme } = useTheme();
   
+  const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [selectedArtifact, setSelectedArtifact] = useState<any | null>(null);
+  const [loadingArtifactId, setLoadingArtifactId] = useState<string | null>(null);
+
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -118,7 +228,29 @@ function ChatUI() {
         }
       })
       .catch(console.error);
+
+    fetch("/api/artifacts")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setArtifacts(data);
+      })
+      .catch(console.error);
   }, []);
+
+  const fetchFullArtifact = async (id: string) => {
+    setLoadingArtifactId(id);
+    try {
+      const res = await fetch(`/api/artifacts?id=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedArtifact(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingArtifactId(null);
+    }
+  };
 
   useEffect(() => {
     const msg = searchParams.get("msg");
@@ -454,6 +586,47 @@ function ChatUI() {
               </button>
             </div>
 
+            {/* Artifacts Section */}
+            {artifacts.length > 0 && (
+              <div className="w-full mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both max-w-4xl">
+                <h2 className="text-xl font-bold tracking-tight mb-4 text-primary flex items-center gap-2 justify-center">
+                  <FileText className="w-5 h-5 text-accent" /> Recent Artifacts
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {artifacts.slice(0, 4).map((art) => (
+                    <button
+                      key={art.id}
+                      onClick={() => fetchFullArtifact(art.id)}
+                      disabled={loadingArtifactId === art.id}
+                      className="flex flex-col text-left p-4 rounded-2xl bg-surface border border-border-default hover:bg-surface-raised transition-all shadow-sm group"
+                    >
+                      <div className="font-semibold text-primary group-hover:text-accent transition-colors flex items-center gap-2">
+                        {loadingArtifactId === art.id ? (
+                           <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                        ) : (
+                           <FileText className="w-4 h-4" />
+                        )}
+                        {art.title || "Untitled Artifact"}
+                      </div>
+                      <div className="text-xs text-secondary mt-2 flex items-center flex-wrap gap-x-4 gap-y-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(art.createdAt * 1000).toLocaleDateString()}
+                        </span>
+                        {art.projectId && (
+                          <span className="flex items-center gap-1">
+                            <FolderKanban className="w-3 h-3" />
+                            {art.projectId.substring(0,8)}...
+                          </span>
+                        )}
+                        <span className="bg-surface-raised px-2 py-0.5 rounded-md border border-border-subtle">{art.type}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {loading && (
               <div className="flex justify-center mt-4">
                 <div className="p-4 rounded-xl bg-surface-raised border border-border-default text-primary italic opacity-70 flex items-center gap-2">
@@ -636,6 +809,76 @@ function ChatUI() {
         </div>
       </div>
 
+      {/* Artifacts Side Panel */}
+      <div 
+        className={`h-full bg-surface border-l border-border-default flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          chatActive ? 'w-64 lg:w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-full border-none'
+        } overflow-hidden shrink-0`}
+      >
+        <div className="p-4 border-b border-border-default shrink-0">
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <FileText className="w-4 h-4 text-accent" /> Artifacts
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {artifacts.length === 0 ? (
+             <div className="text-sm text-tertiary italic text-center mt-4">No artifacts yet.</div>
+          ) : (
+            artifacts.map((art) => (
+              <button
+                key={art.id}
+                onClick={() => fetchFullArtifact(art.id)}
+                disabled={loadingArtifactId === art.id}
+                className="w-full flex flex-col text-left p-3 rounded-xl bg-surface-raised border border-border-default hover:border-accent/50 transition-all shadow-sm group"
+              >
+                <div className="font-semibold text-primary text-sm group-hover:text-accent transition-colors flex items-center gap-2">
+                  {loadingArtifactId === art.id ? (
+                     <div className="w-3 h-3 rounded-full border-2 border-accent border-t-transparent animate-spin shrink-0" />
+                  ) : (
+                     <FileText className="w-3 h-3 shrink-0" />
+                  )}
+                  <span className="truncate">{art.title || "Untitled Artifact"}</span>
+                </div>
+                <div className="text-[10px] text-secondary mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="bg-surface px-1.5 py-0.5 rounded border border-border-subtle truncate max-w-[100px]">{art.type}</span>
+                  <span className="flex items-center gap-1 opacity-70 whitespace-nowrap">
+                    <Clock className="w-2.5 h-2.5" />
+                    {new Date(art.createdAt * 1000).toLocaleDateString()}
+                  </span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {selectedArtifact && (
+        <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in">
+          <div className="bg-surface border border-border-default rounded-3xl shadow-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden animate-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-border-default">
+              <div>
+                <h2 className="text-xl font-bold text-primary">{selectedArtifact.title || "Untitled Artifact"}</h2>
+                <p className="text-sm text-secondary mt-1">{selectedArtifact.type}</p>
+              </div>
+              <button
+                onClick={() => setSelectedArtifact(null)}
+                className="p-2 hover:bg-surface-raised rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5 text-secondary" />
+              </button>
+            </div>
+            <div className={`p-4 md:p-6 overflow-y-auto flex-1 text-primary m-4 rounded-xl border border-border-default shadow-inner ${['plan_complete', 'plan_markdown', 'markdown'].includes(selectedArtifact.type) ? 'bg-base' : 'bg-surface-raised text-sm whitespace-pre-wrap font-mono'}`}>
+              {selectedArtifact.type === 'plan_complete' ? (
+                <PlanRenderer content={selectedArtifact.content} />
+              ) : selectedArtifact.type === 'plan_markdown' || selectedArtifact.type === 'markdown' ? (
+                <MarkdownRenderer content={selectedArtifact.content} />
+              ) : (
+                <ArtifactContent content={selectedArtifact.content} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

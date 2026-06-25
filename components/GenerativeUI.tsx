@@ -338,7 +338,9 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
       const hasClosingTag = closingTagRegex.test(currentText.substring(match.index || 0));
 
       try {
-        const data = JSON.parse(jsonStr);
+        // Strip out markdown code blocks if the LLM mistakenly included them
+        const cleanJsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+        const data = JSON.parse(cleanJsonStr);
         let Component: React.ReactNode = null;
         switch (tagType) {
           case "TABLE": Component = <ResponsiveTable {...data} />; break;

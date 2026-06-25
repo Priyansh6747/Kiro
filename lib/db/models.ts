@@ -291,6 +291,7 @@ export const artifacts = sqliteTable("artifacts", {
     .references(() => users.id),
   projectId: text("project_id")
     .references(() => projects.id),
+  title: text("title").notNull().default("Untitled"),
   type: text("type").notNull(),
   content: text("content").notNull(),
   createdAt: integer("created_at").notNull(),
