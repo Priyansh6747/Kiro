@@ -357,7 +357,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
           case "ARTIFACT-PREVIEW": Component = <ArtifactPreview data={data} />; break;
           case "TASK-GRAPH": Component = <TaskDependencyGraph data={data} />; break;
           case "TASK-MANAGER": Component = <TaskManager data={data} />; break;
-          case "SCHEDULING-FLOW": Component = <SchedulingFlow initialTaskId={data?.taskId} />; break;
+          case "SCHEDULING-FLOW": Component = <SchedulingFlow initialProjectId={data?.projectId || data?.taskId} />; break;
           default: Component = <div className="p-2 bg-missed-subtle text-missed text-xs rounded border border-missed/30">Unknown Tag: {tagType}</div>;
         }
 

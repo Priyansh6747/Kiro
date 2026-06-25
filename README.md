@@ -30,25 +30,38 @@ Dealing with dates across distributed clients and servers is notoriously difficu
 - **Universal UTC Baseline**: All dates are mapped to exact midnight UTC integers. Kiro's backend math calculates local midnight offsets dynamically, guaranteeing that regardless of whether the user is in Tokyo or Los Angeles, the underlying day integers perfectly align with the calendar representation.
 - **Preference Caching**: Timezone offsets are patched and synchronized on app load using `getOrCreatePreferences`, ensuring server-side rendering (SSR) aligns with the client's localized day boundaries.
 
-### 4. AI-Driven Insights & Granular Caching
-Kiro integrates with Groq AI to process task data and deliver intelligent summaries, wrapped in a highly optimized caching layer.
+### 4. Autonomous Multi-Agent Orchestration Team
+Kiro runs a sophisticated multi-agent backend coordinated by **Yuki**, a sharp-tongued coordinator companion. Yuki delegates specialized sub-tasks to dedicated agents equipped with custom toolsets:
+- **Nova (ProjectAgent)**: Manages creation, priority weights, and deadlines for projects.
+- **Quill (TaskAgent)**: Manages granular task operations, scheduling, completions, and reschedules.
+- **Echo (PreferencesAgent)**: Calibrates default timezone bounds, nudge times, and productivity ratios.
+- **Iva (DayLogAgent)**: Maintains the append-only ledger of daily productivity logs, ratios, and penalty calculations.
+- **Juno (PlannerAgent)**: Orchestrates the daily planner limits and triggers visual overload warnings.
+- **Zef (UIAgent)**: Interacts with frontend state dynamically to navigate windows or toggle themes.
 
-- **End-of-Day (EOD) Analysis**: A background worker compiles the day's completed tasks, pending blockers, and DAG progress, feeding it to a Groq LLM to generate actionable, localized insights.
-- **Cache Invalidation Lifecycle**: To prevent expensive LLM calls on every render, summaries are aggressively cached in `localStorage` and Next.js server caches with a 1-hour expiry TTL. The cache is automatically invalidated and revalidated only when a task's completion status mathematically alters the day's progression statistics.
+The agents collaborate for end-to-end planning workflows, asking clarifying questions, generating task breakdowns, and generating interactive dependency graphs.
 
-### 5. Optimistic UI & Transactional Rollbacks
+### 5. Generative UI & SSE Streaming
+Instead of static markdown, Kiro utilizes a dynamic SSE stream handler and `StreamableContentRenderer` in `/chat` and `MiniChat` to stream interactive UI components (prefixed with `<ui:*>` tags) directly into the message feed. This allows users to configure forms, inspect timeline schedules, and view dependencies inline.
+
+### 6. Semantic Human-Readable Operations & Resource Quotas
+- **No UUID Recitation**: Backend APIs maps human-readable project and task names (`projectName`, `taskTitle`) directly to internal database IDs.
+- **Usage Tracking**: Features an "AI Usage" metrics tracker and quota system with a dynamic color-styled progress bar to monitor system resource consumption in real-time.
+
+### 7. Optimistic UI & Transactional Rollbacks
 Every interaction in Kiro feels instantaneous, operating on a "trust but verify" optimistic model.
 
 - **Zero-Latency State Mutation**: Dragging a task, swiping to schedule, or establishing a graph dependency immediately patches the local React state, bypassing network round-trip delays.
-- **Transactional Rollbacks**: If the backend API throws a validation error (e.g., a foreign key failure or a temporal constraint violation), the centralized state manager catches the failure, gracefully reverses the local state, and fires an error via the custom `useToast` system.
-- **Fluid Gestures**: Built with Framer Motion, swipeable interactions (like bucket-dropping) are tied to pointer velocity and physics simulations, providing native app-level haptics.
+- **Transactional Rollbacks**: If the backend API throws a validation error, the centralized state manager catches the failure, gracefully reverses the local state, and fires an error via the custom `useToast` system.
+- **Task Styling & Gestures**: Task status and completions utilize polished strikethrough styling and transition animations. Interactive gestures (like swipe-to-bucket) are powered by Framer Motion velocity physics.
+- **Responsive Mobile Layout**: The layout features dynamic visibility components, sliding panels, and modal-based transitions for task details to ensure complete feature parity on mobile screens.
 
 ---
 
 ## 🛠️ Technology Stack
 
 - **Core Framework**: Next.js 16 (App Router, Server Actions)
-- **Frontend Library**: React 19 (Concurrent Rendering, Custom Hooks)
+- **Frontend Library**: React 19 (Concurrent Rendering, Custom Hooks, Server-Sent Events)
 - **Authentication**: Clerk (with rigorous webhook parsing and fallback user ingestion)
 - **AI/LLM Provider**: Groq API
 - **Graph Visualization**: React Flow

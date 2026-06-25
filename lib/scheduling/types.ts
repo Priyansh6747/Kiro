@@ -1,5 +1,6 @@
 export interface DraftStrategy {
-  taskId: string;
+  taskId?: string;
+  projectId?: string;
   importance: number; // 1-5
   minutesPerDay: number;
   activeDays: number[]; // 1=Mon..7=Sun

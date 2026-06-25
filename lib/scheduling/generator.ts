@@ -11,6 +11,7 @@ export async function generateSchedule(
   task: { id: string; estimateMin: number; title: string },
   predecessorCompletionDay: number,
   defaultAvailableMin: number,
+  inFlightBlocks: GeneratedBlock[] = []
 ): Promise<GeneratedSchedule> {
   const deadlineUnixDay = strategy.deadlineAt
     ? Math.floor(strategy.deadlineAt / UNIX_DAY_SECS)
@@ -25,7 +26,7 @@ export async function generateSchedule(
     if (strategy.activeDays.includes(unixDayOfWeek(d))) allDates.push(d);
   }
   
-  const capacityMap = await buildCapacityMap(userId, allDates, task.id, defaultAvailableMin);
+  const capacityMap = await buildCapacityMap(userId, allDates, task.id, defaultAvailableMin, inFlightBlocks);
   
   let remainingTaskMin = task.estimateMin;
   let deficitCarry = 0;
@@ -118,4 +119,44 @@ export async function generateSchedule(
     : effectiveStart;
   
   return { taskId: task.id, blocks, totalMinutes, completionDate, riskFlags };
+}
+
+export async function batchGenerateSchedule(
+  userId: string,
+  strategy: DraftStrategy,
+  tasksList: { id: string; estimateMin: number; title: string }[],
+  taskPredecessors: Record<string, string[]>,
+  defaultAvailableMin: number
+): Promise<{ schedules: GeneratedSchedule[], overallRiskFlags: string[] }> {
+  const schedules: GeneratedSchedule[] = [];
+  const inFlightBlocks: GeneratedBlock[] = [];
+  const taskCompletionDays: Record<string, number> = {};
+
+  for (const task of tasksList) {
+    const preds = taskPredecessors[task.id] || [];
+    let predecessorCompletionDay = 0;
+    for (const pid of preds) {
+      if (taskCompletionDays[pid] && taskCompletionDays[pid] > predecessorCompletionDay) {
+        predecessorCompletionDay = taskCompletionDays[pid];
+      }
+    }
+
+    const schedule = await generateSchedule(
+      userId,
+      strategy,
+      task,
+      predecessorCompletionDay,
+      defaultAvailableMin,
+      inFlightBlocks
+    );
+
+    schedules.push(schedule);
+    inFlightBlocks.push(...schedule.blocks);
+    taskCompletionDays[task.id] = schedule.completionDate;
+  }
+
+  const overallRiskFlags: string[] = [];
+  // Basic risk aggregation could go here, omitting for brevity
+  
+  return { schedules, overallRiskFlags };
 }

@@ -58,10 +58,10 @@ export function matchesRecurrenceRule(
 export async function projectRecurringOccurrences(
   userId: string,
   dateRange: number[],
-  excludeTaskId: string,
+  excludeTaskId: string | null,
   existingConcrete: Map<string, Set<number>>,
 ): Promise<Map<number, number>> {
-  const recurringTasks = await getRecurringTasksForUser(userId, excludeTaskId);
+  const recurringTasks = excludeTaskId ? await getRecurringTasksForUser(userId, excludeTaskId) : await getRecurringTasksForUser(userId, "DUMMY");
   const result = new Map<number, number>();
   
   for (const unixDay of dateRange) {
@@ -89,8 +89,9 @@ export async function projectRecurringOccurrences(
 export async function buildCapacityMap(
   userId: string,
   dates: number[],
-  excludeTaskId: string,
+  excludeTaskId: string | null,
   defaultAvailableMin: number,
+  inFlightBlocks: { planDate: number; durationMin: number }[] = []
 ): Promise<Map<number, DailyCapacity>> {
   if (dates.length === 0) return new Map();
   
@@ -98,7 +99,7 @@ export async function buildCapacityMap(
   const toDate = Math.max(...dates);
   
   // Fetch concrete reservations
-  const concreteRows = await getDayPlanRowsForDateRange(userId, fromDate, toDate, excludeTaskId);
+  const concreteRows = excludeTaskId ? await getDayPlanRowsForDateRange(userId, fromDate, toDate, excludeTaskId) : await getDayPlanRowsForDateRange(userId, fromDate, toDate, "DUMMY_ID_TO_NOT_EXCLUDE");
   
   // Build existingConcrete map for projection dedup
   const existingConcrete = new Map<string, Set<number>>();
@@ -108,6 +109,11 @@ export async function buildCapacityMap(
     if (!existingConcrete.has(row.taskId)) existingConcrete.set(row.taskId, new Set());
     existingConcrete.get(row.taskId)!.add(row.planDate);
     concreteByDate.set(row.planDate, (concreteByDate.get(row.planDate) ?? 0) + row.durationMin);
+  }
+
+  // Add in-flight blocks to concrete reservations
+  for (const block of inFlightBlocks) {
+    concreteByDate.set(block.planDate, (concreteByDate.get(block.planDate) ?? 0) + block.durationMin);
   }
   
   // Get projected recurring occurrences
