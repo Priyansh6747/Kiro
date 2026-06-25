@@ -328,11 +328,23 @@ export function DayPlanner({
                           )}
                         </button>
                         <div className="flex flex-col flex-1 min-w-0">
-                          <span
-                            className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${animState === "loading" ? "text-secondary" : "text-inherit"} ${task.status === "done" ? "text-secondary doodle-strikethrough" : ""}`}
-                          >
-                            {task.title}
-                          </span>
+                          <div className="relative flex max-w-full self-start min-w-0">
+                            <span
+                              style={task.status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined}
+                              className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${
+                                animState === "loading"
+                                  ? "text-secondary"
+                                  : task.status === "done"
+                                    ? ""
+                                    : "text-inherit"
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                            {task.status === "done" && (
+                              <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />
+                            )}
+                          </div>
                           {task.projectId && (
                             <span
                               className={`text-[9px] uppercase tracking-wider truncate ${task.status === "done" ? "opacity-40" : "opacity-60"}`}

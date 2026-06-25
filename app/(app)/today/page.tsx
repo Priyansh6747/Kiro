@@ -560,11 +560,23 @@ function TodayPageContent() {
                           )}
                         </button>
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span
-                            className={`text-sm font-medium leading-tight truncate ${animState === "loading" ? "text-secondary" : "text-primary"} ${task.status === "done" ? "text-secondary doodle-strikethrough" : ""}`}
-                          >
-                            {task.title}
-                          </span>
+                          <div className="relative flex max-w-full self-start min-w-0">
+                            <span
+                              style={task.status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined}
+                              className={`text-sm font-medium leading-tight truncate ${
+                                animState === "loading"
+                                  ? "text-secondary"
+                                  : task.status === "done"
+                                    ? ""
+                                    : "text-primary"
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                            {task.status === "done" && (
+                              <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />
+                            )}
+                          </div>
                           <span
                             className={`text-xs mt-1 ${animState === "loading" ? "text-secondary" : "text-secondary"}`}
                           >

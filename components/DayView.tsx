@@ -146,11 +146,23 @@ export function DayView({
                             )}
                           </button>
                           <div className="flex flex-col gap-1 min-w-0 flex-1">
-                            <span
-                              className={`text-sm md:text-base font-medium truncate block ${animatingPlacements[plan.taskId] === "loading" ? "text-secondary" : "text-inherit"} ${task.status === "done" ? "text-secondary doodle-strikethrough" : ""}`}
-                            >
-                              {task.title}
-                            </span>
+                            <div className="relative flex max-w-full self-start min-w-0">
+                              <span
+                                style={task.status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined}
+                                className={`text-sm md:text-base font-medium truncate ${
+                                  animatingPlacements[plan.taskId] === "loading"
+                                    ? "text-secondary"
+                                    : task.status === "done"
+                                      ? ""
+                                      : "text-primary"
+                                }`}
+                              >
+                                {task.title}
+                              </span>
+                              {task.status === "done" && (
+                                <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />
+                              )}
+                            </div>
                             {task.projectId && (
                               <span
                                 className={`text-[10px] uppercase tracking-wider truncate ${task.status === "done" ? "text-secondary/60" : "text-tertiary"}`}
