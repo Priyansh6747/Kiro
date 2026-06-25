@@ -46,6 +46,7 @@ import {
   taskClosure,
   taskDependencies,
   tasks,
+  schedulingStrategies,
   type User,
   users,
 } from "./db/models";
@@ -1162,6 +1163,16 @@ export async function removeDayPlanBlock(
     .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)));
 }
 
+export async function removeDayPlanBlockForDate(
+  userId: string,
+  taskId: string,
+  planDate: number,
+): Promise<void> {
+  await db
+    .delete(dayPlan)
+    .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId), eq(dayPlan.planDate, planDate)));
+}
+
 // ---------------------------------------------------------------------------
 // Artifacts
 // ---------------------------------------------------------------------------
@@ -1199,4 +1210,133 @@ export async function updateArtifact(
     .where(eq(artifacts.id, id))
     .returning();
   return updated;
+}
+
+// ---------------------------------------------------------------------------
+// Scheduling Module (Phases 1-5)
+// ---------------------------------------------------------------------------
+
+export async function getDayPlanRowsForDateRange(userId: string, fromDate: number, toDate: number, excludeTaskId: string) {
+  return db
+    .select()
+    .from(dayPlan)
+    .where(
+      and(
+        eq(dayPlan.userId, userId),
+        ne(dayPlan.taskId, excludeTaskId),
+        gte(dayPlan.planDate, fromDate),
+        lte(dayPlan.planDate, toDate)
+      )
+    );
+}
+
+export async function getRecurringTasksForUser(userId: string, excludeTaskId: string) {
+  return db
+    .select({
+      id: tasks.id,
+      estimateMin: tasks.estimateMin,
+      recurrenceRule: tasks.recurrenceRule,
+      recurrenceEndsAt: tasks.recurrenceEndsAt,
+      cadence: projects.cadence,
+      projectType: projects.type,
+      scheduledDate: tasks.scheduledDate,
+    })
+    .from(tasks)
+    .leftJoin(projects, eq(tasks.projectId, projects.id))
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        ne(tasks.id, excludeTaskId),
+        or(
+          sql`${tasks.recurrenceRule} IS NOT NULL`,
+          inArray(projects.type, ["recurring", "habit"])
+        )
+      )
+    );
+}
+
+export async function getPredecessorTasks(taskId: string) {
+  return db
+    .select({
+      id: tasks.id,
+      status: tasks.status,
+      scheduledDate: tasks.scheduledDate,
+    })
+    .from(taskDependencies)
+    .innerJoin(tasks, eq(tasks.id, taskDependencies.predecessorId))
+    .where(eq(taskDependencies.taskId, taskId));
+}
+
+export async function commitSchedule(
+  userId: string,
+  taskId: string,
+  strategy: any,
+  blocks: any[],
+  firstBlockDate: number
+): Promise<{ strategyId: string }> {
+  return await db.transaction(async (tx) => {
+    // Check if strategy already exists
+    const existing = await tx.select({ id: schedulingStrategies.id })
+      .from(schedulingStrategies)
+      .where(eq(schedulingStrategies.taskId, taskId))
+      .limit(1);
+      
+    if (existing.length > 0) {
+      throw new Error("ALREADY_SCHEDULED");
+    }
+
+    const strategyId = crypto.randomUUID();
+    
+    await tx.insert(schedulingStrategies).values({
+      id: strategyId,
+      taskId: strategy.taskId,
+      importance: strategy.importance,
+      minutesPerDay: strategy.minutesPerDay,
+      activeDays: strategy.activeDays,
+      preferredStartDate: strategy.preferredStartDate,
+      deadlineAt: strategy.deadlineAt,
+      isFlexible: strategy.isFlexible,
+      acceptedRisk: strategy.acceptedRisk,
+      suggestedBy: strategy.suggestedBy,
+      createdAt: Math.floor(Date.now() / 1000),
+    });
+
+    for (const b of blocks) {
+      await tx.insert(dayPlan).values({
+        userId,
+        taskId,
+        strategyId,
+        planDate: b.planDate,
+        startTime: b.startTime,
+        durationMin: b.durationMin,
+        sessionType: b.sessionType,
+        createdAt: Math.floor(Date.now() / 1000),
+        updatedAt: Math.floor(Date.now() / 1000),
+      }).onConflictDoUpdate({
+        target: [dayPlan.userId, dayPlan.taskId, dayPlan.planDate, dayPlan.startTime],
+        set: {
+          durationMin: b.durationMin,
+          sessionType: b.sessionType,
+          updatedAt: Math.floor(Date.now() / 1000),
+        }
+      });
+    }
+
+    // Sync task's scheduledDate if it wasn't already set
+    await tx.update(tasks)
+      .set({ scheduledDate: firstBlockDate, updatedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(tasks.id, taskId), isNull(tasks.scheduledDate)));
+
+    return { strategyId };
+  });
+}
+
+export async function getMemoryBaselineForUser(userId: string) {
+  return db
+    .select()
+    .from(memoryBaseline)
+    .where(eq(memoryBaseline.userId, userId))
+    .orderBy(desc(memoryBaseline.computedAt))
+    .limit(1)
+    .then(rows => rows[0] || null);
 }

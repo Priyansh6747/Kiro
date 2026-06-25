@@ -7,6 +7,7 @@ import { AiQuestions } from "./planning/AiQuestions";
 import { ArtifactPreview } from "./planning/ArtifactPreview";
 import { TaskDependencyGraph } from "./planning/TaskDependencyGraph";
 import { TaskManager } from "./planning/TaskManager";
+import { SchedulingFlow } from "./scheduling/SchedulingFlow";
 
 // --- Subcomponents ---
 
@@ -356,6 +357,7 @@ export function ContentRenderer({ content, proseClassName }: { content: string, 
           case "ARTIFACT-PREVIEW": Component = <ArtifactPreview data={data} />; break;
           case "TASK-GRAPH": Component = <TaskDependencyGraph data={data} />; break;
           case "TASK-MANAGER": Component = <TaskManager data={data} />; break;
+          case "SCHEDULING-FLOW": Component = <SchedulingFlow initialTaskId={data?.taskId} />; break;
           default: Component = <div className="p-2 bg-missed-subtle text-missed text-xs rounded border border-missed/30">Unknown Tag: {tagType}</div>;
         }
 

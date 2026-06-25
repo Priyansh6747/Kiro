@@ -304,8 +304,8 @@ export async function POST(req: NextRequest) {
             const isScheduler = stripped === "1" || stripped === "schedule";
             
             if (isScheduler) {
-              console.log("[Sage] Scheduler invoked (Not implemented yet)");
-              finalContent = "Scheduler invoked (Not implemented yet)";
+              push("scheduling_flow_start", {});
+              finalContent = "";
             } else {
               // Trigger a custom event for the UI instead of rendering an XML tag
               push("planning_flow_start", { phase: 1 });
@@ -400,6 +400,7 @@ Delegation Rule:
 15. If you want to assign a task to another agent, you MUST use the delegateToAgent tool. Do NOT generate a text response like "@Juno do this" because the agent will not be invoked unless you actually call the tool.
 16. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
 17. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
+18. If a user asks to schedule a task or project, DO NOT ask them for dates, times, or details. IMMEDIATELY delegate the request to Sage. Sage will handle gathering the necessary details through its specialized scheduling flow.
 ` + agentScopes;
 
         if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {

@@ -206,6 +206,30 @@ export const memoryBaseline = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// scheduling_strategies
+// ---------------------------------------------------------------------------
+export const schedulingStrategies = sqliteTable(
+  "scheduling_strategies",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("task_id")
+      .notNull()
+      .unique()
+      .references(() => tasks.id),
+    importance: integer("importance").notNull().default(3), // 1-5
+    minutesPerDay: integer("minutes_per_day").notNull(),
+    activeDays: text("active_days", { mode: "json" }).notNull(), // JSON array
+    preferredStartDate: integer("preferred_start_date").notNull(),
+    deadlineAt: integer("deadline_at"),
+    isFlexible: integer("is_flexible", { mode: "boolean" }).notNull().default(false),
+    acceptedRisk: integer("accepted_risk", { mode: "boolean" }).notNull().default(false),
+    suggestedBy: text("suggested_by", { enum: ["auto", "manual"] }).notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("idx_strategies_task").on(t.taskId)]
+);
+
+// ---------------------------------------------------------------------------
 // day_plan
 // ---------------------------------------------------------------------------
 export const dayPlan = sqliteTable(
@@ -217,15 +241,19 @@ export const dayPlan = sqliteTable(
     taskId: text("task_id")
       .notNull()
       .references(() => tasks.id),
+    strategyId: text("strategy_id").references(() => schedulingStrategies.id),
     planDate: integer("plan_date").notNull(), // unix date (day only)
     startTime: integer("start_time").notNull(), // unix timestamp
+    durationMin: integer("duration_min").notNull().default(30),
+    sessionType: text("session_type", { enum: ["focused", "overflow", "makeup"] }).notNull().default("focused"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.userId, t.taskId] }),
+    primaryKey({ columns: [t.userId, t.taskId, t.planDate, t.startTime] }),
     index("idx_day_plan_user_date").on(t.userId, t.planDate),
-  ],
+    index("idx_day_plan_task").on(t.taskId),
+  ]
 );
 
 // ---------------------------------------------------------------------------
@@ -257,6 +285,9 @@ export type NewMemoryBaseline = typeof memoryBaseline.$inferInsert;
 
 export type DayPlan = typeof dayPlan.$inferSelect;
 export type NewDayPlan = typeof dayPlan.$inferInsert;
+
+export type SchedulingStrategy = typeof schedulingStrategies.$inferSelect;
+export type NewSchedulingStrategy = typeof schedulingStrategies.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // AI Usage

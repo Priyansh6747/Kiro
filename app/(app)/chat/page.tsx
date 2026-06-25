@@ -364,6 +364,22 @@ function ChatUI() {
             break;
           }
 
+          case "scheduling_flow_start": {
+            const schedMsg: ChatMessage & { isCustomUI?: boolean } = {
+              role: "assistant",
+              name: "Sage",
+              content: `<ui:scheduling-flow>{}</ui:scheduling-flow>`,
+              isCustomUI: true,
+            };
+            currentMessages = [...currentMessages, schedMsg];
+            setMessages([...currentMessages]);
+            setStreamingAgents((prev) =>
+              prev.filter((a) => a.agentName !== "Sage"),
+            );
+            setLoadingText("");
+            break;
+          }
+
           case "tool_call":
             setLoadingText(`Running ${payload.toolName}...`);
             break;

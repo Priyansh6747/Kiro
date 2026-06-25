@@ -61,9 +61,9 @@ Other agents and their scopes:
 - Quill (TaskAgent): Granular task ops — create, complete, reschedule to a specific DATE.
 - Echo (PreferencesAgent): Background config — timezone, ratio mode, nudge time.
 - Iva (DayLogAgent): Records daily history — the append-only ledger.
-- Juno (PlannerAgent): Orchestrates the daily plan, schedules tasks to a specific TIME OF DAY on the timeline, enforces overload warnings.
+- Juno (PlannerAgent): ONLY for moving tasks that are ALREADY scheduled to a specific time of day on the timeline. Do NOT use for general scheduling.
 - Zef (UIAgent): Navigation/UI-state actions.
-- Sage (PlanningAgent): End-to-end project planning — intake → brief → tasks → graph.
+- Sage (PlanningAgent): DELEGATE ALL REQUESTS TO SCHEDULE TASKS HERE. Sage handles project planning AND the multi-day scheduling flow.
 
 If the user asks you to do something outside your scope, DO NOT try to fulfill it or hallucinate tools. Instead, tell the user to ask the corresponding agent or use Yuki.
 IMPORTANT: To assign a task to another agent, YOU MUST CALL the delegateToAgent tool. Do NOT generate plain text like '@Juno do this'. If you don't call the tool, the agent will never receive the task.`;
@@ -111,8 +111,8 @@ export const agents: Record<
   Juno: {
     tools: plannerTools,
     handlers: plannerHandlers,
-    prompt: `You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily plan, enforces overload warnings.\n\nIMPORTANT: If instructed to schedule tasks into the timeline, DO NOT call show_day_plan or show_today_agenda first to check the schedule. Simply call schedule_task_timeline immediately for each task.\n\n${functionCallingEnforcement}\n${agentScopes}`,
-    description: "Orchestrates the daily plan, enforces overload warnings",
+    prompt: `You are Juno, the Kiro Planner Agent. Your scope is Orchestrates the daily agenda, moves tasks to specific times of day on the timeline.\n\nIMPORTANT: If instructed to schedule tasks into the timeline, DO NOT call show_day_plan or show_today_agenda first to check the schedule. Simply call schedule_task_timeline immediately for each task.\n\n${functionCallingEnforcement}\n${agentScopes}`,
+    description: "Orchestrates the daily agenda, moves tasks to specific times of day on the timeline",
     model: "llama-3.3-70b-versatile",
   },
   Zef: {
@@ -126,7 +126,7 @@ export const agents: Record<
     tools: planningTools,
     handlers: planningHandlers,
     prompt: SAGE_PROMPT,
-    description: "End-to-end project planning — intake, clarification, brief, tasks, graph.",
+    description: "End-to-end project planning AND scheduling tasks across multiple days (the 5-phase scheduling flow).",
   },
 };
 

@@ -3,6 +3,8 @@ import { messages, userContext } from "@/lib/db/models";
 import { eq, desc } from "drizzle-orm";
 import { groqChat } from "@/lib/groq";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { clerkClient } from "@clerk/nextjs/server";
+import { findUserById, createUser, createPreferences, createProject } from "@/lib/storage";
 
 const DEFAULT_PYRAMID = {
   level_0_basic_details: [],
@@ -12,7 +14,61 @@ const DEFAULT_PYRAMID = {
   level_4_running_theme: "",
 };
 
+export async function ensureUserExists(userId: string) {
+  const existing = await findUserById(userId);
+  if (existing) return;
+  
+  try {
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId);
+    
+    const email = user.emailAddresses[0]?.emailAddress || `${userId}@noemail.clerk.kiro`;
+    const firstName = user.firstName || "";
+    const lastName = user.lastName || "";
+    const name = `${firstName} ${lastName}`.trim() || user.username || "User";
+    const username = user.username || email.split("@")[0] || `user_${Date.now()}`;
+    const avatarUrl = user.imageUrl || null;
+    const now = Math.floor(Date.now() / 1000);
+
+    await createUser({
+      id: userId,
+      email,
+      username,
+      name,
+      avatarUrl,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await createPreferences({
+      id: crypto.randomUUID(),
+      userId,
+      timezone: "UTC",
+      defaultAvailableMin: 240,
+      ratioMode: "cumulative",
+      morningNudgeTime: "08:00",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await createProject({
+      id: crypto.randomUUID(),
+      userId,
+      name: "Todo",
+      importance: 3,
+      type: "nicetohave",
+      deadlineAt: null,
+      isDefault: true,
+      createdAt: now,
+      archivedAt: null,
+    });
+  } catch (err) {
+    console.error("Error ensuring user exists:", err);
+  }
+}
+
 export async function getUserContext(userId: string) {
+  await ensureUserExists(userId);
   let ctx = await db.select().from(userContext).where(eq(userContext.userId, userId)).get();
   if (!ctx) {
     // initialize
@@ -27,6 +83,7 @@ export async function getUserContext(userId: string) {
 }
 
 export async function pushMessageToDb(userId: string, role: "user" | "assistant" | "system", content: string, agentName?: string, metadata?: any) {
+  await ensureUserExists(userId);
   return await db.insert(messages).values({
     id: crypto.randomUUID(),
     userId,
