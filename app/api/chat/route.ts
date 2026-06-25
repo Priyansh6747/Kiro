@@ -125,7 +125,16 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { messages, confirmedToolCallIds, isMiniChat, pageContext, selectedAgent } = body;
+  let { messages, confirmedToolCallIds, isMiniChat, pageContext, selectedAgent } = body;
+  
+  // Clean messages to remove any frontend-specific properties like `isCustomUI`
+  messages = messages.map((m: any) => {
+    const cleanMsg: any = { role: m.role, content: m.content };
+    if (m.name) cleanMsg.name = m.name;
+    if (m.tool_calls) cleanMsg.tool_calls = m.tool_calls;
+    if (m.tool_call_id) cleanMsg.tool_call_id = m.tool_call_id;
+    return cleanMsg;
+  });
 
   const lastUserMsg = messages.findLast((m: any) => m.role === "user");
   // Only push new user message if this isn't just a tool confirmation pass
@@ -400,7 +409,7 @@ Delegation Rule:
 15. If you want to assign a task to another agent, you MUST use the delegateToAgent tool. Do NOT generate a text response like "@Juno do this" because the agent will not be invoked unless you actually call the tool.
 16. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
 17. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
-18. If a user asks to schedule a task or project, DO NOT ask them for dates, times, or details. IMMEDIATELY delegate the request to Sage. Sage will handle gathering the necessary details through its specialized scheduling flow.
+18. If a user asks to schedule a task or project, or asks what to do today, DO NOT ask them for dates, times, or details. IMMEDIATELY delegate the request to the correct agent (Juno for individual tasks and daily agendas, Sage for projects). The agents will handle gathering the necessary details.
 ` + agentScopes;
 
         if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {
