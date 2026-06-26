@@ -26,11 +26,17 @@ export function matchesRecurrenceRule(
   projectType: string,
   unixDay: number,
   scheduledDate?: number | null,
+  activeDays?: unknown | null,
 ): boolean {
   const dow = unixDayOfWeek(unixDay); // 1-7
   
+  // Use new activeDays JSON array if present
+  if (activeDays && Array.isArray(activeDays) && activeDays.length > 0) {
+    return activeDays.includes(dow);
+  }
+
   // Daily: task has "daily" rule, or is a habit project with daily cadence
-  if (rule === "daily" || (projectType === "habit" && cadence === "daily")) return true;
+  if (rule === "daily" || cadence === "daily") return true;
   
   // Weekly: matches the anchor day-of-week
   if (rule === "weekly" || cadence === "weekly") {
@@ -38,15 +44,15 @@ export function matchesRecurrenceRule(
     return dow === anchorDay;
   }
   
-  // Comma-sep abbrevs: "MON,THU"
+  // Comma-sep abbrevs: "MON,THU" (for older data)
   if (rule && rule !== "daily" && rule !== "weekly") {
     const abbrevMap: Record<string, number> = { MON:1, TUE:2, WED:3, THU:4, FRI:5, SAT:6, SUN:7 };
     const days = rule.split(',').map(a => abbrevMap[a.trim().toUpperCase()]).filter(Boolean);
     if (days.length > 0) return days.includes(dow);
   }
   
-  // Recurring project with custom cadence: treat as weekdays
-  if (projectType === "recurring" && cadence === "custom") return dow <= 5;
+  // Custom cadence fallback: treat as weekdays
+  if (cadence === "custom") return dow <= 5;
   
   return false;
 }
@@ -73,7 +79,7 @@ export async function projectRecurringOccurrences(
       // Skip if recurrenceEndsAt is set and this day is past it
       if (t.recurrenceEndsAt && unixDay * 86400 > t.recurrenceEndsAt) continue;
       
-      if (matchesRecurrenceRule(t.recurrenceRule, t.cadence, t.projectType, unixDay)) {
+      if (matchesRecurrenceRule(t.recurrenceRule, t.cadence, t.projectType, unixDay, t.scheduledDate, t.activeDays)) {
         projected += t.estimateMin;
       }
     }
@@ -122,12 +128,16 @@ export async function buildCapacityMap(
   // Build capacity map
   const capacityMap = new Map<number, DailyCapacity>();
   for (const d of dates) {
-    const reservedMin = (concreteByDate.get(d) ?? 0) + (projected.get(d) ?? 0);
+    const conc = concreteByDate.get(d) ?? 0;
+    const proj = projected.get(d) ?? 0;
+    const reservedMin = conc + proj;
+    const remainingMin = Math.max(0, defaultAvailableMin - reservedMin);
     capacityMap.set(d, {
       date: d,
       totalAvailableMin: defaultAvailableMin,
       reservedMin,
-      remainingMin: Math.max(0, defaultAvailableMin - reservedMin),
+      projectedMin: proj,
+      remainingMin,
     });
   }
   

@@ -43,7 +43,10 @@ export async function generateSchedule(
     const allocate = Math.min(strategy.minutesPerDay, cap.remainingMin, remainingTaskMin);
     if (allocate <= 0) continue;
     
-    const startTime = d * UNIX_DAY_SECS + DAY_START_OFFSET_SECS;
+    // Offset start time by whatever time was taken by habits/recurring tasks
+    const habitOffsetSecs = cap.projectedMin * 60;
+    const startTime = d * UNIX_DAY_SECS + DAY_START_OFFSET_SECS + habitOffsetSecs;
+    
     const block: GeneratedBlock = {
       planDate: d,
       startTime,

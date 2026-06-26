@@ -14,6 +14,7 @@ export interface DailyCapacity {
   date: number; // unix day
   totalAvailableMin: number; // from preferences.defaultAvailableMin
   reservedMin: number; // concrete dayPlan rows + projected recurring/habit occurrences
+  projectedMin: number; // JUST the habits/recurring component, used for offsetting start times
   remainingMin: number;
 }
 
