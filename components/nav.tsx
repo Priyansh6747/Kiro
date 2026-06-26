@@ -7,6 +7,7 @@ import {
   FolderKanban,
   Settings,
   Zap,
+  Repeat,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/today", label: "Today", Icon: Zap },
   { href: "/todo", label: "Todo", Icon: CheckSquare },
   { href: "/projects", label: "Projects", Icon: FolderKanban },
+  { href: "/habits", label: "Habits", Icon: Repeat },
   { href: "/insights", label: "Insights", Icon: BarChart2 },
   { href: "/chat", label: "Yuki", Icon: Bot },
   { href: "/settings", label: "Settings", Icon: Settings },

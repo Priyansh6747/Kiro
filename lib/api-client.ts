@@ -224,3 +224,12 @@ export const generateEodSummary = () =>
 
 export const removeDayPlanBlock = (taskId: string) =>
   request<"ok">(`/api/planner/day-plan/${taskId}`, { method: "DELETE" });
+
+// ── Habits & Recurring ────────────────────────────────────────────────────────
+
+export const listHabits = () => request<import("./db/models").Habit[]>("/api/habits");
+export const archiveHabit = (id: string) => request<{ success: boolean }>(`/api/habits/${id}`, { method: "DELETE" });
+export const getHabitStreak = (id: string) => request<{ current: number, best: number, rate7d: number }>(`/api/habits/${id}/streak`);
+
+export const listRecurringTasks = () => request<import("./db/models").RecurringTask[]>("/api/recurring");
+export const archiveRecurringTask = (id: string) => request<{ success: boolean }>(`/api/recurring/${id}`, { method: "DELETE" });
