@@ -197,7 +197,7 @@ export const plannerHandlers: Record<string, Function> = {
     }
     
     const task = await findTaskByTitle(args.taskTitle, userId, projectId);
-    if (!task) return { preformattedUi: `Task "${args.taskTitle}" not found.` };
+    if (!task) return { preformattedUi: `Task "${args.taskTitle}" not found. Stop trying to schedule this task.` };
 
     let timeStr = args.timeOfDay.toLowerCase().replace(/\s+/g, '');
     let isPM = timeStr.includes("pm");

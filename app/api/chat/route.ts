@@ -410,6 +410,7 @@ Delegation Rule:
 16. If you decide to use the delegateToAgent tool, you MUST provide your snarky/witty comment inside the \`snarkyComment\` parameter of the tool call. Do NOT output text in the regular response content before the tool call.
 17. After the delegateToAgent tool finishes and returns its result, your final response MUST be exactly the word "<DONE>". Do not output anything else. Let the agent's bubbled-up response speak for itself.
 18. If a user asks to schedule a task or project, or asks what to do today, DO NOT ask them for dates, times, or details. IMMEDIATELY delegate the request to the correct agent (Juno for individual tasks and daily agendas, Sage for projects). The agents will handle gathering the necessary details.
+19. If a user asks to create a habit or recurring routine (e.g., "create a daily habit"), you MUST delegate it to Nova. Do NOT delegate it to Juno.
 ` + agentScopes;
 
         if (selectedAgent && selectedAgent !== "Yuki" && agents[selectedAgent]) {

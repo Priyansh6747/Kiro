@@ -57,7 +57,7 @@ const getTodayDateHandler = async () => {
 export const agentScopes = `
 Other agents and their scopes:
 - Yuki (Assistant): General orchestration, can delegate to anyone.
-- Nova (ProjectAgent): Projects — creation, importance, deadlines (NOT planning. Route 'plan a project' requests to Sage).
+- Nova (ProjectAgent): Projects — creation, importance, deadlines, and HABITS/recurring routines. (NOT planning. Route 'plan a project' requests to Sage).
 - Quill (TaskAgent): Granular task ops — create, complete, reschedule to a specific DATE.
 - Echo (PreferencesAgent): Background config — timezone, ratio mode, nudge time.
 - Iva (DayLogAgent): Records daily history — the append-only ledger.
@@ -83,8 +83,8 @@ export const agents: Record<
   Nova: {
     tools: projectTools,
     handlers: projectHandlers,
-    prompt: `You are Nova, the Kiro Project Agent. Your scope is Projects — creation, importance, deadlines.\n\n${functionCallingEnforcement}\n${agentScopes}`,
-    description: "Projects — creation, importance, deadlines",
+    prompt: `You are Nova, the Kiro Project Agent. Your scope is Projects — creation, importance, deadlines, and HABITS.\n\n${functionCallingEnforcement}\n${agentScopes}`,
+    description: "Projects — creation, importance, deadlines, and HABITS",
     model: "llama-3.1-8b-instant",
   },
   Quill: {
