@@ -84,6 +84,18 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     updates.morningNudgeTime = val;
   }
 
+  // ── streak_threshold ───────────────────────────────────────────────────────
+  if ("streak_threshold" in body) {
+    const val = Number(body.streak_threshold);
+    if (!Number.isInteger(val) || val < 0 || val > 100) {
+      return Response.json(
+        { error: "streak_threshold must be an integer between 0 and 100" },
+        { status: 400 },
+      );
+    }
+    updates.streakThreshold = val;
+  }
+
   updates.updatedAt = nowSec();
 
   const updated = await updatePreferences(userId, updates);

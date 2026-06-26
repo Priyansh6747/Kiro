@@ -101,6 +101,7 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState("UTC");
   const [availableMin, setAvailableMin] = useState(240);
   const [ratioMode, setRatioMode] = useState<RatioMode>("cumulative");
+  const [streakThreshold, setStreakThreshold] = useState(75);
   const [nudgeTime, setNudgeTime] = useState("08:00");
 
   // Save states per field
@@ -110,6 +111,8 @@ export default function SettingsPage() {
   const [savedAvail, setSavedAvail] = useState(false);
   const [savingRatio, setSavingRatio] = useState(false);
   const [savedRatio, setSavedRatio] = useState(false);
+  const [savingStreakThreshold, setSavingStreakThreshold] = useState(false);
+  const [savedStreakThreshold, setSavedStreakThreshold] = useState(false);
   const [savingNudge, setSavingNudge] = useState(false);
   const [savedNudge, setSavedNudge] = useState(false);
 
@@ -122,6 +125,7 @@ export default function SettingsPage() {
       setTimezone(p.timezone);
       setAvailableMin(p.defaultAvailableMin);
       setRatioMode(p.ratioMode);
+      setStreakThreshold(p.streakThreshold ?? 75);
       setNudgeTime(p.morningNudgeTime);
     } catch (e) {
       setError((e as Error).message);
@@ -297,9 +301,40 @@ export default function SettingsPage() {
               </div>
               <p className="text-xs text-tertiary bg-surface-raised px-3 py-2 rounded-md border border-border-subtle">
                 {ratioMode === "cumulative"
-                  ? "Cumulative tracks total completed tasks against total assigned over time."
-                  : "Streak tracks your consecutive days of achieving at least 50% completion."}
+                  ? "Cumulative tracks total completed project tasks against total assigned over time."
+                  : "Streak tracks your consecutive days of achieving at least 50% project task completion."}
               </p>
+            </div>
+          </Field>
+
+          <Field
+            label="Routine Streak Threshold (%)"
+            description="Minimum daily completion percentage of habits and recurring tasks required to maintain a routine streak."
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="w-24 bg-surface-raised border border-border-default rounded-lg px-4 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent transition-all text-center"
+                value={streakThreshold}
+                onChange={(e) => setStreakThreshold(Number(e.target.value))}
+              />
+              <span className="text-sm font-medium text-secondary min-w-[30px]">
+                %
+              </span>
+              <div className="flex-1" />
+              <SaveButton
+                saving={savingStreakThreshold}
+                saved={savedStreakThreshold}
+                onClick={() =>
+                  save(
+                    { streak_threshold: streakThreshold },
+                    setSavingStreakThreshold,
+                    setSavedStreakThreshold,
+                  )
+                }
+              />
             </div>
           </Field>
         </SectionCard>

@@ -190,6 +190,7 @@ export async function updatePreferences(
       | "defaultAvailableMin"
       | "ratioMode"
       | "morningNudgeTime"
+      | "streakThreshold"
       | "updatedAt"
     >
   >,
@@ -1485,6 +1486,20 @@ export async function computeHabitStreak(userId: string, habitId: string): Promi
     .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.habitId, habitId)))
     .orderBy(desc(habitMarkers.date));
 
+  return computeStreakFromMarkers(markers);
+}
+
+export async function computeRecurringStreak(userId: string, recurringTaskId: string): Promise<{ current: number, best: number, rate7d: number }> {
+  const markers = await db
+    .select()
+    .from(recurringMarkers)
+    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.recurringTaskId, recurringTaskId)))
+    .orderBy(desc(recurringMarkers.date));
+
+  return computeStreakFromMarkers(markers);
+}
+
+function computeStreakFromMarkers(markers: any[]): { current: number, best: number, rate7d: number } {
   let current = 0;
   let best = 0;
   let tempStreak = 0;

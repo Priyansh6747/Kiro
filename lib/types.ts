@@ -56,6 +56,7 @@ export interface Preference {
   defaultAvailableMin: number;
   ratioMode: RatioMode;
   morningNudgeTime: string; // HH:MM
+  streakThreshold: number; // 0-100
   createdAt: number;
   updatedAt: number;
 }

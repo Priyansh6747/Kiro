@@ -185,6 +185,7 @@ export const patchPreferences = (
     default_available_min: number;
     ratio_mode: import("./types").RatioMode;
     morning_nudge_time: string;
+    streak_threshold: number;
   }>,
 ) =>
   request<import("./types").Preference>("/api/preferences", {
@@ -228,6 +229,20 @@ export const removeDayPlanBlock = (taskId: string) =>
 // ── Habits & Recurring ────────────────────────────────────────────────────────
 
 export const listHabits = () => request<import("./db/models").Habit[]>("/api/habits");
+export const getHabitsDashboard = (from?: number, to?: number) => {
+  const sp = new URLSearchParams();
+  if (from != null) sp.set("from", String(from));
+  if (to != null) sp.set("to", String(to));
+  return request<{
+    habits: import("./db/models").Habit[];
+    streaks: Record<string, { current: number; best: number; rate7d: number }>;
+    markers: Record<string, Record<number, string>>;
+    recurringTasks: import("./db/models").RecurringTask[];
+    recurringStreaks: Record<string, { current: number; best: number; rate7d: number }>;
+    recurringMarkers: Record<string, Record<number, string>>;
+    today: number;
+  }>(`/api/habits/dashboard?${sp.toString()}`);
+};
 export const createHabit = (data: Partial<import("./db/models").Habit>) => request<import("./db/models").Habit>("/api/habits", { method: "POST", body: JSON.stringify(data) });
 export const archiveHabit = (id: string) => request<{ success: boolean }>(`/api/habits/${id}`, { method: "DELETE" });
 export const getHabitStreak = (id: string) => request<{ current: number; best: number; rate7d: number }>(`/api/habits/${id}/streak`);

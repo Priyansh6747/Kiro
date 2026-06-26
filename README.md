@@ -55,6 +55,12 @@ Every interaction in Kiro feels instantaneous, operating on a "trust but verify"
 - **Transactional Rollbacks**: If the backend API throws a validation error, the centralized state manager catches the failure, gracefully reverses the local state, and fires an error via the custom `useToast` system.
 - **Task Styling & Gestures**: Task status and completions utilize polished strikethrough styling and transition animations. Interactive gestures (like swipe-to-bucket) are powered by Framer Motion velocity physics.
 - **Responsive Mobile Layout**: The layout features dynamic visibility components, sliding panels, and modal-based transitions for task details to ensure complete feature parity on mobile screens.
+  
+### 8. High-Performance Habit & Streak Tracking
+Building a dashboard to track numerous habits with hundreds of daily markers requires complex aggregations. Kiro solves this through optimized API and UI architecture.
+- **Concurrent Matrix Aggregation**: The `/api/habits/dashboard` endpoint concurrently resolves habit matrices, historical completion markers, and streak algorithms (current vs. best) into a single optimized payload.
+- **Drag-to-Select Custom Ranges**: The calendar UI abandons standard date pickers for a native, click-and-drag matrix that instantly calculates and rerenders custom completion ratios and stats on the fly, with zero network latency.
+- **Theme-Native Visualizations**: All calendar pills, matrices, and percentage indicators directly consume the dynamic CSS variables (`bg-done`, `bg-missed`), ensuring the dashboard natively adapts to any of Kiro's custom themes.
 
 ---
 
