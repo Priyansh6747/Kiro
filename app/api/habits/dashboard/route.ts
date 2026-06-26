@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const habits = await listActiveHabits(userId);
     
     // Compute streaks for all habits concurrently
-    const streaks: Record<string, { current: number, best: number, rate7d: number }> = {};
+    const streaks: Record<string, { current: number, best: number, rate7d: number, totalCompletions: number }> = {};
     const streaksData = await Promise.all(
       habits.map(h => computeHabitStreak(userId, h.id))
     );
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     // Fetch active recurring tasks
     const recurringTasks = await listActiveRecurringTasks(userId);
-    const recurringStreaks: Record<string, { current: number, best: number, rate7d: number }> = {};
+    const recurringStreaks: Record<string, { current: number, best: number, rate7d: number, totalCompletions: number }> = {};
     const recurringStreaksData = await Promise.all(
       recurringTasks.map(rt => computeRecurringStreak(userId, rt.id))
     );

@@ -1381,19 +1381,18 @@ export async function listActiveHabits(userId: string): Promise<Habit[]> {
     .from(habits)
     .where(and(eq(habits.userId, userId), isNull(habits.archivedAt)));
 }
-
-export async function archiveHabit(habitId: string): Promise<void> {
+export async function archiveHabit(id: string): Promise<void> {
   await db
     .update(habits)
     .set({ archivedAt: nowSec(), updatedAt: nowSec() })
-    .where(eq(habits.id, habitId));
+    .where(eq(habits.id, id));
 }
 
-export async function updateHabit(habitId: string, patch: Partial<Habit>): Promise<Habit> {
+export async function updateHabit(id: string, updates: Partial<Habit>): Promise<Habit> {
   const rows = await db
     .update(habits)
-    .set({ ...patch, updatedAt: nowSec() })
-    .where(eq(habits.id, habitId))
+    .set({ ...updates, updatedAt: nowSec() })
+    .where(eq(habits.id, id))
     .returning();
   return rows[0];
 }
@@ -1419,6 +1418,15 @@ export async function archiveRecurringTask(id: string): Promise<void> {
     .update(recurringTasks)
     .set({ archivedAt: nowSec(), updatedAt: nowSec() })
     .where(eq(recurringTasks.id, id));
+}
+
+export async function updateRecurringTask(id: string, updates: Partial<NewRecurringTask>): Promise<RecurringTask> {
+  const rows = await db
+    .update(recurringTasks)
+    .set({ ...updates, updatedAt: nowSec() })
+    .where(eq(recurringTasks.id, id))
+    .returning();
+  return rows[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -1479,7 +1487,7 @@ export async function getHabitMarkersInRange(userId: string, habitId: string, fr
     .orderBy(asc(habitMarkers.date));
 }
 
-export async function computeHabitStreak(userId: string, habitId: string): Promise<{ current: number, best: number, rate7d: number }> {
+export async function computeHabitStreak(userId: string, habitId: string): Promise<{ current: number, best: number, rate7d: number, totalCompletions: number }> {
   const markers = await db
     .select()
     .from(habitMarkers)
@@ -1489,7 +1497,7 @@ export async function computeHabitStreak(userId: string, habitId: string): Promi
   return computeStreakFromMarkers(markers);
 }
 
-export async function computeRecurringStreak(userId: string, recurringTaskId: string): Promise<{ current: number, best: number, rate7d: number }> {
+export async function computeRecurringStreak(userId: string, recurringTaskId: string): Promise<{ current: number, best: number, rate7d: number, totalCompletions: number }> {
   const markers = await db
     .select()
     .from(recurringMarkers)
@@ -1499,7 +1507,7 @@ export async function computeRecurringStreak(userId: string, recurringTaskId: st
   return computeStreakFromMarkers(markers);
 }
 
-function computeStreakFromMarkers(markers: any[]): { current: number, best: number, rate7d: number } {
+function computeStreakFromMarkers(markers: any[]): { current: number, best: number, rate7d: number, totalCompletions: number } {
   let current = 0;
   let best = 0;
   let tempStreak = 0;
@@ -1540,9 +1548,14 @@ function computeStreakFromMarkers(markers: any[]): { current: number, best: numb
     }
   }
 
-  const rate7d = valid7d > 0 ? done7d / valid7d : 0;
+  const totalCompletions = markers.filter(m => m.status === "done").length;
 
-  return { current, best, rate7d };
+  return {
+    current,
+    best,
+    rate7d: valid7d > 0 ? done7d / valid7d : 0,
+    totalCompletions
+  };
 }
 
 // ---------------------------------------------------------------------------

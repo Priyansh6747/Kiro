@@ -2,26 +2,76 @@
 
 import {
   Plus,
-  Filter,
+  Search,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   getHabitsDashboard,
+  archiveHabit,
+  archiveRecurringTask
 } from "@/lib/api-client";
+import { CreateRoutineModal } from "@/components/CreateRoutineModal";
 import type { Habit, RecurringTask } from "@/lib/db/models";
 import { LoadingScreen, ErrorBanner } from "@/components/ui";
+import { useMemo } from "react";
+import { useConfirm } from "@/hooks/useConfirm";
+
+class TrieNode {
+  children: Map<string, TrieNode> = new Map();
+  itemIds: Set<string> = new Set();
+}
+
+class Trie {
+  root: TrieNode = new TrieNode();
+
+  insert(title: string, id: string) {
+    const text = title.toLowerCase();
+    const words = text.split(/\s+/);
+    for (const word of words) {
+      for (let i = 0; i < word.length; i++) {
+        let node = this.root;
+        for (let j = i; j < word.length; j++) {
+          const char = word[j];
+          if (!node.children.has(char)) {
+            node.children.set(char, new TrieNode());
+          }
+          node = node.children.get(char)!;
+          node.itemIds.add(id);
+        }
+      }
+    }
+  }
+
+  search(query: string): Set<string> {
+    const text = query.toLowerCase().trim();
+    if (!text) return new Set();
+    
+    let node = this.root;
+    for (const char of text) {
+      if (!node.children.has(char)) {
+        return new Set();
+      }
+      node = node.children.get(char)!;
+    }
+    return node.itemIds;
+  }
+}
 
 function RoutineListItem({ 
   title, 
   streak, 
   onClick, 
+  onEdit,
+  onDelete,
   isActive 
 }: { 
   title: string; 
-  streak?: { current: number; best: number; rate7d: number };
+  streak?: { current: number; best: number; rate7d: number; totalCompletions: number };
   onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   isActive: boolean;
 }) {
   const completionRate = streak ? Math.round(streak.rate7d * 100) : 0;
@@ -37,13 +87,13 @@ function RoutineListItem({
       <span className="font-medium text-secondary">{completionRate}%</span>
       <div className={`flex gap-4 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
         <button
-          onClick={(e) => { e.stopPropagation(); }}
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className="text-sm font-medium text-secondary hover:text-accent transition-colors"
         >
           Edit
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); }}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="text-sm font-medium text-secondary hover:text-missed transition-colors"
         >
           Delete
@@ -56,10 +106,10 @@ function RoutineListItem({
 export default function HabitsPage() {
   const [data, setData] = useState<{
     habits: Habit[];
-    streaks: Record<string, { current: number; best: number; rate7d: number }>;
+    streaks: Record<string, { current: number; best: number; rate7d: number; totalCompletions: number }>;
     markers: Record<string, Record<number, string>>;
     recurringTasks: RecurringTask[];
-    recurringStreaks: Record<string, { current: number; best: number; rate7d: number }>;
+    recurringStreaks: Record<string, { current: number; best: number; rate7d: number; totalCompletions: number }>;
     recurringMarkers: Record<string, Record<number, string>>;
     today: number;
   } | null>(null);
@@ -68,12 +118,16 @@ export default function HabitsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [calendarOffset, setCalendarOffset] = useState(0);
   
   const [rangeStart, setRangeStart] = useState<number | null>(null);
   const [rangeEnd, setRangeEnd] = useState<number | null>(null);
   const [dragOrigin, setDragOrigin] = useState<number | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<any | null>(null);
+  const { confirm, ConfirmModal } = useConfirm();
 
   useEffect(() => {
     setRangeStart(null);
@@ -99,14 +153,14 @@ export default function HabitsPage() {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (keepSelection = false) => {
     try {
       setIsLoading(true);
       // Fetch data for roughly a year back just to be safe for calendar scrolling, 
       // though typically you'd fetch per month dynamically.
       const res = await getHabitsDashboard();
       setData(res);
-      if (res.habits.length > 0) {
+      if (!keepSelection && res.habits.length > 0) {
         setSelectedHabitId(res.habits[0].id);
       }
     } catch (err: any) {
@@ -120,18 +174,32 @@ export default function HabitsPage() {
     loadData();
   }, []);
 
-  if (isLoading || !data) return <LoadingScreen />;
-  if (error) return <ErrorBanner message={error.message} onRetry={loadData} />;
-
-  const { habits, streaks, markers, recurringTasks, recurringStreaks, recurringMarkers, today } = data;
-  
-  const currentStreaks = activeTab === "habits" ? streaks : recurringStreaks;
-  const currentMarkers = activeTab === "habits" ? markers : recurringMarkers;
-  const currentList = [...(activeTab === "habits" ? habits : recurringTasks)].sort((a, b) => {
+  const currentStreaks = activeTab === "habits" ? data?.streaks || {} : data?.recurringStreaks || {};
+  const currentMarkers = activeTab === "habits" ? data?.markers || {} : data?.recurringMarkers || {};
+  const currentList = [...(activeTab === "habits" ? data?.habits || [] : data?.recurringTasks || [])].sort((a, b) => {
     const rateA = currentStreaks[a.id]?.rate7d ?? 0;
     const rateB = currentStreaks[b.id]?.rate7d ?? 0;
     return rateB - rateA;
   });
+
+  const searchTrie = useMemo(() => {
+    const trie = new Trie();
+    for (const item of currentList) {
+      trie.insert((item as any).name || (item as any).title, item.id);
+    }
+    return trie;
+  }, [currentList]);
+
+  const filteredList = useMemo(() => {
+    if (!searchQuery.trim()) return currentList;
+    const matchedIds = searchTrie.search(searchQuery);
+    return currentList.filter(item => matchedIds.has(item.id));
+  }, [currentList, searchQuery, searchTrie]);
+
+  if (isLoading || !data) return <LoadingScreen />;
+  if (error) return <ErrorBanner message={error.message} onRetry={loadData} />;
+
+  const { today } = data;
 
   const selectedItem = currentList.find(item => item.id === selectedHabitId);
   const selectedStreak = selectedHabitId ? currentStreaks[selectedHabitId] : null;
@@ -160,7 +228,7 @@ export default function HabitsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full mb-8 gap-4">
         <div className="flex gap-2 md:gap-4">
           <button 
-            onClick={() => { setActiveTab("habits"); setSelectedHabitId(habits[0]?.id || null); }}
+            onClick={() => { setActiveTab("habits"); setSelectedHabitId(data?.habits?.[0]?.id || null); }}
             className={`px-6 md:px-10 py-2.5 rounded-xl font-bold text-lg transition-colors ${
               activeTab === "habits" 
                 ? "bg-accent-subtle text-accent border border-accent" 
@@ -170,7 +238,7 @@ export default function HabitsPage() {
             Habits
           </button>
           <button 
-            onClick={() => { setActiveTab("recurring"); setSelectedHabitId(recurringTasks[0]?.id || null); }}
+            onClick={() => { setActiveTab("recurring"); setSelectedHabitId(data?.recurringTasks?.[0]?.id || null); }}
             className={`px-6 md:px-10 py-2.5 rounded-xl font-bold text-lg transition-colors ${
               activeTab === "recurring" 
                 ? "bg-accent-subtle text-accent border border-accent" 
@@ -185,12 +253,14 @@ export default function HabitsPage() {
             <input
               type="text"
               placeholder="Search ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-4 pr-10 py-2.5 bg-surface border border-border-default text-primary rounded-xl focus:outline-none focus:border-accent font-medium placeholder:text-tertiary transition-colors"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary pointer-events-none">
+              <Search className="w-5 h-5" strokeWidth={2} />
+            </div>
           </div>
-          <button className="p-2.5 bg-surface border border-border-default rounded-xl flex items-center justify-center shrink-0 hover:border-accent text-secondary hover:text-accent transition-colors">
-            <Filter className="w-5 h-5" strokeWidth={2} />
-          </button>
         </div>
       </div>
 
@@ -209,23 +279,40 @@ export default function HabitsPage() {
 
           {/* List */}
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 pb-24 w-full scrollbar-none">
-            {currentList.length === 0 ? (
+            {filteredList.length === 0 ? (
                <div className="text-secondary text-sm p-4 text-center">No items found.</div>
             ) : (
-               currentList.map((item) => (
+               filteredList.map((item) => (
                 <RoutineListItem 
                   key={item.id} 
                   title={(item as any).name || (item as any).title} 
                   streak={currentStreaks[item.id]}
                   isActive={selectedHabitId === item.id}
-                  onClick={() => setSelectedHabitId(item.id)} 
+                  onClick={() => setSelectedHabitId(item.id)}
+                  onEdit={() => {
+                    setEditItem(item);
+                    setIsCreateModalOpen(true);
+                  }}
+                  onDelete={async () => {
+                    const confirmed = await confirm("Delete item", "Are you sure you want to delete this?");
+                    if (confirmed) {
+                      if ("name" in item) await archiveHabit(item.id);
+                      else await archiveRecurringTask(item.id);
+                      
+                      if (selectedHabitId === item.id) setSelectedHabitId(null);
+                      loadData(true);
+                    }
+                  }}
                 />
               ))
             )}
           </div>
 
           {/* Floating FAB */}
-          <button className="absolute bottom-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-accent rounded-full flex items-center justify-center hover:bg-accent-hover text-white shadow-lg shadow-accent/20 transition-all z-10">
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-accent rounded-full flex items-center justify-center hover:bg-accent-hover text-white shadow-lg shadow-accent/20 transition-all z-10"
+          >
             <Plus className="w-8 h-8" strokeWidth={2.5} />
           </button>
         </div>
@@ -430,9 +517,22 @@ export default function HabitsPage() {
               <span className="text-tertiary mb-2">✦</span>
               {selectedItem ? (
                 <div className="text-center">
-                  <p className="text-primary font-bold text-lg mb-2">{(selectedItem as any).name || (selectedItem as any).title} Overview</p>
-                  <p>Current Streak: {selectedStreak?.current ?? 0}</p>
-                  <p>Best Streak: {selectedStreak?.best ?? 0}</p>
+                  <p className="text-primary font-bold text-lg mb-4">{(selectedItem as any).name || (selectedItem as any).title} Overview</p>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <div className="text-right text-tertiary">Current Streak:</div>
+                    <div className="text-left font-bold text-primary">{selectedStreak?.current ?? 0}</div>
+                    
+                    <div className="text-right text-tertiary">Best Streak:</div>
+                    <div className="text-left font-bold text-primary">{selectedStreak?.best ?? 0}</div>
+                    
+                    <div className="text-right text-tertiary">Total Completions:</div>
+                    <div className="text-left font-bold text-primary">{selectedStreak?.totalCompletions ?? 0}</div>
+                    
+                    <div className="text-right text-tertiary">Created:</div>
+                    <div className="text-left font-bold text-primary">
+                      {new Date((selectedItem as any).createdAt * 1000).toLocaleDateString()}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p>Task details</p>
@@ -441,6 +541,22 @@ export default function HabitsPage() {
           </div>
         </div>
       </div>
+      
+      <CreateRoutineModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditItem(null);
+        }}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          setEditItem(null);
+          loadData(true);
+        }}
+        editItem={editItem}
+      />
+      
+      <ConfirmModal />
     </div>
   );
 }

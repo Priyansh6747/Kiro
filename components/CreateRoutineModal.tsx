@@ -1,22 +1,62 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { createHabit, createRecurringTask } from "@/lib/api-client";
+import { createHabit, createRecurringTask, updateHabit, updateRecurringTask } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
+import { useEffect } from "react";
 
 export function CreateRoutineModal({
   isOpen,
   onClose,
   onSuccess,
+  editItem,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editItem?: any | null;
 }) {
   const [type, setType] = useState<"habit" | "recurring">("habit");
   const [title, setTitle] = useState("");
   const [cadence, setCadence] = useState<"daily" | "weekly" | "custom">("daily");
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (editItem && isOpen) {
+      const isHabit = "name" in editItem;
+      setType(isHabit ? "habit" : "recurring");
+      setTitle(isHabit ? editItem.name : editItem.title);
+      setCadence(editItem.cadence || "daily");
+      
+      if (isHabit) {
+        setSelectedDays(editItem.activeDays || []);
+      } else {
+        if (editItem.recurrenceRule && editItem.recurrenceRule !== "daily" && editItem.recurrenceRule !== "weekly") {
+          const abbrevMap: Record<string, number> = { MON:1, TUE:2, WED:3, THU:4, FRI:5, SAT:6, SUN:0 };
+          const days = editItem.recurrenceRule.split(',').map((a: string) => abbrevMap[a.trim().toUpperCase()]).filter((d: number) => d !== undefined);
+          setSelectedDays(days);
+        } else {
+          setSelectedDays([]);
+        }
+      }
+    } else if (isOpen) {
+      setType("habit");
+      setTitle("");
+      setCadence("daily");
+      setSelectedDays([]);
+    }
+  }, [editItem, isOpen]);
+
+  const DAYS = [
+    { label: 'Mon', value: 1 },
+    { label: 'Tue', value: 2 },
+    { label: 'Wed', value: 3 },
+    { label: 'Thu', value: 4 },
+    { label: 'Fri', value: 5 },
+    { label: 'Sat', value: 6 },
+    { label: 'Sun', value: 0 },
+  ];
 
   if (!isOpen) return null;
 
@@ -26,12 +66,31 @@ export function CreateRoutineModal({
 
     try {
       setIsSubmitting(true);
-      if (type === "habit") {
-        await createHabit({ name: title, cadence, activeDays: null, estimateMin: 30 });
-      } else {
-        await createRecurringTask({ title, cadence, activeDays: null, recurrenceRule: null, estimateMin: 30, projectId: null });
+      
+      if (cadence === "custom" && selectedDays.length === 0) {
+        showToast("Please select at least one day.", "error");
+        setIsSubmitting(false);
+        return;
       }
-      showToast(`${type === "habit" ? "Habit" : "Recurring Task"} created!`, "success");
+
+      if (type === "habit") {
+        const activeDays = cadence === "custom" ? selectedDays : null;
+        if (editItem) {
+          await updateHabit(editItem.id, { name: title, cadence, activeDays });
+        } else {
+          await createHabit({ name: title, cadence, activeDays, estimateMin: 30 });
+        }
+      } else {
+        const recurrenceRule = cadence === "custom" 
+          ? selectedDays.map(d => DAYS.find(x => x.value === d)?.label.toUpperCase()).join(",") 
+          : null;
+        if (editItem) {
+          await updateRecurringTask(editItem.id, { title, cadence, recurrenceRule });
+        } else {
+          await createRecurringTask({ title, cadence, activeDays: null, recurrenceRule, estimateMin: 30, projectId: null });
+        }
+      }
+      showToast(`${type === "habit" ? "Habit" : "Recurring Task"} ${editItem ? "updated" : "created"}!`, "success");
       onSuccess();
     } catch (err: any) {
       showToast(err.message, "error");
@@ -51,7 +110,7 @@ export function CreateRoutineModal({
           <X className="w-5 h-5" />
         </button>
         
-        <h2 className="text-xl font-bold text-primary mb-6">Create New Routine</h2>
+        <h2 className="text-xl font-bold text-primary mb-6">{editItem ? "Edit Routine" : "Create New Routine"}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -107,6 +166,34 @@ export function CreateRoutineModal({
             </select>
           </div>
 
+          {cadence === "custom" && (
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">Select Days</label>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS.map(day => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => {
+                      if (selectedDays.includes(day.value)) {
+                        setSelectedDays(selectedDays.filter(d => d !== day.value));
+                      } else {
+                        setSelectedDays([...selectedDays, day.value]);
+                      }
+                    }}
+                    className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${
+                      selectedDays.includes(day.value)
+                        ? "bg-accent text-white"
+                        : "bg-surface-raised border border-border-subtle text-secondary"
+                    }`}
+                  >
+                    {day.label[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="pt-4 flex justify-end gap-3">
             <button
               type="button"
@@ -120,7 +207,7 @@ export function CreateRoutineModal({
               disabled={isSubmitting || !title.trim()}
               className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {isSubmitting ? "Creating..." : "Create"}
+              {isSubmitting ? "Saving..." : (editItem ? "Save Changes" : "Create")}
             </button>
           </div>
         </form>

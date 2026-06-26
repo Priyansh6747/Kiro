@@ -235,20 +235,22 @@ export const getHabitsDashboard = (from?: number, to?: number) => {
   if (to != null) sp.set("to", String(to));
   return request<{
     habits: import("./db/models").Habit[];
-    streaks: Record<string, { current: number; best: number; rate7d: number }>;
+    streaks: Record<string, { current: number; best: number; rate7d: number; totalCompletions: number }>;
     markers: Record<string, Record<number, string>>;
     recurringTasks: import("./db/models").RecurringTask[];
-    recurringStreaks: Record<string, { current: number; best: number; rate7d: number }>;
+    recurringStreaks: Record<string, { current: number; best: number; rate7d: number; totalCompletions: number }>;
     recurringMarkers: Record<string, Record<number, string>>;
     today: number;
   }>(`/api/habits/dashboard?${sp.toString()}`);
 };
 export const createHabit = (data: Partial<import("./db/models").Habit>) => request<import("./db/models").Habit>("/api/habits", { method: "POST", body: JSON.stringify(data) });
+export const updateHabit = (id: string, data: Partial<import("./db/models").Habit>) => request<import("./db/models").Habit>(`/api/habits/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const archiveHabit = (id: string) => request<{ success: boolean }>(`/api/habits/${id}`, { method: "DELETE" });
 export const getHabitStreak = (id: string) => request<{ current: number; best: number; rate7d: number }>(`/api/habits/${id}/streak`);
 export const getHabitMarkers = (id: string, from: number, to: number) => request<import("./db/models").HabitMarker[]>(`/api/habits/${id}/markers?from=${from}&to=${to}`);
 
 export const listRecurringTasks = () => request<import("./db/models").RecurringTask[]>("/api/recurring");
 export const createRecurringTask = (data: Partial<import("./db/models").RecurringTask>) => request<import("./db/models").RecurringTask>("/api/recurring", { method: "POST", body: JSON.stringify(data) });
+export const updateRecurringTask = (id: string, data: Partial<import("./db/models").RecurringTask>) => request<import("./db/models").RecurringTask>(`/api/recurring/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const archiveRecurringTask = (id: string) => request<{ success: boolean }>(`/api/recurring/${id}`, { method: "DELETE" });
 export const getRecurringMarkers = (id: string, from: number, to: number) => request<import("./db/models").RecurringMarker[]>(`/api/recurring/${id}/markers?from=${from}&to=${to}`);
