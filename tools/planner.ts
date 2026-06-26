@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
-import { listDayPlansForDate, listTasks } from "@/lib/storage";
+import { listDayPlansForDate, listTasks, getDailyHabitBlocks, markHabit, markRecurring } from "@/lib/storage";
 import { db } from "@/lib/db/client";
 import { projects } from "@/lib/db/models";
 import { eq } from "drizzle-orm";
@@ -51,6 +51,36 @@ export const plannerTools: ChatCompletionTool[] = [
           timeOfDay: { type: "string", description: "Time of day in HH:MM format (24-hour) local time" },
         },
         required: ["taskTitle", "date", "timeOfDay"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "mark_habit",
+      description: "Mark a habit as done, skipped, or missed for today.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitId: { type: "string" },
+          status: { type: "string", enum: ["done", "skipped", "missed", "pending"] },
+        },
+        required: ["habitId", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "mark_recurring",
+      description: "Mark a recurring task as done, carried, or missed for today.",
+      parameters: {
+        type: "object",
+        properties: {
+          recurringTaskId: { type: "string" },
+          status: { type: "string", enum: ["done", "carried", "missed", "pending"] },
+        },
+        required: ["recurringTaskId", "status"],
       },
     },
   },
@@ -137,6 +167,27 @@ export const plannerHandlers: Record<string, Function> = {
     const enrichedBucket = bucket.map(enrich);
 
     const rows: string[][] = [];
+    
+    // Add Habits and Recurring Tasks (Phase 5)
+    const { habits, recurring } = await getDailyHabitBlocks(userId, todayDate);
+    
+    habits.forEach((h: any) => {
+      let displayStatus = "⬜ Pending";
+      if (h.status === "done") displayStatus = "✅ Done";
+      else if (h.status === "missed") displayStatus = "❌ Missed";
+      else if (h.status === "skipped") displayStatus = "⏭️ Skipped";
+      
+      rows.push([displayStatus, `✦ ${h.name} (Habit)`, "Habits", h.estimateMin ? h.estimateMin + ' min' : '-']);
+    });
+    
+    recurring.forEach((rt: any) => {
+      let displayStatus = "⬜ Pending";
+      if (rt.status === "done") displayStatus = "✅ Done";
+      else if (rt.status === "missed") displayStatus = "❌ Missed";
+      else if (rt.status === "carried") displayStatus = "➡️ Carried";
+      
+      rows.push([displayStatus, `↻ ${rt.title} (Recurring)`, "Recurring", rt.estimateMin ? rt.estimateMin + ' min' : '-']);
+    });
     
     enrichedAgenda.forEach((t: any) => {
       rows.push([t.scheduledDate || 'Unscheduled', t.title, t.projectName, t.estimateMin ? t.estimateMin + ' min' : '-']);
@@ -244,7 +295,7 @@ export const plannerHandlers: Record<string, Function> = {
       await placeDayPlanBlock(userId, task.id, targetDate, startTime);
       await updateTask(task.id, { scheduledDate: targetDate });
       return {
-        preformattedUi: `✓ Scheduled **${task.title}** at ${args.timeOfDay}`
+        preformattedUi: `Task **${task.title}** has been scheduled successfully for ${args.timeOfDay} on ${args.date}.`
       };
     } catch (e: any) {
       if (e instanceof OverlapConflictError) {
@@ -253,4 +304,30 @@ export const plannerHandlers: Record<string, Function> = {
       return { preformattedUi: `❌ Failed to schedule: ${e.message}` };
     }
   },
+  mark_habit: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+    const { getOrCreatePreferences, markHabit } = await import("@/lib/storage");
+    const { todayUnixDay } = await import("@/lib/utils");
+    const prefs = await getOrCreatePreferences(userId);
+    const todayDate = todayUnixDay(prefs.timezone);
+    
+    await markHabit(args.habitId, todayDate, args.status);
+    return {
+      preformattedUi: `✓ Habit marked as **${args.status}** for today.`
+    };
+  },
+  mark_recurring: async (args: any) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+    const { getOrCreatePreferences, markRecurring } = await import("@/lib/storage");
+    const { todayUnixDay } = await import("@/lib/utils");
+    const prefs = await getOrCreatePreferences(userId);
+    const todayDate = todayUnixDay(prefs.timezone);
+    
+    await markRecurring(args.recurringTaskId, todayDate, args.status);
+    return {
+      preformattedUi: `✓ Recurring task marked as **${args.status}** for today.`
+    };
+  }
 };
