@@ -12,7 +12,7 @@ import {
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 
-const VALID_TYPES = ["critical", "recurring", "habit", "nicetohave"] as const;
+const VALID_TYPES = ["critical", "nicetohave"] as const;
 type ProjectType = (typeof VALID_TYPES)[number];
 
 // ── GET ───────────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 // ---------------------------------------------------------------------------
@@ -52,7 +53,7 @@ export const projects = sqliteTable(
     name: text("name").notNull(),
     importance: integer("importance").notNull().default(3), // 1–5
     type: text("type", {
-      enum: ["critical", "recurring", "habit", "nicetohave"],
+      enum: ["critical", "nicetohave"],
     }).notNull(),
     deadlineAt: integer("deadline_at"), // unix timestamp, nullable
     isDefault: integer("is_default", { mode: "boolean" })
@@ -257,6 +258,90 @@ export const dayPlan = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// habits
+// ---------------------------------------------------------------------------
+export const habits = sqliteTable("habits", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  importance: integer("importance").notNull().default(3),
+  cadence: text("cadence").notNull().default('daily'),
+  activeDays: text("active_days", { mode: "json" }), // JSON array
+  estimateMin: integer("estimate_min").notNull().default(30),
+  color: text("color"),
+  archivedAt: integer("archived_at"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// recurring_tasks
+// ---------------------------------------------------------------------------
+export const recurringTasks = sqliteTable("recurring_tasks", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  projectId: text("project_id").references(() => projects.id),
+  importance: integer("importance").notNull().default(3),
+  cadence: text("cadence").notNull(),
+  activeDays: text("active_days", { mode: "json" }), // JSON array
+  recurrenceRule: text("recurrence_rule"),
+  recurrenceEndsAt: integer("recurrence_ends_at"),
+  estimateMin: integer("estimate_min").notNull().default(30),
+  archivedAt: integer("archived_at"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// habit_markers
+// ---------------------------------------------------------------------------
+export const habitMarkers = sqliteTable("habit_markers", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  habitId: text("habit_id")
+    .notNull()
+    .references(() => habits.id),
+  date: integer("date").notNull(), // unix day
+  status: text("status", { enum: ["pending", "done", "missed", "skipped"] }).notNull().default("pending"),
+  completedAt: integer("completed_at"),
+  notes: text("notes"),
+  createdAt: integer("created_at").notNull(),
+}, (t) => [
+  index("idx_habit_markers_user_date").on(t.userId, t.date),
+  uniqueIndex("idx_habit_markers_habit_date").on(t.habitId, t.date),
+]);
+
+// ---------------------------------------------------------------------------
+// recurring_markers
+// ---------------------------------------------------------------------------
+export const recurringMarkers = sqliteTable("recurring_markers", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  recurringTaskId: text("recurring_task_id")
+    .notNull()
+    .references(() => recurringTasks.id),
+  date: integer("date").notNull(), // unix day
+  status: text("status", { enum: ["pending", "done", "missed", "carried"] }).notNull().default("pending"),
+  spawnedTaskId: text("spawned_task_id").references(() => tasks.id),
+  completedAt: integer("completed_at"),
+  createdAt: integer("created_at").notNull(),
+}, (t) => [
+  index("idx_recurring_markers_user_date").on(t.userId, t.date),
+  uniqueIndex("idx_recurring_markers_task_date").on(t.recurringTaskId, t.date),
+]);
+
+// ---------------------------------------------------------------------------
 // Inferred types  (handy for service/repo layers)
 // ---------------------------------------------------------------------------
 export type User = typeof users.$inferSelect;
@@ -288,6 +373,18 @@ export type NewDayPlan = typeof dayPlan.$inferInsert;
 
 export type SchedulingStrategy = typeof schedulingStrategies.$inferSelect;
 export type NewSchedulingStrategy = typeof schedulingStrategies.$inferInsert;
+
+export type Habit = typeof habits.$inferSelect;
+export type NewHabit = typeof habits.$inferInsert;
+
+export type RecurringTask = typeof recurringTasks.$inferSelect;
+export type NewRecurringTask = typeof recurringTasks.$inferInsert;
+
+export type HabitMarker = typeof habitMarkers.$inferSelect;
+export type NewHabitMarker = typeof habitMarkers.$inferInsert;
+
+export type RecurringMarker = typeof recurringMarkers.$inferSelect;
+export type NewRecurringMarker = typeof recurringMarkers.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // AI Usage

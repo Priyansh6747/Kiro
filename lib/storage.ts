@@ -49,6 +49,18 @@ import {
   schedulingStrategies,
   type User,
   users,
+  habits,
+  type Habit,
+  type NewHabit,
+  recurringTasks,
+  type RecurringTask,
+  type NewRecurringTask,
+  habitMarkers,
+  type HabitMarker,
+  type NewHabitMarker,
+  recurringMarkers,
+  type RecurringMarker,
+  type NewRecurringMarker,
 } from "./db/models";
 import { nowSec } from "./utils";
 
@@ -1230,29 +1242,41 @@ export async function getDayPlanRowsForDateRange(userId: string, fromDate: numbe
     );
 }
 
-export async function getRecurringTasksForUser(userId: string, excludeTaskId: string) {
-  return db
+export async function getRecurringTasksForUser(userId: string, excludeTaskId?: string) {
+  // Query both habits and recurring tasks, returning uniform format for capacity projection
+  const userHabits = await db
     .select({
-      id: tasks.id,
-      estimateMin: tasks.estimateMin,
-      recurrenceRule: tasks.recurrenceRule,
-      recurrenceEndsAt: tasks.recurrenceEndsAt,
-      cadence: projects.cadence,
-      projectType: projects.type,
-      scheduledDate: tasks.scheduledDate,
+      id: habits.id,
+      estimateMin: habits.estimateMin,
+      recurrenceRule: sql<string | null>`NULL`,
+      recurrenceEndsAt: sql<number | null>`NULL`,
+      cadence: habits.cadence,
+      projectType: sql<string>`'habit'`,
+      scheduledDate: sql<number | null>`NULL`,
+      activeDays: habits.activeDays,
     })
-    .from(tasks)
-    .leftJoin(projects, eq(tasks.projectId, projects.id))
-    .where(
-      and(
-        eq(tasks.userId, userId),
-        ne(tasks.id, excludeTaskId),
-        or(
-          sql`${tasks.recurrenceRule} IS NOT NULL`,
-          inArray(projects.type, ["recurring", "habit"])
-        )
-      )
-    );
+    .from(habits)
+    .where(and(eq(habits.userId, userId), isNull(habits.archivedAt)));
+
+  const userRecurring = await db
+    .select({
+      id: recurringTasks.id,
+      estimateMin: recurringTasks.estimateMin,
+      recurrenceRule: recurringTasks.recurrenceRule,
+      recurrenceEndsAt: recurringTasks.recurrenceEndsAt,
+      cadence: recurringTasks.cadence,
+      projectType: sql<string>`'recurring'`,
+      scheduledDate: sql<number | null>`NULL`,
+      activeDays: recurringTasks.activeDays,
+    })
+    .from(recurringTasks)
+    .where(and(eq(recurringTasks.userId, userId), isNull(recurringTasks.archivedAt)));
+
+  let results = [...userHabits, ...userRecurring];
+  if (excludeTaskId) {
+    results = results.filter(r => r.id !== excludeTaskId);
+  }
+  return results;
 }
 
 export async function getPredecessorTasks(taskId: string) {
@@ -1339,4 +1363,257 @@ export async function getMemoryBaselineForUser(userId: string) {
     .orderBy(desc(memoryBaseline.computedAt))
     .limit(1)
     .then(rows => rows[0] || null);
+}
+
+// ---------------------------------------------------------------------------
+// Habits
+// ---------------------------------------------------------------------------
+
+export async function createHabit(data: NewHabit): Promise<Habit> {
+  const rows = await db.insert(habits).values(data).returning();
+  return rows[0];
+}
+
+export async function listActiveHabits(userId: string): Promise<Habit[]> {
+  return db
+    .select()
+    .from(habits)
+    .where(and(eq(habits.userId, userId), isNull(habits.archivedAt)));
+}
+
+export async function archiveHabit(habitId: string): Promise<void> {
+  await db
+    .update(habits)
+    .set({ archivedAt: nowSec(), updatedAt: nowSec() })
+    .where(eq(habits.id, habitId));
+}
+
+export async function updateHabit(habitId: string, patch: Partial<Habit>): Promise<Habit> {
+  const rows = await db
+    .update(habits)
+    .set({ ...patch, updatedAt: nowSec() })
+    .where(eq(habits.id, habitId))
+    .returning();
+  return rows[0];
+}
+
+// ---------------------------------------------------------------------------
+// Recurring Tasks
+// ---------------------------------------------------------------------------
+
+export async function createRecurringTask(data: NewRecurringTask): Promise<RecurringTask> {
+  const rows = await db.insert(recurringTasks).values(data).returning();
+  return rows[0];
+}
+
+export async function listActiveRecurringTasks(userId: string): Promise<RecurringTask[]> {
+  return db
+    .select()
+    .from(recurringTasks)
+    .where(and(eq(recurringTasks.userId, userId), isNull(recurringTasks.archivedAt)));
+}
+
+export async function archiveRecurringTask(id: string): Promise<void> {
+  await db
+    .update(recurringTasks)
+    .set({ archivedAt: nowSec(), updatedAt: nowSec() })
+    .where(eq(recurringTasks.id, id));
+}
+
+// ---------------------------------------------------------------------------
+// Habit Markers
+// ---------------------------------------------------------------------------
+
+export async function ensureHabitMarkersForDate(userId: string, date: number): Promise<void> {
+  const activeHabits = await listActiveHabits(userId);
+  for (const h of activeHabits) {
+    // Quick active_days check
+    const dow = new Date(date * 86400000).getUTCDay();
+    const normalizedDow = dow === 0 ? 7 : dow; // 1-7 (Mon-Sun)
+    
+    let shouldFire = false;
+    if (h.cadence === "daily") {
+      shouldFire = true;
+    } else if (h.activeDays && Array.isArray(h.activeDays)) {
+      if ((h.activeDays as number[]).includes(normalizedDow)) {
+        shouldFire = true;
+      }
+    }
+    
+    if (shouldFire) {
+      await db.insert(habitMarkers).values({
+        id: crypto.randomUUID(),
+        userId,
+        habitId: h.id,
+        date,
+        status: "pending",
+        createdAt: nowSec()
+      }).onConflictDoNothing();
+    }
+  }
+}
+
+export async function markHabit(habitId: string, date: number, status: "pending" | "done" | "missed" | "skipped"): Promise<HabitMarker> {
+  const rows = await db
+    .update(habitMarkers)
+    .set({ status, completedAt: status === "done" ? nowSec() : null })
+    .where(and(eq(habitMarkers.habitId, habitId), eq(habitMarkers.date, date)))
+    .returning();
+  if (rows.length === 0) throw new Error("Marker not found");
+  return rows[0];
+}
+
+export async function getHabitMarkersInRange(userId: string, habitId: string, from: number, to: number): Promise<HabitMarker[]> {
+  return db
+    .select()
+    .from(habitMarkers)
+    .where(
+      and(
+        eq(habitMarkers.userId, userId),
+        eq(habitMarkers.habitId, habitId),
+        gte(habitMarkers.date, from),
+        lte(habitMarkers.date, to)
+      )
+    )
+    .orderBy(asc(habitMarkers.date));
+}
+
+export async function computeHabitStreak(userId: string, habitId: string): Promise<{ current: number, best: number, rate7d: number }> {
+  const markers = await db
+    .select()
+    .from(habitMarkers)
+    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.habitId, habitId)))
+    .orderBy(desc(habitMarkers.date));
+
+  let current = 0;
+  let best = 0;
+  let tempStreak = 0;
+  let done7d = 0;
+  let valid7d = 0;
+
+  const today = Math.floor(Date.now() / 86400000);
+  
+  // Calculate current streak
+  for (const m of markers) {
+    if (m.date > today) continue;
+    if (m.status === "done") {
+      current++;
+    } else if (m.status === "missed" && m.date < today) {
+      break;
+    }
+  }
+
+  // Calculate best streak
+  for (let i = markers.length - 1; i >= 0; i--) {
+    const m = markers[i];
+    if (m.status === "done") {
+      tempStreak++;
+      if (tempStreak > best) best = tempStreak;
+    } else if (m.status === "missed") {
+      tempStreak = 0;
+    }
+  }
+
+  // Calculate 7d rate
+  const sevenDaysAgo = today - 7;
+  for (const m of markers) {
+    if (m.date <= today && m.date > sevenDaysAgo) {
+      if (m.status === "done" || m.status === "missed") {
+        valid7d++;
+        if (m.status === "done") done7d++;
+      }
+    }
+  }
+
+  const rate7d = valid7d > 0 ? done7d / valid7d : 0;
+
+  return { current, best, rate7d };
+}
+
+// ---------------------------------------------------------------------------
+// Recurring Markers
+// ---------------------------------------------------------------------------
+
+export async function ensureRecurringMarkersForDate(userId: string, date: number): Promise<void> {
+  // We'll import matchesRecurrenceRule dynamically to avoid circular dependency
+  const { matchesRecurrenceRule } = await import("./scheduling/capacity");
+  const activeRecurring = await listActiveRecurringTasks(userId);
+  
+  for (const rt of activeRecurring) {
+    if (rt.recurrenceEndsAt && date * 86400 > rt.recurrenceEndsAt) continue;
+    if (matchesRecurrenceRule(rt.recurrenceRule, rt.cadence, "recurring", date)) {
+      await db.insert(recurringMarkers).values({
+        id: crypto.randomUUID(),
+        userId,
+        recurringTaskId: rt.id,
+        date,
+        status: "pending",
+        createdAt: nowSec()
+      }).onConflictDoNothing();
+    }
+  }
+}
+
+export async function markRecurring(recurringTaskId: string, date: number, status: "pending" | "done" | "missed" | "carried"): Promise<RecurringMarker> {
+  const rows = await db
+    .update(recurringMarkers)
+    .set({ status, completedAt: status === "done" ? nowSec() : null })
+    .where(and(eq(recurringMarkers.recurringTaskId, recurringTaskId), eq(recurringMarkers.date, date)))
+    .returning();
+  if (rows.length === 0) throw new Error("Marker not found");
+  return rows[0];
+}
+
+export async function spawnCarryForwardTask(marker: RecurringMarker): Promise<Task> {
+  const rt = await db.select().from(recurringTasks).where(eq(recurringTasks.id, marker.recurringTaskId)).limit(1);
+  if (!rt.length) throw new Error("Recurring task not found");
+  
+  const { createTask } = await import("./storage");
+  const newTask = await createTask({
+    id: crypto.randomUUID(),
+    userId: marker.userId,
+    projectId: rt[0].projectId || "", 
+    title: rt[0].title,
+    estimateMin: rt[0].estimateMin,
+    status: "pending",
+    createdAt: nowSec(),
+    updatedAt: nowSec(),
+    // We reuse carriedFromId conceptually to point back to the recurring task 
+    carriedFromId: rt[0].id
+  });
+  
+  await db.update(recurringMarkers).set({ spawnedTaskId: newTask.id }).where(eq(recurringMarkers.id, marker.id));
+  return newTask;
+}
+
+// ---------------------------------------------------------------------------
+// Combined Daily View
+// ---------------------------------------------------------------------------
+
+export async function getDailyHabitBlocks(userId: string, date: number) {
+  const habitsRes = await db
+    .select({
+      id: habits.id,
+      name: habits.name,
+      estimateMin: habits.estimateMin,
+      color: habits.color,
+      status: habitMarkers.status,
+    })
+    .from(habitMarkers)
+    .innerJoin(habits, eq(habitMarkers.habitId, habits.id))
+    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.date, date)));
+
+  const recurringRes = await db
+    .select({
+      id: recurringTasks.id,
+      title: recurringTasks.title,
+      estimateMin: recurringTasks.estimateMin,
+      status: recurringMarkers.status,
+      spawnedTaskId: recurringMarkers.spawnedTaskId,
+    })
+    .from(recurringMarkers)
+    .innerJoin(recurringTasks, eq(recurringMarkers.recurringTaskId, recurringTasks.id))
+    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, date)));
+
+  return { habits: habitsRes, recurring: recurringRes };
 }

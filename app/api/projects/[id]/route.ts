@@ -7,7 +7,7 @@ import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { archiveProject, findProjectById, updateProject } from "@/lib/storage";
 
-const VALID_TYPES = ["critical", "recurring", "habit", "nicetohave"] as const;
+const VALID_TYPES = ["critical", "nicetohave"] as const;
 type ProjectType = (typeof VALID_TYPES)[number];
 
 // ── PATCH ─────────────────────────────────────────────────────────────────────
