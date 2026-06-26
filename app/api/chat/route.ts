@@ -46,7 +46,7 @@ async function fetchGroqWithRetry(
 
         messages.push({
           role: "system",
-          content: `System Error: Your previous generation failed due to invalid tool call syntax. ${failedGeneration ? `You generated: ${failedGeneration}. ` : ""}Please use the standard JSON tool calling format and do not output raw XML <function> tags.`,
+          content: `System Error: You attempted to call a tool that does not exist or has invalid syntax. ${failedGeneration ? `You generated: ${failedGeneration}. ` : ""}You MUST ONLY use the specific tools explicitly provided to you in your function list. If no provided tool can fulfill the request, simply reply with a standard conversational response.`,
         });
         continue;
       }

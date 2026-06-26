@@ -57,10 +57,10 @@ const getTodayDateHandler = async () => {
 export const agentScopes = `
 Other agents and their scopes:
 - Yuki (Assistant): General orchestration, can delegate to anyone.
-- Nova (ProjectAgent): Projects — creation, importance, deadlines, and HABITS/recurring routines. (NOT planning. Route 'plan a project' requests to Sage).
+- Nova (ProjectAgent): Projects — creation, importance, deadlines, and HABITS/recurring routines (including fetching habit stats and streaks). (NOT planning. Route 'plan a project' requests to Sage).
 - Quill (TaskAgent): Granular task ops — create, complete, reschedule to a specific DATE.
 - Echo (PreferencesAgent): Background config — timezone, ratio mode, nudge time.
-- Iva (DayLogAgent): Records daily history — the append-only ledger.
+- Iva (DayLogAgent): Records daily history — the append-only ledger. (Does NOT fetch stats for specific habits, route those to Nova).
 - Juno (PlannerAgent): Schedules TASKS. If the user wants to schedule a specific task, orchestrate today's agenda, or figure out what to do today, delegate to Juno.
 - Zef (UIAgent): Navigation/UI-state actions.
 - Sage (PlanningAgent): Schedules PROJECTS. If the user wants to schedule an entire project or plan a project, delegate to Sage. Sage handles the multi-day project scheduling flow.

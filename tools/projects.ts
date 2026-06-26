@@ -9,6 +9,10 @@ import {
   listActiveProjects,
   createHabit,
   createRecurringTask,
+  listActiveHabits,
+  computeHabitStreak,
+  listActiveRecurringTasks,
+  computeRecurringStreak,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
 
@@ -96,6 +100,20 @@ export const projectTools: ChatCompletionTool[] = [
         required: ["title", "cadence"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "showHabitStats",
+      description: "Show the current streak, best streak, and completion rate for a specific habit or recurring task by name. This will display a rich UI component to the user.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "The name of the habit or recurring task (e.g. 'morning jog')" }
+        },
+        required: ["name"]
+      }
+    }
   }
 ];
 
@@ -143,6 +161,41 @@ export const projectHandlers: Record<string, Function> = {
     if (!p) throw new Error(`Project '${args.name}' not found`);
     await archiveProject(p.id);
     return { preformattedUi: `✓ Project **${p.name}** archived.` };
+  },
+  showHabitStats: async (args: { name: string }) => {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+    const searchName = args.name.toLowerCase();
+
+    // Search habits first
+    const habits = await listActiveHabits(userId);
+    const habit = habits.find((h: any) => h.name.toLowerCase().includes(searchName));
+    if (habit) {
+      const stats = await computeHabitStreak(userId, habit.id);
+      return { 
+        preformattedUi: `
+<ui:metrics>{"title": "Current Streak - ${habit.name}", "value": ${stats.current}, "unit": "days"}</ui:metrics>
+<ui:metrics>{"title": "Longest Streak - ${habit.name}", "value": ${stats.best}, "unit": "days"}</ui:metrics>
+<ui:metrics>{"title": "Last 7 Days - ${habit.name}", "value": ${Math.round(stats.rate7d)}, "unit": "%", "percentage": ${Math.round(stats.rate7d)}}</ui:metrics>
+`
+      };
+    }
+
+    // Search recurring tasks
+    const recurring = await listActiveRecurringTasks(userId);
+    const recTask = recurring.find((r: any) => r.title.toLowerCase().includes(searchName));
+    if (recTask) {
+      const stats = await computeRecurringStreak(userId, recTask.id);
+      return { 
+        preformattedUi: `
+<ui:metrics>{"title": "Current Streak - ${recTask.title}", "value": ${stats.current}, "unit": "days"}</ui:metrics>
+<ui:metrics>{"title": "Longest Streak - ${recTask.title}", "value": ${stats.best}, "unit": "days"}</ui:metrics>
+<ui:metrics>{"title": "Last 7 Days - ${recTask.title}", "value": ${Math.round(stats.rate7d)}, "unit": "%", "percentage": ${Math.round(stats.rate7d)}}</ui:metrics>
+`
+      };
+    }
+
+    return { error: `No active habit or recurring task found matching '${args.name}'.` };
   },
   createHabit: async (args: any) => {
     const { userId } = await auth();
