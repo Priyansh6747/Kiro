@@ -36,6 +36,7 @@ export const preferences = sqliteTable("preferences", {
     .notNull()
     .default("cumulative"),
   morningNudgeTime: text("morning_nudge_time").notNull().default("08:00"),
+  streakThreshold: integer("streak_threshold").notNull().default(100),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });

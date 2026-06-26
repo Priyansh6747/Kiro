@@ -23,8 +23,10 @@ import type { Habit, RecurringTask } from "@/lib/db/models";
 import { LoadingScreen, EmptyState, ErrorBanner } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 import { useConfirm } from "@/hooks/useConfirm";
+import { TaskCalendarModal } from "@/components/TaskCalendarModal";
+import { CreateRoutineModal } from "@/components/CreateRoutineModal";
 
-function HabitCard({ habit, onArchive }: { habit: Habit; onArchive: (id: string) => void }) {
+function HabitCard({ habit, onArchive, onClick }: { habit: Habit; onArchive: (id: string) => void; onClick: () => void }) {
   const [streak, setStreak] = useState<{ current: number; best: number; rate7d: number } | null>(null);
 
   useEffect(() => {
@@ -32,14 +34,17 @@ function HabitCard({ habit, onArchive }: { habit: Habit; onArchive: (id: string)
   }, [habit.id]);
 
   return (
-    <div className="rounded-xl border border-border-default bg-surface p-5 hover:border-accent hover:shadow-sm transition-all group">
+    <div 
+      onClick={onClick}
+      className="cursor-pointer rounded-xl border border-border-default bg-surface p-5 hover:border-accent hover:shadow-sm transition-all group"
+    >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-semibold text-lg text-primary">{habit.name}</h3>
           <p className="text-sm text-secondary capitalize">{habit.cadence} Habit</p>
         </div>
         <button
-          onClick={() => onArchive(habit.id)}
+          onClick={(e) => { e.stopPropagation(); onArchive(habit.id); }}
           className="text-tertiary hover:text-status-missed opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Trash2 className="w-4 h-4" />
@@ -69,16 +74,19 @@ function HabitCard({ habit, onArchive }: { habit: Habit; onArchive: (id: string)
   );
 }
 
-function RecurringTaskCard({ rt, onArchive }: { rt: RecurringTask; onArchive: (id: string) => void }) {
+function RecurringTaskCard({ rt, onArchive, onClick }: { rt: RecurringTask; onArchive: (id: string) => void; onClick: () => void }) {
   return (
-    <div className="rounded-xl border border-border-default bg-surface p-5 hover:border-accent hover:shadow-sm transition-all group">
+    <div 
+      onClick={onClick}
+      className="cursor-pointer rounded-xl border border-border-default bg-surface p-5 hover:border-accent hover:shadow-sm transition-all group"
+    >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-semibold text-lg text-primary">{rt.title}</h3>
           <p className="text-sm text-secondary capitalize">{rt.cadence} Recurring Task</p>
         </div>
         <button
-          onClick={() => onArchive(rt.id)}
+          onClick={(e) => { e.stopPropagation(); onArchive(rt.id); }}
           className="text-tertiary hover:text-status-missed opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Trash2 className="w-4 h-4" />
@@ -99,6 +107,8 @@ export default function HabitsPage() {
   const [activeTab, setActiveTab] = useState<"habits" | "recurring">("habits");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [selectedTask, setSelectedTask] = useState<{ id: string; title: string; type: "habit" | "recurring" } | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { confirm, ConfirmModal } = useConfirm();
   const { showToast } = useToast();
@@ -159,12 +169,12 @@ export default function HabitsPage() {
             Track your daily disciplines and recurring commitments.
           </p>
         </div>
-        <Link
-          href="/chat"
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
           className="rounded-full bg-accent text-white w-10 h-10 flex items-center justify-center shadow hover:opacity-90 transition-opacity shrink-0"
         >
           <Plus className="w-5 h-5" />
-        </Link>
+        </button>
       </div>
 
       <div className="flex items-center gap-6 border-b border-border-default mb-6">
@@ -219,7 +229,12 @@ export default function HabitsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {habits.map((h) => (
-                  <HabitCard key={h.id} habit={h} onArchive={handleArchiveHabit} />
+                  <HabitCard 
+                    key={h.id} 
+                    habit={h} 
+                    onArchive={handleArchiveHabit} 
+                    onClick={() => setSelectedTask({ id: h.id, title: h.name, type: "habit" })}
+                  />
                 ))}
               </div>
             )}
@@ -236,7 +251,12 @@ export default function HabitsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {recurring.map((rt) => (
-                  <RecurringTaskCard key={rt.id} rt={rt} onArchive={handleArchiveRecurring} />
+                  <RecurringTaskCard 
+                    key={rt.id} 
+                    rt={rt} 
+                    onArchive={handleArchiveRecurring} 
+                    onClick={() => setSelectedTask({ id: rt.id, title: rt.title, type: "recurring" })}
+                  />
                 ))}
               </div>
             )}
@@ -245,6 +265,24 @@ export default function HabitsPage() {
       </div>
 
       <ConfirmModal />
+      {selectedTask && (
+        <TaskCalendarModal
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+          taskId={selectedTask.id}
+          taskTitle={selectedTask.title}
+          type={selectedTask.type}
+        />
+      )}
+      
+      <CreateRoutineModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadData();
+        }}
+      />
     </div>
   );
 }

@@ -1564,6 +1564,21 @@ export async function markRecurring(recurringTaskId: string, date: number, statu
   return rows[0];
 }
 
+export async function getRecurringMarkersInRange(userId: string, recurringTaskId: string, from: number, to: number): Promise<RecurringMarker[]> {
+  return db
+    .select()
+    .from(recurringMarkers)
+    .where(
+      and(
+        eq(recurringMarkers.userId, userId),
+        eq(recurringMarkers.recurringTaskId, recurringTaskId),
+        gte(recurringMarkers.date, from),
+        lte(recurringMarkers.date, to)
+      )
+    )
+    .orderBy(asc(recurringMarkers.date));
+}
+
 export async function spawnCarryForwardTask(marker: RecurringMarker): Promise<Task> {
   const rt = await db.select().from(recurringTasks).where(eq(recurringTasks.id, marker.recurringTaskId)).limit(1);
   if (!rt.length) throw new Error("Recurring task not found");
