@@ -65,7 +65,7 @@ export const projectTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "createHabit",
-      description: "Create a new daily or weekly habit routine.",
+      description: "Create a new daily or weekly habit. Use this ONLY for personal disciplines, routines, or consistency goals (e.g., 'drink water', 'meditate', 'read'). Do NOT use for repeating tasks/chores.",
       parameters: {
         type: "object",
         properties: {
@@ -82,7 +82,7 @@ export const projectTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "createRecurringTask",
-      description: "Create a new recurring task.",
+      description: "Create a new recurring or repeating task. Use this for chores, work tasks, or anything explicitly called a 'repeating task' or 'recurring task' (e.g., 'take out trash', 'intern work every tue').",
       parameters: {
         type: "object",
         properties: {

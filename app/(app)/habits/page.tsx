@@ -8,7 +8,9 @@ import {
   Trophy,
   Activity,
   Trash2,
+  Plus,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   listHabits,
@@ -94,6 +96,7 @@ function RecurringTaskCard({ rt, onArchive }: { rt: RecurringTask; onArchive: (i
 export default function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [recurring, setRecurring] = useState<RecurringTask[]>([]);
+  const [activeTab, setActiveTab] = useState<"habits" | "recurring">("habits");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -156,54 +159,89 @@ export default function HabitsPage() {
             Track your daily disciplines and recurring commitments.
           </p>
         </div>
+        <Link
+          href="/chat"
+          className="rounded-full bg-accent text-white w-10 h-10 flex items-center justify-center shadow hover:opacity-90 transition-opacity shrink-0"
+        >
+          <Plus className="w-5 h-5" />
+        </Link>
       </div>
 
-      <div className="space-y-12">
-        {/* HABITS SECTION */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-bold text-primary">Active Habits</h2>
-            <span className="bg-surface-raised border border-border-default px-2 py-0.5 rounded-full text-xs font-medium text-tertiary">
-              {habits.length}
-            </span>
-          </div>
+      <div className="flex items-center gap-6 border-b border-border-default mb-6">
+        <button
+          onClick={() => setActiveTab("habits")}
+          className={`pb-3 font-semibold transition-colors flex items-center gap-2 ${
+            activeTab === "habits"
+              ? "border-b-2 border-accent text-accent"
+              : "text-secondary hover:text-primary"
+          }`}
+        >
+          Active Habits
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              activeTab === "habits"
+                ? "bg-accent/10"
+                : "bg-surface-raised border border-border-default"
+            }`}
+          >
+            {habits.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("recurring")}
+          className={`pb-3 font-semibold transition-colors flex items-center gap-2 ${
+            activeTab === "recurring"
+              ? "border-b-2 border-accent text-accent"
+              : "text-secondary hover:text-primary"
+          }`}
+        >
+          Recurring Tasks
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              activeTab === "recurring"
+                ? "bg-accent/10"
+                : "bg-surface-raised border border-border-default"
+            }`}
+          >
+            {recurring.length}
+          </span>
+        </button>
+      </div>
 
-          {habits.length === 0 ? (
-            <div className="border border-dashed border-border-strong rounded-xl p-8 text-center bg-surface-raised/50">
-              <p className="text-secondary font-medium">No active habits</p>
-              <p className="text-sm text-tertiary mt-1">Ask Nova to create a habit for you!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {habits.map((h) => (
-                <HabitCard key={h.id} habit={h} onArchive={handleArchiveHabit} />
-              ))}
-            </div>
-          )}
-        </section>
+      <div>
+        {activeTab === "habits" && (
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {habits.length === 0 ? (
+              <div className="border border-dashed border-border-strong rounded-xl p-8 text-center bg-surface-raised/50">
+                <p className="text-secondary font-medium">No active habits</p>
+                <p className="text-sm text-tertiary mt-1">Ask Nova to create a habit for you!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {habits.map((h) => (
+                  <HabitCard key={h.id} habit={h} onArchive={handleArchiveHabit} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
-        {/* RECURRING TASKS SECTION */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-bold text-primary">Recurring Tasks</h2>
-            <span className="bg-surface-raised border border-border-default px-2 py-0.5 rounded-full text-xs font-medium text-tertiary">
-              {recurring.length}
-            </span>
-          </div>
-
-          {recurring.length === 0 ? (
-            <div className="border border-dashed border-border-strong rounded-xl p-8 text-center bg-surface-raised/50">
-              <p className="text-secondary font-medium">No recurring tasks</p>
-              <p className="text-sm text-tertiary mt-1">Ask Nova to schedule one!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recurring.map((rt) => (
-                <RecurringTaskCard key={rt.id} rt={rt} onArchive={handleArchiveRecurring} />
-              ))}
-            </div>
-          )}
-        </section>
+        {activeTab === "recurring" && (
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {recurring.length === 0 ? (
+              <div className="border border-dashed border-border-strong rounded-xl p-8 text-center bg-surface-raised/50">
+                <p className="text-secondary font-medium">No recurring tasks</p>
+                <p className="text-sm text-tertiary mt-1">Ask Nova to schedule one!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recurring.map((rt) => (
+                  <RecurringTaskCard key={rt.id} rt={rt} onArchive={handleArchiveRecurring} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       <ConfirmModal />

@@ -173,6 +173,10 @@ export const dayLogs = sqliteTable(
     tasksCompleted: integer("tasks_completed").notNull().default(0),
     tasksMissed: integer("tasks_missed").notNull().default(0),
     tasksCarried: integer("tasks_carried").notNull().default(0),
+    habitsCompleted: integer("habits_completed").notNull().default(0),
+    habitsMissed: integer("habits_missed").notNull().default(0),
+    recurringsCompleted: integer("recurrings_completed").notNull().default(0),
+    recurringsMissed: integer("recurrings_missed").notNull().default(0),
     ratio: real("ratio").notNull().default(0.0),
     penalty: real("penalty").notNull().default(0.0),
     dayType: text("day_type", {

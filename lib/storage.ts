@@ -1617,3 +1617,63 @@ export async function getDailyHabitBlocks(userId: string, date: number) {
 
   return { habits: habitsRes, recurring: recurringRes };
 }
+
+// ---------------------------------------------------------------------------
+// Day Close
+// ---------------------------------------------------------------------------
+
+export async function closeDayForUser(userId: string, todayUnixDay: number) {
+  const yesterdayUnixDay = todayUnixDay - 1;
+
+  // 1. Seed today's markers
+  await ensureHabitMarkersForDate(userId, todayUnixDay);
+  await ensureRecurringMarkersForDate(userId, todayUnixDay);
+
+  // 2. Mark pending from yesterday as missed
+  const missedHabits = await db
+    .update(habitMarkers)
+    .set({ status: "missed" })
+    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.date, yesterdayUnixDay), eq(habitMarkers.status, "pending")))
+    .returning();
+
+  const missedRecurrings = await db
+    .update(recurringMarkers)
+    .set({ status: "missed" })
+    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, yesterdayUnixDay), eq(recurringMarkers.status, "pending")))
+    .returning();
+
+  // 3. Spawn carry-forward tasks for missed recurring tasks
+  for (const m of missedRecurrings) {
+    await spawnCarryForwardTask(m);
+  }
+
+  // 4. Compute stats for yesterday's day log
+  const habitsStats = await db
+    .select({ status: habitMarkers.status, count: sql<number>`count(*)` })
+    .from(habitMarkers)
+    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.date, yesterdayUnixDay)))
+    .groupBy(habitMarkers.status);
+
+  const recStats = await db
+    .select({ status: recurringMarkers.status, count: sql<number>`count(*)` })
+    .from(recurringMarkers)
+    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, yesterdayUnixDay)))
+    .groupBy(recurringMarkers.status);
+
+  const habitsCompleted = habitsStats.find((s) => s.status === "done")?.count || 0;
+  const habitsMissedCount = habitsStats.find((s) => s.status === "missed")?.count || 0;
+  const recurringsCompleted = recStats.find((s) => s.status === "done")?.count || 0;
+  const recurringsMissedCount = recStats.find((s) => s.status === "missed")?.count || 0;
+
+  // 5. Update yesterday's day log
+  await db
+    .update(dayLogs)
+    .set({
+      habitsCompleted,
+      habitsMissed: habitsMissedCount,
+      recurringsCompleted,
+      recurringsMissed: recurringsMissedCount,
+      updatedAt: nowSec(),
+    })
+    .where(and(eq(dayLogs.userId, userId), eq(dayLogs.date, yesterdayUnixDay)));
+}
