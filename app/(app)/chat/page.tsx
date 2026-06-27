@@ -161,6 +161,7 @@ function ChatUI() {
   const [artifacts, setArtifacts] = useState<any[]>([]);
   const [selectedArtifact, setSelectedArtifact] = useState<any | null>(null);
   const [loadingArtifactId, setLoadingArtifactId] = useState<string | null>(null);
+  const [showArtifactsPanel, setShowArtifactsPanel] = useState(false);
 
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
@@ -473,6 +474,29 @@ function ChatUI() {
     await handleSendDirect(input);
   };
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isRightSwipe) {
+      setShowArtifactsPanel(false);
+    }
+  };
+
   const executeTools = async (approved: boolean) => {
     setLoadingText("Running tools...");
     setLoading(true);
@@ -666,6 +690,13 @@ function ChatUI() {
               <Bot className="w-6 h-6 mr-3 text-accent" />
               <span className="text-2xl font-bold tracking-tight text-primary">Yuki (Assistant)</span>
             </div>
+            <button
+              onClick={() => setShowArtifactsPanel(!showArtifactsPanel)}
+              className={`p-2 rounded-xl transition-colors ${showArtifactsPanel ? 'bg-accent/10 text-accent' : 'hover:bg-surface-raised text-secondary'}`}
+              title="Toggle Artifacts"
+            >
+              <FileText className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Messages */}
@@ -828,13 +859,23 @@ function ChatUI() {
       {/* Artifacts Side Panel */}
       <div 
         className={`h-full bg-surface border-l border-border-default flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-          chatActive ? 'w-64 lg:w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-full border-none'
+          showArtifactsPanel ? 'w-64 lg:w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-full border-none'
         } overflow-hidden shrink-0`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        <div className="p-4 border-b border-border-default shrink-0">
+        <div className="p-4 border-b border-border-default shrink-0 flex items-center justify-between">
           <h3 className="font-bold text-primary flex items-center gap-2">
             <FileText className="w-4 h-4 text-accent" /> Artifacts
           </h3>
+          <button
+            onClick={() => setShowArtifactsPanel(false)}
+            className="p-1 hover:bg-surface-raised rounded-lg transition-colors"
+            title="Close Panel"
+          >
+            <X className="w-4 h-4 text-secondary" />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {artifacts.length === 0 ? (

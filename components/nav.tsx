@@ -138,7 +138,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <BottomNav />
-      <MiniChat />
     </div>
   );
 }
