@@ -74,11 +74,13 @@ export const dayLogHandlers: Record<string, Function> = {
       l.dateStr,
       l.dayType,
       l.loadStatus,
-      `${l.tasksCompleted}/${l.tasksAssigned}`
+      `${l.tasksCompleted}/${l.tasksAssigned}`,
+      `${l.habitsCompleted}/${l.habitsCompleted + l.habitsMissed}`,
+      `${l.recurringsCompleted}/${l.recurringsCompleted + l.recurringsMissed}`
     ]);
 
     return {
-      preformattedUi: `<ui:table>${JSON.stringify({ headers: ["Date", "Type", "Load", "Tasks"], rows, caption: "Daily Logs" })}</ui:table>`
+      preformattedUi: `<ui:table>${JSON.stringify({ headers: ["Date", "Type", "Load", "Tasks", "Habits", "Recurring"], rows, caption: "Daily Logs" })}</ui:table>`
     };
   },
   show_day_log: async (args: any) => {
@@ -127,7 +129,9 @@ export const dayLogHandlers: Record<string, Function> = {
     
     const enriched = enrichLog(log);
     const metrics = [
-      `<ui:metrics>${JSON.stringify({ title: "Tasks Completed", value: enriched.tasksCompleted, unit: "tasks" })}</ui:metrics>`,
+      `<ui:metrics>${JSON.stringify({ title: "Tasks Completed", value: enriched.tasksCompleted, unit: `of ${enriched.tasksAssigned}` })}</ui:metrics>`,
+      `<ui:metrics>${JSON.stringify({ title: "Habits Completed", value: enriched.habitsCompleted, unit: `of ${enriched.habitsCompleted + enriched.habitsMissed}` })}</ui:metrics>`,
+      `<ui:metrics>${JSON.stringify({ title: "Recurrings Completed", value: enriched.recurringsCompleted, unit: `of ${enriched.recurringsCompleted + enriched.recurringsMissed}` })}</ui:metrics>`,
       `<ui:metrics>${JSON.stringify({ title: "Load Status", value: enriched.loadStatus, unit: "" })}</ui:metrics>`
     ].join('\n');
 

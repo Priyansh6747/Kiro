@@ -16,9 +16,12 @@ import {
   placeDayPlanBlock,
   removeDayPlanBlock,
   updateTask,
+  getHabitsDashboard,
+  markHabitMarker,
+  markRecurringMarker,
 } from "@/lib/api-client";
 import type { Project, Task, TodayPlannerData } from "@/lib/types";
-import { todayUnixDay } from "@/lib/types";
+import { todayUnixDay } from "@/lib/utils";
 
 export default function TodayPage() {
   return (
@@ -33,6 +36,7 @@ function TodayPageContent() {
   const [plan, setPlan] = useState<TodayPlannerData | null>(null);
   const [bucketTasks, setBucketTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [habitsData, setHabitsData] = useState<any>(null);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,14 +77,16 @@ function TodayPageContent() {
     if (selectedDate === 0) return;
     setError(null);
     try {
-      const [planData, bucket, projs] = await Promise.all([
+      const [planData, bucket, projs, habDash] = await Promise.all([
         getTodayPlan(selectedDate),
         listTasks({ bucket: true }),
         listProjects(),
+        getHabitsDashboard(selectedDate, selectedDate).catch(() => null),
       ]);
       setPlan(planData);
       setBucketTasks(bucket);
       setProjects(projs);
+      if (habDash) setHabitsData(habDash);
       setDisplayedDate(selectedDate);
     } catch (e) {
       setError((e as Error).message);
@@ -416,6 +422,94 @@ function TodayPageContent() {
     }
   };
 
+  const handleMarkHabit = async (habitId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "done" ? "pending" : "done";
+    
+    // Optimistic Update
+    setHabitsData((prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      next.markers = { ...prev.markers };
+      next.markers[habitId] = { ...prev.markers[habitId], [selectedDate]: newStatus };
+      return next;
+    });
+    setAnimatingTasksStatus((prev) => ({ ...prev, [habitId]: "loading" }));
+
+    try {
+      await markHabitMarker(habitId, selectedDate, newStatus);
+      setAnimatingTasksStatus((prev) => ({ ...prev, [habitId]: "success" }));
+      setTimeout(() => {
+        setAnimatingTasksStatus((prev) => {
+          const next = { ...prev };
+          delete next[habitId];
+          return next;
+        });
+      }, 500);
+    } catch (e) {
+      showToast("Failed to update habit: " + (e as Error).message, "error");
+      setAnimatingTasksStatus((prev) => ({ ...prev, [habitId]: "error" }));
+      // Revert
+      setHabitsData((prev: any) => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        next.markers = { ...prev.markers };
+        next.markers[habitId] = { ...prev.markers[habitId], [selectedDate]: currentStatus };
+        return next;
+      });
+      setTimeout(() => {
+        setAnimatingTasksStatus((prev) => {
+          const next = { ...prev };
+          delete next[habitId];
+          return next;
+        });
+      }, 500);
+    }
+  };
+
+  const handleMarkRecurring = async (rtId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "done" ? "pending" : "done";
+    
+    // Optimistic Update
+    setHabitsData((prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      next.recurringMarkers = { ...prev.recurringMarkers };
+      next.recurringMarkers[rtId] = { ...prev.recurringMarkers[rtId], [selectedDate]: newStatus };
+      return next;
+    });
+    setAnimatingTasksStatus((prev) => ({ ...prev, [rtId]: "loading" }));
+
+    try {
+      await markRecurringMarker(rtId, selectedDate, newStatus);
+      setAnimatingTasksStatus((prev) => ({ ...prev, [rtId]: "success" }));
+      setTimeout(() => {
+        setAnimatingTasksStatus((prev) => {
+          const next = { ...prev };
+          delete next[rtId];
+          return next;
+        });
+      }, 500);
+    } catch (e) {
+      showToast("Failed to update routine: " + (e as Error).message, "error");
+      setAnimatingTasksStatus((prev) => ({ ...prev, [rtId]: "error" }));
+      // Revert
+      setHabitsData((prev: any) => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        next.recurringMarkers = { ...prev.recurringMarkers };
+        next.recurringMarkers[rtId] = { ...prev.recurringMarkers[rtId], [selectedDate]: currentStatus };
+        return next;
+      });
+      setTimeout(() => {
+        setAnimatingTasksStatus((prev) => {
+          const next = { ...prev };
+          delete next[rtId];
+          return next;
+        });
+      }, 500);
+    }
+  };
+
   const handleQuickAdd = () => {
     if (projects.length === 0) {
       showToast("Create a project first", "error");
@@ -605,7 +699,103 @@ function TodayPageContent() {
                   );
                 })}
 
-                {anyTimeTasksOrig.length === 0 && (
+                {/* Habits */}
+                {habitsData?.habits?.map((habit: any) => {
+                  const status = habitsData.markers[habit.id]?.[selectedDate];
+                  if (!status) return null;
+                  
+                  const animState = animatingTasksStatus[habit.id];
+                  return (
+                    <div
+                      key={`habit-${habit.id}`}
+                      className={`flex flex-col group relative p-2 -mx-2 hover:bg-surface-raised rounded transition-colors ${
+                        animState === "success"
+                          ? "bg-done-subtle text-done"
+                          : animState === "error"
+                            ? "bg-missed-subtle text-missed"
+                            : animState === "loading"
+                              ? "bg-accent-subtle/50 animate-pulse text-secondary"
+                              : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <button
+                          onClick={() => handleMarkHabit(habit.id, status)}
+                          className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            status === "done"
+                              ? "border-done bg-done text-surface"
+                              : "border-border-strong hover:border-done"
+                          }`}
+                        >
+                          {status === "done" && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          )}
+                        </button>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="relative flex max-w-full self-start min-w-0">
+                            <span style={status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined} className={`text-sm font-medium leading-tight truncate ${animState === "loading" ? "text-secondary" : status === "done" ? "" : "text-primary"}`}>
+                              {habit.name}
+                            </span>
+                            {status === "done" && <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />}
+                          </div>
+                          <span className={`text-xs mt-1 ${animState === "loading" ? "text-secondary" : "text-secondary"}`}>
+                            {habit.estimateMin}m (Habit)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Recurring Tasks */}
+                {habitsData?.recurringTasks?.map((rt: any) => {
+                  const status = habitsData.recurringMarkers[rt.id]?.[selectedDate];
+                  if (!status) return null;
+                  
+                  const animState = animatingTasksStatus[rt.id];
+                  return (
+                    <div
+                      key={`recurring-${rt.id}`}
+                      className={`flex flex-col group relative p-2 -mx-2 hover:bg-surface-raised rounded transition-colors ${
+                        animState === "success"
+                          ? "bg-done-subtle text-done"
+                          : animState === "error"
+                            ? "bg-missed-subtle text-missed"
+                            : animState === "loading"
+                              ? "bg-accent-subtle/50 animate-pulse text-secondary"
+                              : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <button
+                          onClick={() => handleMarkRecurring(rt.id, status)}
+                          className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            status === "done"
+                              ? "border-done bg-done text-surface"
+                              : "border-border-strong hover:border-done"
+                          }`}
+                        >
+                          {status === "done" && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          )}
+                        </button>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="relative flex max-w-full self-start min-w-0">
+                            <span style={status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined} className={`text-sm font-medium leading-tight truncate ${animState === "loading" ? "text-secondary" : status === "done" ? "" : "text-primary"}`}>
+                              {rt.title}
+                            </span>
+                            {status === "done" && <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />}
+                          </div>
+                          <span className={`text-xs mt-1 ${animState === "loading" ? "text-secondary" : "text-secondary"}`}>
+                            {rt.estimateMin}m (Routine)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {anyTimeTasksOrig.length === 0 && (!habitsData || (habitsData.habits.length === 0 && habitsData.recurringTasks.length === 0)) && (
                   <p className="text-sm text-tertiary italic">
                     No unplaced tasks
                   </p>

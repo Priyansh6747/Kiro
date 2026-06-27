@@ -130,6 +130,10 @@ export interface EodSummaryPayload {
   ratio: number;
   doneTasks: string[];
   missedTasks: string[];
+  habitsCompleted: number;
+  habitsMissed: number;
+  recurringsCompleted: number;
+  recurringsMissed: number;
   day_type: string;
 }
 

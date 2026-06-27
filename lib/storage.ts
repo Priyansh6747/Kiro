@@ -918,10 +918,34 @@ export async function syncDayLogStats(
   // ratio is against tasksAssigned which was locked in at the time of confirmDay
   const ratio = log.tasksAssigned > 0 ? completed / log.tasksAssigned : 0.0;
 
+  const habitsStats = await db
+    .select({ status: habitMarkers.status, count: sql<number>`count(*)` })
+    .from(habitMarkers)
+    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.date, date)))
+    .groupBy(habitMarkers.status);
+
+  const recStats = await db
+    .select({ status: recurringMarkers.status, count: sql<number>`count(*)` })
+    .from(recurringMarkers)
+    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, date)))
+    .groupBy(recurringMarkers.status);
+
+  const habitsCompleted = habitsStats.find((s) => s.status === "done")?.count || 0;
+  const habitsMissedCount = (habitsStats.find((s) => s.status === "missed")?.count || 0) + 
+                            (habitsStats.find((s) => s.status === "pending")?.count || 0);
+
+  const recurringsCompleted = recStats.find((s) => s.status === "done")?.count || 0;
+  const recurringsMissedCount = (recStats.find((s) => s.status === "missed")?.count || 0) + 
+                                (recStats.find((s) => s.status === "pending")?.count || 0);
+
   await updateDayLog(userId, date, {
     tasksCompleted: completed,
     tasksMissed: missed,
     tasksCarried: carried,
+    habitsCompleted,
+    habitsMissed: habitsMissedCount,
+    recurringsCompleted,
+    recurringsMissed: recurringsMissedCount,
     ratio: Math.min(ratio, 1.0),
     updatedAt: nowSec(),
   });

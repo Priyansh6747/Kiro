@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { listActiveHabits, createHabit } from "@/lib/storage";
+import { listActiveHabits, createHabit, ensureHabitMarkersForDate, syncDayLogStats, getOrCreatePreferences } from "@/lib/storage";
 import { randomUUID } from "crypto";
-import { nowSec } from "@/lib/utils";
+import { nowSec, todayUnixDay } from "@/lib/utils";
 
 export async function GET(): Promise<Response> {
   const { userId } = await auth();
@@ -27,6 +27,11 @@ export async function POST(req: Request): Promise<Response> {
     createdAt: nowSec(),
     updatedAt: nowSec()
   });
+
+  const prefs = await getOrCreatePreferences(userId);
+  const today = todayUnixDay(prefs.timezone);
+  await ensureHabitMarkersForDate(userId, today);
+  await syncDayLogStats(userId, today);
 
   return Response.json({ data: habit });
 }

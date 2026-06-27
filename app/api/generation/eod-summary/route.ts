@@ -62,6 +62,10 @@ export async function POST(): Promise<Response> {
     ratio: dayLog.ratio,
     doneTasks: doneTasks.map((t) => t.title),
     missedTasks: missedTasks.map((t) => t.title),
+    habitsCompleted: dayLog.habitsCompleted,
+    habitsMissed: dayLog.habitsMissed,
+    recurringsCompleted: dayLog.recurringsCompleted,
+    recurringsMissed: dayLog.recurringsMissed,
     day_type: dayLog.dayType,
   };
 
