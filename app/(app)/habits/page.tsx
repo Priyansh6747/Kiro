@@ -14,7 +14,8 @@ import {
 } from "@/lib/api-client";
 import { CreateRoutineModal } from "@/components/CreateRoutineModal";
 import type { Habit, RecurringTask } from "@/lib/db/models";
-import { LoadingScreen, ErrorBanner } from "@/components/ui";
+import { HabitsSkeleton } from "@/components/skeletons";
+import { ErrorBanner } from "@/components/ui";
 import { useMemo } from "react";
 import { useConfirm } from "@/hooks/useConfirm";
 
@@ -196,7 +197,7 @@ export default function HabitsPage() {
     return currentList.filter(item => matchedIds.has(item.id));
   }, [currentList, searchQuery, searchTrie]);
 
-  if (isLoading || !data) return <LoadingScreen />;
+  if (isLoading || !data) return <HabitsSkeleton />;
   if (error) return <ErrorBanner message={error.message} onRetry={loadData} />;
 
   const { today } = data;

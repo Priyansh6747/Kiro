@@ -18,9 +18,9 @@ import {
   CreateProjectForm,
   EmptyState,
   ErrorBanner,
-  LoadingScreen,
   TypeBadge,
 } from "@/components/ui";
+import { ProjectsSkeleton } from "@/components/skeletons";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -557,7 +557,7 @@ export default function ProjectsPage() {
     return result;
   }, [projects, filterType, searchQuery, sortBy, sortAsc]);
 
-  if (loading) return <LoadingScreen message="Loading projects…" />;
+  if (loading) return <ProjectsSkeleton />;
   if (error)
     return (
       <div className="p-4">

@@ -4,7 +4,8 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import { Contrast, Leaf, Moon, Sparkles, Sun } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
-import { ErrorBanner, LoadingScreen, Spinner } from "@/components/ui";
+import { SettingsSkeleton } from "@/components/skeletons";
+import { ErrorBanner, Spinner } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 import { getPreferences, patchPreferences } from "@/lib/api-client";
 import type { Preference, RatioMode } from "@/lib/types";
@@ -157,7 +158,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) return <LoadingScreen message="Loading settings…" />;
+  if (loading) return <SettingsSkeleton />;
   if (error)
     return (
       <div className="p-8 max-w-4xl mx-auto w-full">

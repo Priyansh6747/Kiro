@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ScheduledTimelineColumn } from "@/components/todo/ScheduledTimelineColumn";
 import { TaskDetailColumn } from "@/components/todo/TaskDetailColumn";
 import { UnscheduledColumn } from "@/components/todo/UnscheduledColumn";
-import { ErrorBanner, LoadingScreen } from "@/components/ui";
+import { ErrorBanner } from "@/components/ui";
+import { TodoSkeleton } from "@/components/skeletons";
 import { useToast } from "@/hooks/useToast";
 import {
   addDependency,
@@ -151,7 +152,7 @@ export default function TodoPage() {
     }
   };
 
-  if (loading) return <LoadingScreen message="Loading Todo…" />;
+  if (loading) return <TodoSkeleton />;
   if (error)
     return (
       <div className="p-4">

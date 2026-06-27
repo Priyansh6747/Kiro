@@ -5,8 +5,8 @@ import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
 import { DayPlanner } from "@/components/DayPlanner";
 import { DayView } from "@/components/DayView";
-import { TodaySkeleton } from "@/components/TodaySkeleton";
-import { ErrorBanner, LoadingScreen, QuickCapture } from "@/components/ui";
+import { TodaySkeleton } from "@/components/skeletons";
+import { ErrorBanner, QuickCapture } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 import {
   createTask,
@@ -25,7 +25,7 @@ import { todayUnixDay } from "@/lib/utils";
 
 export default function TodayPage() {
   return (
-    <Suspense fallback={<LoadingScreen message="Loading today's plan…" />}>
+    <Suspense fallback={<TodaySkeleton />}>
       <TodayPageContent />
     </Suspense>
   );
@@ -518,7 +518,7 @@ function TodayPageContent() {
     setShowQuickCapture(true);
   };
 
-  if (initialLoading) return <LoadingScreen message="Loading today's plan…" />;
+  if (initialLoading) return <TodaySkeleton />;
   if (error)
     return (
       <div className="p-4">

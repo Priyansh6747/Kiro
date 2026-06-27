@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { InsightsDashboard } from "@/components/insights/InsightsDashboard";
-import { ErrorBanner, LoadingScreen } from "@/components/ui";
+import { InsightsSkeleton } from "@/components/skeletons";
+import { ErrorBanner } from "@/components/ui";
 import { listDayLogs, listProjects, listTasks, getTodayUsage } from "@/lib/api-client";
 import type { DayLog, Project, Task } from "@/lib/types";
 import { todayUnixDay } from "@/lib/types";
@@ -64,7 +65,7 @@ export default function InsightsPage() {
     load();
   }, [load]);
 
-  if (loading) return <LoadingScreen message="Loading insights…" />;
+  if (loading) return <InsightsSkeleton />;
 
   if (error) {
     return (
