@@ -44,9 +44,7 @@ export default function NewLandingPage() {
       <FadeInSection>
         <FlightSystems />
       </FadeInSection>
-      <FadeInSection>
-        <Themes />
-      </FadeInSection>
+
       <FadeInSection>
         <FinalCTA />
       </FadeInSection>
