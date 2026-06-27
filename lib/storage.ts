@@ -880,6 +880,10 @@ export async function updateDayLog(
       | "tasksCompleted"
       | "tasksMissed"
       | "tasksCarried"
+      | "habitsCompleted"
+      | "habitsMissed"
+      | "recurringsCompleted"
+      | "recurringsMissed"
       | "ratio"
       | "updatedAt"
     >
