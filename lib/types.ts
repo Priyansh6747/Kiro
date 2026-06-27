@@ -88,6 +88,24 @@ export interface DayPlan {
   updatedAt: number;
 }
 
+export interface HabitDayPlan {
+  userId: string;
+  habitId: string;
+  planDate: number;
+  startTime: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RecurringDayPlan {
+  userId: string;
+  recurringTaskId: string;
+  planDate: number;
+  startTime: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface TodayPlannerData {
   date: number;
   tasks: Task[];
@@ -96,6 +114,8 @@ export interface TodayPlannerData {
   overloaded: boolean;
   dayLog: DayLog | null;
   dayPlans: DayPlan[];
+  habitDayPlans?: HabitDayPlan[];
+  recurringDayPlans?: RecurringDayPlan[];
   taskDependencies: { taskId: string; predecessorId: string }[];
 }
 

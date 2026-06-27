@@ -26,6 +26,8 @@ import {
   type DayPlan,
   dayLogs,
   dayPlan,
+  habitDayPlan,
+  recurringDayPlan,
   type MemoryBaseline,
   memoryBaseline,
   artifacts,
@@ -1212,6 +1214,102 @@ export async function removeDayPlanBlockForDate(
   await db
     .delete(dayPlan)
     .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId), eq(dayPlan.planDate, planDate)));
+}
+
+export async function placeHabitDayPlanBlock(
+  userId: string,
+  habitId: string,
+  planDate: number,
+  startTime: number,
+): Promise<void> {
+  await db
+    .insert(habitDayPlan)
+    .values({
+      userId,
+      habitId,
+      planDate,
+      startTime,
+      createdAt: nowSec(),
+      updatedAt: nowSec(),
+    })
+    .onConflictDoUpdate({
+      target: [habitDayPlan.userId, habitDayPlan.habitId, habitDayPlan.planDate],
+      set: { startTime, updatedAt: nowSec() },
+    });
+}
+
+export async function removeHabitDayPlanBlock(
+  userId: string,
+  habitId: string,
+  planDate: number,
+): Promise<void> {
+  await db
+    .delete(habitDayPlan)
+    .where(
+      and(
+        eq(habitDayPlan.userId, userId),
+        eq(habitDayPlan.habitId, habitId),
+        eq(habitDayPlan.planDate, planDate)
+      )
+    );
+}
+
+export async function listHabitDayPlansForDate(
+  userId: string,
+  planDate: number,
+) {
+  return db
+    .select()
+    .from(habitDayPlan)
+    .where(and(eq(habitDayPlan.userId, userId), eq(habitDayPlan.planDate, planDate)));
+}
+
+export async function placeRecurringDayPlanBlock(
+  userId: string,
+  recurringTaskId: string,
+  planDate: number,
+  startTime: number,
+): Promise<void> {
+  await db
+    .insert(recurringDayPlan)
+    .values({
+      userId,
+      recurringTaskId,
+      planDate,
+      startTime,
+      createdAt: nowSec(),
+      updatedAt: nowSec(),
+    })
+    .onConflictDoUpdate({
+      target: [recurringDayPlan.userId, recurringDayPlan.recurringTaskId, recurringDayPlan.planDate],
+      set: { startTime, updatedAt: nowSec() },
+    });
+}
+
+export async function removeRecurringDayPlanBlock(
+  userId: string,
+  recurringTaskId: string,
+  planDate: number,
+): Promise<void> {
+  await db
+    .delete(recurringDayPlan)
+    .where(
+      and(
+        eq(recurringDayPlan.userId, userId),
+        eq(recurringDayPlan.recurringTaskId, recurringTaskId),
+        eq(recurringDayPlan.planDate, planDate)
+      )
+    );
+}
+
+export async function listRecurringDayPlansForDate(
+  userId: string,
+  planDate: number,
+) {
+  return db
+    .select()
+    .from(recurringDayPlan)
+    .where(and(eq(recurringDayPlan.userId, userId), eq(recurringDayPlan.planDate, planDate)));
 }
 
 // ---------------------------------------------------------------------------

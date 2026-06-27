@@ -169,6 +169,10 @@ export const plannerHandlers: Record<string, Function> = {
     const rows: string[][] = [];
     
     // Add Habits and Recurring Tasks (Phase 5)
+    const { ensureHabitMarkersForDate, ensureRecurringMarkersForDate } = await import("@/lib/storage");
+    await ensureHabitMarkersForDate(userId, todayDate);
+    await ensureRecurringMarkersForDate(userId, todayDate);
+    
     const { habits, recurring } = await getDailyHabitBlocks(userId, todayDate);
     
     habits.forEach((h: any) => {
@@ -211,6 +215,8 @@ export const plannerHandlers: Record<string, Function> = {
     return { 
       agenda: enrichedAgenda, 
       bucket: enrichedBucket,
+      habits: habits,
+      recurringTasks: recurring,
       preformattedUi: markdown
     };
   },
