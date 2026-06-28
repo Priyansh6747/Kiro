@@ -14,6 +14,7 @@ export default function SignInPage() {
       <div className="relative z-10 animate-in fade-in zoom-in duration-500">
         <Suspense fallback={<div className="text-[#F4EFE6]">Loading...</div>}>
           <SignIn
+            signUpFallbackRedirectUrl="/privacy"
             appearance={{
               elements: {
                 card: "bg-[#181613]/80 backdrop-blur-xl border border-[#332E27] shadow-2xl",

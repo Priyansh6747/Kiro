@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { AcceptButton } from "./AcceptButton";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -218,6 +219,8 @@ export default function PrivacyPolicyPage() {
           </p>
 
         </div>
+        
+        <AcceptButton />
       </div>
     </div>
   );
