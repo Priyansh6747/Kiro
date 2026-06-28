@@ -8,6 +8,7 @@ import { animate } from "motion";
 export default function ChatDemo() {
   const [messages, setMessages] = useState<any[]>([]);
   const [script, setScript] = useState<any[]>([]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,24 +24,41 @@ export default function ChatDemo() {
   useEffect(() => {
     if (script.length === 0) return;
 
-    let currentIdx = 0;
-    
-    // Add first message immediately
-    setMessages([script[0]]);
-    currentIdx++;
+    let isCancelled = false;
 
-    const interval = setInterval(() => {
-      if (currentIdx < script.length) {
-        // Capture the current value to avoid closure issues
-        const nextMsg = script[currentIdx];
-        setMessages(prev => [...prev, nextMsg]);
-        currentIdx++;
-      } else {
-        clearInterval(interval);
+    const runConversation = async () => {
+      while (!isCancelled) {
+        setIsTransitioning(false);
+        setMessages([script[0]]);
+        let currentIdx = 1;
+        
+        while (currentIdx < script.length && !isCancelled) {
+          // 4 seconds between messages for better reading pacing
+          await new Promise(r => setTimeout(r, 4000));
+          if (isCancelled) break;
+          const nextMsg = script[currentIdx];
+          setMessages(prev => [...prev, nextMsg]);
+          currentIdx++;
+        }
+        
+        if (isCancelled) break;
+        
+        // Wait a bit before restarting
+        await new Promise(r => setTimeout(r, 6000));
+        if (isCancelled) break;
+        
+        // Trigger fade out
+        setIsTransitioning(true);
+        // Wait for fade out animation to finish
+        await new Promise(r => setTimeout(r, 800));
       }
-    }, 4000); // 4 seconds between messages for better reading pacing
+    };
 
-    return () => clearInterval(interval);
+    runConversation();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [script]);
 
   useEffect(() => {
@@ -78,7 +96,7 @@ export default function ChatDemo() {
   }, []);
 
   return (
-    <div className="theme-paper w-full h-full relative z-20 pointer-events-none">
+    <div className="theme-paper w-full h-full relative z-20 pointer-events-none flex items-center justify-center p-4 sm:p-8">
       <style>{`
         .theme-paper {
           --color-base: var(--bg-base);
@@ -110,9 +128,25 @@ export default function ChatDemo() {
           --tw-prose-td-borders: var(--border-default);
         }
       `}</style>
-      <div className="w-full h-full bg-base md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className={`w-full max-w-xl h-[450px] md:h-[600px] bg-base rounded-xl shadow-[0_25px_65px_rgba(0,0,0,0.6)] border border-border-default/40 flex flex-col overflow-hidden transition-opacity duration-700 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+        
+        {/* Window Titlebar */}
+        <div className="h-10 bg-surface-raised flex items-center px-4 shrink-0 border-b border-border-default/40">
+          <div className="flex gap-2 w-16">
+            <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-black/10" />
+            <div className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-black/10" />
+            <div className="w-3 h-3 rounded-full bg-[#27C93F] border border-black/10" />
+          </div>
+          <div className="flex-1 flex justify-center">
+            <span className="text-[12px] font-medium text-secondary">
+              Yuki &mdash; Assistant
+            </span>
+          </div>
+          <div className="w-16" /> {/* Spacer for centering */}
+        </div>
+
         <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar bg-base">
-          <div className="p-6 md:p-10 space-y-8 flex flex-col">
+          <div className="p-5 md:p-8 space-y-6 flex flex-col">
             {messages.map((msg, i) => (
               <div key={i} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'} animate-in slide-in-from-bottom-2 fade-in duration-500`}>
                 {msg.role !== 'user' && msg.name && (
