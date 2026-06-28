@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useRef } from 'react';
-import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'motion/react';
+import { DayPlannerDemo, DependencyGraphDemo, YukiChatDemo } from './DemoComponents';
 
 const FEATURES = [
   {
@@ -10,21 +10,21 @@ const FEATURES = [
     eyebrow: 'HOW IT FEELS DAY TO DAY',
     headline: 'Twenty-one days, one continuous view.',
     body: "No pages, no pagination lag — just what's coming, scrolling smoothly past.",
-    imagePath: '/Demo/DayPlanner.png'
+    component: <DayPlannerDemo />
   },
   {
     id: 'dependency',
     eyebrow: null,
     headline: 'Move one task. Watch everything downstream catch up.',
     body: "Reschedule something upstream and Kiro automatically ripples the change through everything that depends on it.",
-    imagePath: '/Demo/DependencyGraph.png'
+    component: <DependencyGraphDemo />
   },
   {
     id: 'chat',
     eyebrow: null,
     headline: 'Ask for a plan. Watch it build itself.',
     body: "Tell Yuki what you're trying to do, and a real, editable plan appears inline — not a wall of text, an actual interface.",
-    imagePath: '/Demo/Yuki.png'
+    component: <YukiChatDemo />
   }
 ];
 
@@ -32,7 +32,7 @@ function FeatureRow({ feature, index }: { feature: any, index: number }) {
   const isReversed = index % 2 !== 0;
   const containerRef = useRef(null);
   
-  // Parallax effect for the image to float against the scroll
+  // Parallax effect for the image/demo to float against the scroll
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
@@ -65,7 +65,7 @@ function FeatureRow({ feature, index }: { feature: any, index: number }) {
         </p>
       </motion.div>
 
-      {/* Image Block - Fades in, un-blurs, subtly scales down, and tracks with parallax */}
+      {/* Demo Block - Fades in, un-blurs, subtly scales down, and tracks with parallax */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
         whileInView={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
@@ -84,13 +84,7 @@ function FeatureRow({ feature, index }: { feature: any, index: number }) {
             transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 w-full h-full"
           >
-            <Image 
-              src={feature.imagePath} 
-              alt={feature.headline}
-              fill
-              className="object-cover object-left-top"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
+            {feature.component}
           </motion.div>
         </motion.div>
       </motion.div>
