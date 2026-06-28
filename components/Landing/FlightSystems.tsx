@@ -95,8 +95,8 @@ function FeatureRow({ feature, index }: { feature: any, index: number }) {
 
 export default function FlightSystems() {
   return (
-    <section className="w-full bg-[#0E0D0B] py-32 lg:py-48 px-8 overflow-hidden border-t border-[#332E27]">
-      <div className="max-w-7xl mx-auto flex flex-col gap-32 lg:gap-48">
+    <section className="w-full bg-[#0E0D0B] py-20 lg:py-48 px-6 md:px-8 overflow-hidden border-t border-[#332E27]">
+      <div className="max-w-7xl mx-auto flex flex-col gap-24 lg:gap-48">
         {FEATURES.map((feature, i) => (
           <FeatureRow key={feature.id} feature={feature} index={i} />
         ))}

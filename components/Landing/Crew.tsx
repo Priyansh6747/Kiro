@@ -48,15 +48,15 @@ export default function Crew() {
   
   return (
     <section ref={containerRef} className="w-full bg-[#0E0D0B] border-t border-[#332E27] relative">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row px-8">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row px-6 md:px-8">
         
         {/* Left Side: Fixed/Sticky Yuki */}
-        <div className="lg:w-1/2 lg:sticky lg:top-0 lg:h-screen flex flex-col justify-center py-32 lg:py-0 relative">
+        <div className="lg:w-1/2 lg:sticky lg:top-0 lg:h-screen flex flex-col justify-center py-20 lg:py-0 relative">
           
           <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-[#FF8A3D] opacity-5 blur-[100px] rounded-full pointer-events-none" />
           
           <div className="relative z-10">
-            <span className="text-[#9C9488] text-[11px] tracking-[0.12em] uppercase font-bold mb-12 block">
+            <span className="text-[#9C9488] text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-8 md:mb-12 block">
               THE CREW
             </span>
             

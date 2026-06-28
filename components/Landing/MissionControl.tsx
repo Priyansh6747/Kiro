@@ -17,24 +17,24 @@ export default function MissionControl() {
   }, [isInView, count]);
 
   return (
-    <section className="w-full bg-[#181613] py-32 px-8 border-y border-[#332E27]">
+    <section className="w-full bg-[#181613] py-20 md:py-32 px-6 md:px-8 border-y border-[#332E27]">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
         
         {/* Left: Copy */}
         <div className="flex-1 max-w-xl">
-          <span className="text-[#9C9488] text-[11px] tracking-[0.12em] uppercase font-bold mb-6 block">
+          <span className="text-[#9C9488] text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-4 md:mb-6 block">
             HOW IT DECIDES
           </span>
-          <h2 className="text-4xl md:text-5xl font-serif text-[#F4EFE6] leading-[1.2] mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif text-[#F4EFE6] leading-[1.2] mb-6">
             Every project gets a score. <br />
             <em className="italic font-light">Ignore it, and the number knows.</em>
           </h2>
-          <p className="text-[#9C9488] text-lg leading-relaxed">
+          <p className="text-[#9C9488] text-base md:text-lg leading-relaxed">
             The longer something sits untouched, the higher its score climbs. The closer the deadline, the sharper it spikes. Kiro doesn't guess what needs your attention — it calculates it, every morning, and says so plainly.
           </p>
           
-          <div className="mt-10 pt-8 border-t border-[#332E27]/60">
-            <p className="text-[#9C9488] text-sm flex items-start gap-3 opacity-80">
+          <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-[#332E27]/60">
+            <p className="text-[#9C9488] text-xs md:text-sm flex items-start gap-3 opacity-80">
               <span className="text-[#FF5C5C] mt-0.5 select-none">↳</span>
               <span className="italic font-light">Yuki's already seen it. She'll mention it.</span>
             </p>
@@ -42,10 +42,10 @@ export default function MissionControl() {
         </div>
 
         {/* Right: Data Visualization */}
-        <div className="flex-1 w-full flex flex-col items-center justify-center py-12" ref={containerRef}>
-          <div className="relative flex items-center justify-center">
+        <div className="flex-1 w-full flex flex-col items-center justify-center py-8 md:py-12" ref={containerRef}>
+          <div className="relative flex items-center justify-center w-full max-w-[280px]">
             
-            <svg width="280" height="280" viewBox="0 0 200 200" className="transform -rotate-90 drop-shadow-xl overflow-visible">
+            <svg viewBox="0 0 200 200" className="w-full h-auto transform -rotate-90 drop-shadow-xl overflow-visible">
               {/* Outer Track */}
               <circle cx="100" cy="100" r="90" fill="none" stroke="#2A261F" strokeWidth="2" />
               

@@ -35,9 +35,7 @@ export default function NewLandingPage() {
       <FadeInSection>
         <Problem />
       </FadeInSection>
-      <FadeInSection>
-        <Crew />
-      </FadeInSection>
+      <Crew />
       <FadeInSection>
         <MissionControl />
       </FadeInSection>
