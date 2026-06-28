@@ -882,6 +882,10 @@ function TodayPageContent() {
                   recurringDayPlans={recurringDayPlans}
                   onOpenPlanner={() => setIsPlannerOpen(true)}
                   onMarkDone={handleMarkDone}
+                  onMarkHabit={handleMarkHabit}
+                  onMarkRecurring={handleMarkRecurring}
+                  habitsData={habitsData}
+                  selectedDate={selectedDate}
                   animatingPlacements={animatingTasksStatus}
                 />
               </div>
@@ -907,6 +911,10 @@ function TodayPageContent() {
                   onUnplaceRecurring={handleUnplaceRecurring}
                   onClose={() => setIsPlannerOpen(false)}
                   onMarkDone={handleMarkDone}
+                  onMarkHabit={handleMarkHabit}
+                  onMarkRecurring={handleMarkRecurring}
+                  habitsData={habitsData}
+                  selectedDate={selectedDate}
                   animatingPlacements={animatingTasksStatus}
                 />
               )}

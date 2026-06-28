@@ -51,6 +51,10 @@ interface TimelineProps {
 
   onClose: () => void;
   onMarkDone: (task: Task) => void;
+  onMarkHabit?: (habitId: string, currentStatus: string) => void;
+  onMarkRecurring?: (rtId: string, currentStatus: string) => void;
+  habitsData?: any;
+  selectedDate?: number;
   animatingPlacements?: Record<string, "loading" | "success" | "error">;
 }
 
@@ -71,6 +75,10 @@ export function DayPlanner({
   onUnplaceRecurring,
   onClose,
   onMarkDone,
+  onMarkHabit,
+  onMarkRecurring,
+  habitsData,
+  selectedDate,
   animatingPlacements = {},
 }: TimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -348,24 +356,30 @@ export function DayPlanner({
     let label: string;
     let sublabel: string;
     let baseClass: string;
+    let isDone = false;
 
     if (d.kind === "task") {
       const task = d.item as Task;
       label = task.title;
       sublabel = projects.find((p) => p.id === task.projectId)?.name ?? "";
-      baseClass =
-        task.status === "done"
+      isDone = task.status === "done";
+      baseClass = isDone
           ? "bg-done-subtle border-done/30 text-secondary"
           : "bg-accent-subtle border-accent/30 hover:border-accent text-primary";
     } else if (d.kind === "habit") {
       label = (d.item as Habit).name;
       sublabel = "Habit";
-      baseClass =
-        "bg-purple-500/10 border-purple-400/30 hover:border-purple-400/70 text-primary";
+      isDone = habitsData?.markers?.[(d.item as Habit).id]?.[selectedDate || 0] === "done";
+      baseClass = isDone
+          ? "bg-purple-500/5 border-purple-400/20 text-secondary"
+          : "bg-purple-500/10 border-purple-400/30 hover:border-purple-400/70 text-primary";
     } else {
       label = (d.item as RecurringTask).title;
       sublabel = "Routine";
-      baseClass = "bg-done-subtle border-done/30 hover:border-done/70 text-primary";
+      isDone = habitsData?.recurringMarkers?.[(d.item as RecurringTask).id]?.[selectedDate || 0] === "done";
+      baseClass = isDone
+          ? "bg-done-subtle/50 border-done/20 text-secondary"
+          : "bg-done-subtle border-done/30 hover:border-done/70 text-primary";
     }
 
     return (
@@ -385,42 +399,43 @@ export function DayPlanner({
       >
         <div className="flex justify-between items-start h-full">
           <div className="flex items-start gap-2 flex-1 min-w-0 pr-2">
-            {/* Mark-done button only for tasks */}
-            {d.kind === "task" && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (d.kind === "task") {
                   onMarkDone(d.item as Task);
-                }}
-                className={`shrink-0 mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  (d.item as Task).status === "done"
-                    ? "border-done bg-done text-surface"
-                    : "border-border-strong hover:border-done"
-                }`}
-              >
-                {(d.item as Task).status === "done" && (
-                  <svg
-                    width="10"
-                    height="10"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            )}
+                } else if (d.kind === "habit" && onMarkHabit) {
+                  onMarkHabit(d.item.id, isDone ? "done" : "pending");
+                } else if (d.kind === "recurring" && onMarkRecurring) {
+                  onMarkRecurring(d.item.id, isDone ? "done" : "pending");
+                }
+              }}
+              className={`shrink-0 mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                isDone
+                  ? "border-done bg-done text-surface"
+                  : "border-border-strong hover:border-done"
+              }`}
+            >
+              {isDone && (
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
             <div className="flex flex-col flex-1 min-w-0">
               <div className="relative flex max-w-full self-start min-w-0">
                 <span
                   style={
-                    d.kind === "task" && (d.item as Task).status === "done"
-                      ? { color: "rgba(0,0,0,0.5)" }
-                      : undefined
+                    isDone ? { color: "rgba(0,0,0,0.5)" } : undefined
                   }
                   className={`text-xs md:text-sm font-medium truncate leading-tight select-none ${
                     animState === "loading" ? "text-secondary" : "text-inherit"
@@ -428,7 +443,7 @@ export function DayPlanner({
                 >
                   {label}
                 </span>
-                {d.kind === "task" && (d.item as Task).status === "done" && (
+                {isDone && (
                   <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />
                 )}
               </div>

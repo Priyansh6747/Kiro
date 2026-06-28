@@ -13,6 +13,10 @@ interface DayViewProps {
   recurringDayPlans: RecurringPlan[];
   onOpenPlanner: () => void;
   onMarkDone: (task: Task) => void;
+  onMarkHabit?: (habitId: string, currentStatus: string) => void;
+  onMarkRecurring?: (rtId: string, currentStatus: string) => void;
+  habitsData?: any;
+  selectedDate?: number;
   animatingPlacements?: Record<string, "loading" | "success" | "error">;
 }
 
@@ -26,6 +30,10 @@ export function DayView({
   recurringDayPlans,
   onOpenPlanner,
   onMarkDone,
+  onMarkHabit,
+  onMarkRecurring,
+  habitsData,
+  selectedDate,
   animatingPlacements = {},
 }: DayViewProps) {
   // Combine all types of plans into a single sorted list
@@ -110,11 +118,17 @@ export function DayView({
                 } else if (u.type === "habit") {
                   title = (u.item as Habit).name;
                   subtitle = "HABIT";
-                  baseClass = "bg-transparent backdrop-blur-xl border-cyan-500/50 hover:border-cyan-400 shadow-sm";
+                  isDone = habitsData?.markers?.[(u.item as Habit).id]?.[selectedDate || 0] === "done";
+                  baseClass = isDone
+                    ? "bg-transparent backdrop-blur-xl border-cyan-500/30 text-secondary"
+                    : "bg-transparent backdrop-blur-xl border-cyan-500/50 hover:border-cyan-400 shadow-sm";
                 } else {
                   title = (u.item as RecurringTask).title;
                   subtitle = "ROUTINE";
-                  baseClass = "bg-transparent backdrop-blur-xl border-done/30 hover:border-done/70 shadow-sm";
+                  isDone = habitsData?.recurringMarkers?.[(u.item as RecurringTask).id]?.[selectedDate || 0] === "done";
+                  baseClass = isDone
+                    ? "bg-transparent backdrop-blur-xl border-done/20 text-secondary"
+                    : "bg-transparent backdrop-blur-xl border-done/30 hover:border-done/70 shadow-sm";
                 }
 
                 return (
@@ -163,31 +177,37 @@ export function DayView({
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {u.type === "task" && (
-                            <button
-                              onClick={() => onMarkDone(u.item as Task)}
-                              className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                isDone
-                                  ? "border-done bg-done text-surface"
-                                  : "border-border-strong hover:border-done"
-                              }`}
-                            >
-                              {isDone && (
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="3"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                              )}
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              if (u.type === "task") {
+                                onMarkDone(u.item as Task);
+                              } else if (u.type === "habit" && onMarkHabit) {
+                                onMarkHabit(u.item.id, isDone ? "done" : "pending");
+                              } else if (u.type === "recurring" && onMarkRecurring) {
+                                onMarkRecurring(u.item.id, isDone ? "done" : "pending");
+                              }
+                            }}
+                            className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              isDone
+                                ? "border-done bg-done text-surface"
+                                : "border-border-strong hover:border-done"
+                            }`}
+                          >
+                            {isDone && (
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            )}
+                          </button>
                           <div className="flex flex-col gap-1 min-w-0 flex-1">
                             <div className="relative flex max-w-full self-start min-w-0">
                               <span
