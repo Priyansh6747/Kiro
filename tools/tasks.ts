@@ -222,7 +222,49 @@ export const taskHandlers: Record<string, Function> = {
     }
 
     const task = await findTaskByTitle(args.taskTitle, userId, projectId);
-    if (!task) throw new Error(`Task "${args.taskTitle}" not found.`);
+    if (!task) {
+      // Fallback: check if it's a habit or recurring task
+      const { listActiveHabits, listActiveRecurringTasks, markHabit, markRecurring, getOrCreatePreferences } = await import("@/lib/storage");
+      const { todayUnixDay } = await import("@/lib/utils");
+      
+      const [habits, recurring] = await Promise.all([
+        listActiveHabits(userId),
+        listActiveRecurringTasks(userId)
+      ]);
+      
+      const lowerTitle = args.taskTitle.toLowerCase();
+      const habit = habits.find(h => h.name.toLowerCase() === lowerTitle || lowerTitle.includes(h.name.toLowerCase()));
+      if (habit) {
+        let hStatus = args.status;
+        if (hStatus === "deleted") hStatus = "skipped";
+        if (hStatus !== "done" && hStatus !== "pending" && hStatus !== "missed" && hStatus !== "skipped") {
+           hStatus = "done"; // default to done if ambiguous
+        }
+        const prefs = await getOrCreatePreferences(userId);
+        const todayDate = todayUnixDay(prefs.timezone);
+        await markHabit(habit.id, todayDate, hStatus as any);
+        return {
+          preformattedUi: `✓ Marked habit **${habit.name}** as ${hStatus} for today.`
+        };
+      }
+      
+      const rec = recurring.find(r => r.title.toLowerCase() === lowerTitle || lowerTitle.includes(r.title.toLowerCase()));
+      if (rec) {
+        let rStatus = args.status;
+        if (rStatus === "deleted") rStatus = "missed";
+        if (rStatus !== "done" && rStatus !== "pending" && rStatus !== "missed" && rStatus !== "carried") {
+           rStatus = "done";
+        }
+        const prefs = await getOrCreatePreferences(userId);
+        const todayDate = todayUnixDay(prefs.timezone);
+        await markRecurring(rec.id, todayDate, rStatus as any);
+        return {
+          preformattedUi: `✓ Marked recurring task **${rec.title}** as ${rStatus} for today.`
+        };
+      }
+
+      throw new Error(`Task "${args.taskTitle}" not found. No matching standard task, habit, or recurring task was found.`);
+    }
 
     const updates: any = {};
     if (args.status !== undefined) updates.status = args.status;

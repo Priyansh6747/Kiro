@@ -1784,7 +1784,11 @@ export async function getDailyHabitBlocks(userId: string, date: number) {
     .innerJoin(recurringTasks, eq(recurringMarkers.recurringTaskId, recurringTasks.id))
     .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, date)));
 
-  return { habits: habitsRes, recurring: recurringRes };
+  // Deduplicate in case of dirty db state or missing unique constraints
+  const uniqueHabits = Array.from(new Map(habitsRes.map(h => [h.id, h])).values());
+  const uniqueRecurring = Array.from(new Map(recurringRes.map(r => [r.id, r])).values());
+
+  return { habits: uniqueHabits, recurring: uniqueRecurring };
 }
 
 // ---------------------------------------------------------------------------
