@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveHorizontal } from "lucide-react";
+import { motion } from "motion/react";
 import {
   type RefObject,
   useEffect,
@@ -15,27 +16,51 @@ import { formatDateShort, parseDateStr } from "./utils";
 
 function ScheduledTask({
   task,
+  onDone,
+  onDelete,
   onClick,
   isSelected,
 }: {
   task: Task;
+  onDone: (t: Task) => void;
+  onDelete: (t: Task) => void;
   onClick: () => void;
   isSelected: boolean;
 }) {
   return (
-    <div
-      onClick={onClick}
-      className={`border border-border-default rounded-md p-2 cursor-pointer transition-colors ${isSelected ? "bg-accent-subtle border-accent" : "bg-surface hover:bg-surface-raised"} relative z-10`}
-    >
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-primary line-clamp-1 mr-2">
-          {task.title}
-        </span>
+    <div className="relative overflow-hidden border border-border-default rounded-md bg-surface last:mb-0">
+      <div className="absolute inset-y-0 left-0 w-1/2 bg-done text-white flex items-center px-4 font-semibold text-sm rounded-l-md">
+        Done
       </div>
-      <div className="flex justify-between items-center text-xs text-secondary">
-        <span>{task.estimateMin}m</span>
-        <StatusBadge status={task.status} />
+      <div className="absolute inset-y-0 right-0 w-1/2 bg-missed text-white flex items-center justify-end px-4 font-semibold text-sm rounded-r-md">
+        Delete
       </div>
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.8}
+        onDragEnd={(e, info) => {
+          if (info.offset.x > 80) onDone(task);
+          else if (info.offset.x < -80) onDelete(task);
+        }}
+        onClick={onClick}
+        style={{ touchAction: "pan-y" }}
+        className={`relative z-10 p-2 cursor-pointer transition-colors ${isSelected ? "bg-accent-subtle border-accent" : "bg-surface hover:bg-surface-raised"}`}
+      >
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-sm font-medium text-primary line-clamp-1 mr-2">
+            {task.title}
+          </span>
+          <div className="flex items-center gap-1 text-[10px] text-tertiary opacity-50 font-medium shrink-0">
+            <MoveHorizontal className="w-3 h-3" />
+            <span className="hidden sm:inline">Swipe</span>
+          </div>
+        </div>
+        <div className="flex justify-between items-center text-xs text-secondary mt-1">
+          <span>{task.estimateMin}m</span>
+          <StatusBadge status={task.status} />
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -55,6 +80,8 @@ export function ScheduledTimelineColumn({
   timelineMode,
   setTimelineMode,
   onSelectTask,
+  onUpdateTask,
+  onDeleteTask,
   todayRef,
   className,
 }: {
@@ -63,6 +90,8 @@ export function ScheduledTimelineColumn({
   timelineMode: "compact" | "continuous";
   setTimelineMode: (m: "compact" | "continuous") => void;
   onSelectTask: (t: Task) => void;
+  onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onDeleteTask: (id: string) => void;
   todayRef: RefObject<HTMLDivElement | null>;
   className?: string;
 }) {
@@ -311,6 +340,8 @@ export function ScheduledTimelineColumn({
                     key={t.id}
                     task={t}
                     onClick={() => onSelectTask(t)}
+                    onDone={(t) => onUpdateTask(t.id, { status: "done" })}
+                    onDelete={(t) => onDeleteTask(t.id)}
                     isSelected={selectedTask?.id === t.id}
                   />
                 ))}
@@ -366,6 +397,8 @@ export function ScheduledTimelineColumn({
                   key={t.id}
                   task={t}
                   onClick={() => onSelectTask(t)}
+                  onDone={(t) => onUpdateTask(t.id, { status: "done" })}
+                  onDelete={(t) => onDeleteTask(t.id)}
                   isSelected={selectedTask?.id === t.id}
                 />
               ))}
@@ -434,6 +467,13 @@ export function ScheduledTimelineColumn({
           </button>
         </div>
       </div>
+      {tasks.length > 0 && (
+        <div className="px-4 py-1.5 bg-surface-raised border-b border-border-default flex items-center justify-center gap-4 text-[10px] text-tertiary uppercase tracking-wider shrink-0 select-none">
+          <span className="flex items-center gap-1"><span className="opacity-50">←</span> Delete</span>
+          <span className="opacity-20">|</span>
+          <span className="flex items-center gap-1">Done <span className="opacity-50">→</span></span>
+        </div>
+      )}
       <div className="relative" style={{ height: "calc(100vh - 120px)" }}>
         <div
           ref={scrollContainerRef}

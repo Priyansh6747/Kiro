@@ -61,8 +61,7 @@ export function Sidebar() {
     <aside className="hidden md:flex flex-col w-48 lg:w-56 shrink-0 border-r border-border-default bg-surface h-screen sticky top-0 justify-between">
       <div>
         <div className="px-6 py-6">
-          <h1 className="text-xl font-mono tracking-tight text-primary flex items-center gap-2">
-            <img src="/Logo.jpg" alt="Kiro Logo" className="w-8 h-8 rounded-md" />
+          <h1 className="text-xl font-mono tracking-tight text-primary">
             Kiro
           </h1>
         </div>

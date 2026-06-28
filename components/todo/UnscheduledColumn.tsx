@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { MoveHorizontal } from "lucide-react";
 import type { Project, Task } from "@/lib/types";
 
 function SwipeableUnscheduledTask({
@@ -37,9 +38,15 @@ function SwipeableUnscheduledTask({
         className={`relative z-10 flex flex-col p-3 cursor-pointer select-none transition-colors ${isSelected ? "!bg-accent-subtle" : "bg-surface hover:bg-surface-raised"}`}
       >
         <span className="text-sm font-medium text-primary">{task.title}</span>
-        <span className="text-xs text-secondary mt-1">
-          {task.estimateMin}m • {task.status}
-        </span>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-xs text-secondary">
+            {task.estimateMin}m • {task.status}
+          </span>
+          <div className="flex items-center gap-1 text-[10px] text-tertiary opacity-50 font-medium">
+            <MoveHorizontal className="w-3 h-3" />
+            <span>Swipe</span>
+          </div>
+        </div>
       </motion.div>
     </div>
   );
@@ -76,6 +83,13 @@ export function UnscheduledColumn({
           {unscheduledTasks.length}
         </span>
       </div>
+      {unscheduledTasks.length > 0 && (
+        <div className="px-4 py-1.5 bg-surface-raised border-b border-border-default flex items-center justify-center gap-4 text-[10px] text-tertiary uppercase tracking-wider shrink-0 select-none">
+          <span className="flex items-center gap-1"><span className="opacity-50">←</span> Delete</span>
+          <span className="opacity-20">|</span>
+          <span className="flex items-center gap-1">Done <span className="opacity-50">→</span></span>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto">
         {unscheduledTasks.length === 0 ? (
           <div className="p-4 text-secondary text-sm text-center mt-10">

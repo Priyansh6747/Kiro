@@ -198,6 +198,8 @@ export default function TodoPage() {
           timelineMode={timelineMode}
           setTimelineMode={setTimelineMode}
           onSelectTask={setSelectedTask}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
           todayRef={todayRef}
         />
 

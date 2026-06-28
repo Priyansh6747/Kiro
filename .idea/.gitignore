@@ -8,3 +8,7 @@
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+/data_source_mapping.xml
+/dataSources.xml
+/sqldialects.xml
+
