@@ -163,7 +163,7 @@ export function StrategyForm({ taskId, taskTitle, estimateMin, deadlineAt, initi
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active Days</label>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="day-picker" style={{ display: 'flex', gap: 8 }}>
           {DAYS.map((label, i) => {
             const val = i + 1;
             const selected = activeDays.includes(val);
@@ -171,6 +171,7 @@ export function StrategyForm({ taskId, taskTitle, estimateMin, deadlineAt, initi
               <button
                 key={val}
                 onClick={() => toggleDay(val)}
+                className="day"
                 style={{
                   width: 36, height: 36, borderRadius: 18,
                   background: selected ? 'var(--accent)' : 'var(--bg-surface-raised)',
@@ -194,6 +195,7 @@ export function StrategyForm({ taskId, taskTitle, estimateMin, deadlineAt, initi
           <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Start Date</label>
           <input 
             type="date" 
+            className="start-date"
             value={preferredStartDate} 
             onChange={e => setPreferredStartDate(e.target.value)}
             style={{
@@ -226,6 +228,7 @@ export function StrategyForm({ taskId, taskTitle, estimateMin, deadlineAt, initi
       </label>
 
       <button
+        className="feasibility-btn"
         onClick={handleSubmit}
         style={{
           background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8,
