@@ -15,7 +15,7 @@ export default function Hero() {
 
       {/* Left column (~42%) */}
       <div className="relative z-10 w-full md:w-[42%] flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-32 md:pt-0 pb-12 md:pb-0 h-auto md:h-full">
-        <span className="text-[#9C9488] text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-4 md:mb-6">
+        <span className="text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-4 md:mb-6" style={{ color: "rgba(244, 239, 230, 0.7)" }}>
           KIRO &middot; TASK MANAGEMENT, RUN BY AGENTS
         </span>
         
@@ -23,7 +23,7 @@ export default function Hero() {
           There's an intelligence running your day. <span className="italic font-light">Meet Yuki — she has opinions about how you're running it.</span>
         </h1>
         
-        <p className="text-[#9C9488] text-base md:text-lg font-sans leading-relaxed mb-8 md:mb-10 max-w-md">
+        <p className="text-base md:text-lg font-sans leading-relaxed mb-8 md:mb-10 max-w-md" style={{ color: "rgba(244, 239, 230, 0.7)" }}>
           Yuki is your primary coordinator. She delegates to a crew of specialized agents, calls you out when you slack off, and keeps your week from quietly falling apart — with brutal efficiency.
         </p>
 

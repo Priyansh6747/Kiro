@@ -22,19 +22,19 @@ export default function MissionControl() {
         
         {/* Left: Copy */}
         <div className="flex-1 max-w-xl">
-          <span className="text-[#9C9488] text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-4 md:mb-6 block">
+          <span className="text-[10px] md:text-[11px] tracking-[0.12em] uppercase font-bold mb-4 md:mb-6 block" style={{ color: "#9C9488" }}>
             HOW IT DECIDES
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif text-[#F4EFE6] leading-[1.2] mb-6">
             Every project gets a score. <br />
             <em className="italic font-light">Ignore it, and the number knows.</em>
           </h2>
-          <p className="text-[#9C9488] text-base md:text-lg leading-relaxed">
+          <p className="text-base md:text-lg leading-relaxed" style={{ color: "#9C9488" }}>
             The longer something sits untouched, the higher its score climbs. The closer the deadline, the sharper it spikes. Kiro doesn't guess what needs your attention — it calculates it, every morning, and says so plainly.
           </p>
           
           <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-[#332E27]/60">
-            <p className="text-[#9C9488] text-xs md:text-sm flex items-start gap-3 opacity-80">
+            <p className="text-xs md:text-sm flex items-start gap-3 opacity-80" style={{ color: "#9C9488" }}>
               <span className="text-[#FF5C5C] mt-0.5 select-none">↳</span>
               <span className="italic font-light">Yuki's already seen it. She'll mention it.</span>
             </p>
