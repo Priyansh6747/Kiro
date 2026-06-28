@@ -28,7 +28,7 @@ export default function Hero() {
 
         <div className="flex items-center gap-6">
           <button className="px-8 py-3.5 rounded-full bg-[#F4EFE6] text-[#0E0D0B] text-sm font-bold hover:opacity-90 transition-opacity">
-            Talk to Yuki
+            Get Started
           </button>
           <a href="#" className="text-[#9C9488] text-sm font-medium hover:text-[#F4EFE6] transition-colors">
             Watch her think &rarr;
