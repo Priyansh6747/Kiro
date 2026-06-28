@@ -179,19 +179,19 @@ export default function SettingsPage() {
         </div>
 
         <SectionCard title="Account" description="Manage your active session.">
-          <div className="flex items-center justify-between py-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-6 sm:gap-4">
             {user ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 truncate">
                 <img
                   src={user.imageUrl}
                   alt="Profile"
-                  className="w-12 h-12 rounded-full border border-border-default shadow-sm"
+                  className="w-12 h-12 rounded-full border border-border-default shadow-sm shrink-0"
                 />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-primary">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-semibold text-primary truncate">
                     {user.fullName || user.firstName || "User"}
                   </span>
-                  <span className="text-xs text-secondary">
+                  <span className="text-xs text-secondary truncate">
                     {user.primaryEmailAddress?.emailAddress}
                   </span>
                 </div>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
               <div className="text-sm text-secondary">Loading profile...</div>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 shrink-0">
               <button
                 onClick={() => clerk.openUserProfile()}
                 className="px-4 py-2 text-sm font-medium text-secondary bg-surface-raised hover:text-primary hover:border-border-strong border border-border-default rounded-lg transition-all focus:ring-2 focus:ring-accent/30"
