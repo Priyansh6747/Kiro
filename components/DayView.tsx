@@ -105,16 +105,16 @@ export function DayView({
                   subtitle = projects.find((p) => p.id === task.projectId)?.name || "PROJECT";
                   isDone = task.status === "done";
                   baseClass = isDone
-                    ? "bg-done-subtle border-done/30 text-secondary"
-                    : "bg-surface-raised border-border-default hover:border-accent text-primary";
+                    ? "bg-transparent backdrop-blur-xl border-done/30 text-secondary"
+                    : "bg-transparent backdrop-blur-xl border-border-default hover:border-accent text-primary shadow-sm";
                 } else if (u.type === "habit") {
                   title = (u.item as Habit).name;
                   subtitle = "HABIT";
-                  baseClass = "bg-purple-500/5 border-purple-400/30 hover:border-purple-400/70 text-primary";
+                  baseClass = "bg-transparent backdrop-blur-xl border-cyan-500/50 hover:border-cyan-400 shadow-sm";
                 } else {
                   title = (u.item as RecurringTask).title;
                   subtitle = "ROUTINE";
-                  baseClass = "bg-done-subtle border-done/30 hover:border-done/70 text-primary";
+                  baseClass = "bg-transparent backdrop-blur-xl border-done/30 hover:border-done/70 shadow-sm";
                 }
 
                 return (
@@ -191,14 +191,11 @@ export function DayView({
                           <div className="flex flex-col gap-1 min-w-0 flex-1">
                             <div className="relative flex max-w-full self-start min-w-0">
                               <span
-                                style={isDone ? { color: "rgba(0,0,0,0.5)" } : undefined}
-                                className={`text-sm md:text-base font-medium truncate ${
-                                  animState === "loading"
-                                    ? "text-secondary"
-                                    : isDone
-                                      ? ""
-                                      : "text-primary"
-                                }`}
+                                style={{
+                                  color: isDone ? "rgba(0,0,0,0.5)" : "var(--text-primary)",
+                                  opacity: animState === "loading" ? 0.7 : 1
+                                }}
+                                className={`text-sm md:text-base font-medium truncate`}
                               >
                                 {title}
                               </span>
@@ -207,15 +204,10 @@ export function DayView({
                               )}
                             </div>
                             <span
-                              className={`text-[10px] uppercase tracking-wider truncate ${
-                                isDone 
-                                  ? "text-secondary/60" 
-                                  : u.type === "habit" 
-                                    ? "text-purple-400" 
-                                    : u.type === "recurring" 
-                                      ? "text-done" 
-                                      : "text-tertiary"
-                              }`}
+                              style={{
+                                color: isDone ? "var(--text-secondary)" : u.type === "habit" ? "var(--text-accent)" : u.type === "recurring" ? "var(--status-done)" : "var(--text-tertiary)"
+                              }}
+                              className={`text-[10px] uppercase tracking-wider truncate`}
                             >
                               {subtitle}
                             </span>
