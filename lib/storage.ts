@@ -1770,7 +1770,11 @@ export async function getDailyHabitBlocks(userId: string, date: number) {
     })
     .from(habitMarkers)
     .innerJoin(habits, eq(habitMarkers.habitId, habits.id))
-    .where(and(eq(habitMarkers.userId, userId), eq(habitMarkers.date, date)));
+    .where(and(
+      eq(habitMarkers.userId, userId), 
+      eq(habitMarkers.date, date),
+      isNull(habits.archivedAt)
+    ));
 
   const recurringRes = await db
     .select({
@@ -1782,7 +1786,11 @@ export async function getDailyHabitBlocks(userId: string, date: number) {
     })
     .from(recurringMarkers)
     .innerJoin(recurringTasks, eq(recurringMarkers.recurringTaskId, recurringTasks.id))
-    .where(and(eq(recurringMarkers.userId, userId), eq(recurringMarkers.date, date)));
+    .where(and(
+      eq(recurringMarkers.userId, userId), 
+      eq(recurringMarkers.date, date),
+      isNull(recurringTasks.archivedAt)
+    ));
 
   // Deduplicate in case of dirty db state or missing unique constraints
   const uniqueHabits = Array.from(new Map(habitsRes.map(h => [h.id, h])).values());

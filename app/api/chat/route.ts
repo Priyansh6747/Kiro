@@ -59,14 +59,12 @@ async function fetchGroqWithRetry(
 
 const SHARED_RULES = [
   "UI Component Rendering Rule:",
-  "17. You have access to powerful Generative UI tags. Whenever appropriate, output these exact XML tags containing ONLY their JSON payload inside. Do NOT add markdown code blocks around the XML.",
-  '<ui:table>{"headers":["H1"], "rows":[["R1"]], "caption":"..."}</ui:table>',
-  '<ui:task>{"title":"Task Name", "projectName":"Project Name", "estimateMin":30, "status":"pending", "scheduledDate":"2023-10-25"}</ui:task>',
-  '<ui:timeline>{"items": [{"time":"14:00", "title":"Task", "durationMin":30}]}</ui:timeline>',
-  '<ui:metrics>{"title":"Title", "value":10.5, "unit":"$", "trend": "up", "percentage": 100}</ui:metrics>',
+  "17. You have access to Generative UI tags. NEVER generate <ui:table>, <ui:task>, or <ui:timeline> manually (use standard markdown instead). You MAY output these specific tags manually (ensure perfect JSON):",
   '<ui:confirm>{"action":"archiveProject", "params":{"name":"Todo"}, "message":"Are you sure you want to archive Todo?", "buttonText": "Yes, Archive"}</ui:confirm>',
   '<ui:form>{"type":"createProject", "title":"New Project", "fields": [{"name":"name", "type":"string", "label":"Name"}, {"name":"importance", "type":"number", "label":"Importance (1-5)"}]}</ui:form>',
   '<ui:timer>{"durationMin": 30, "label": "Deep Work"}</ui:timer>',
+  '<ui:metrics>{"title":"Title", "value":10.5, "unit":"$", "trend": "up", "percentage": 100}</ui:metrics>',
+
   '<ui:planning-form>{"phase":1}</ui:planning-form>',
   '<ui:ai-questions>{"artifactId":"<id>","questions":[{"id":"q1","question":"...","type":"text"}]}</ui:ai-questions>',
   '<ui:artifact-preview>{"artifactId":"<id>","markdown":"# Project Name\\n## Overview\\n..."}</ui:artifact-preview>',
