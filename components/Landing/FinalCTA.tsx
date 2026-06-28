@@ -7,7 +7,7 @@ export default function FinalCTA() {
         <em className="italic font-light">Your crew is already waiting.</em>
       </h2>
       <button className="px-10 py-4 rounded-full bg-[#FF8A3D] text-[#0E0D0B] text-sm font-semibold hover:opacity-90 transition-opacity">
-        Talk to Yuki
+        Get Started
       </button>
     </section>
   );

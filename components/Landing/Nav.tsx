@@ -10,7 +10,7 @@ export default function Nav() {
       </div>
       <div>
         <button className="px-6 py-2.5 rounded-full bg-[#221F1B] text-[#F4EFE6] text-sm font-medium hover:bg-[#332E27] transition-colors border border-[#332E27]">
-          Talk to Yuki
+          Get Started
         </button>
       </div>
     </nav>
