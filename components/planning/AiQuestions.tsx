@@ -121,7 +121,7 @@ export function AiQuestions({ data }: Props) {
   };
 
   const cardStyle: React.CSSProperties = {
-    background: "var(--surface-raised)",
+    background: "var(--bg-surface-raised)",
     border: "1px solid var(--border-default)",
     borderRadius: "16px",
     padding: "28px",
@@ -134,7 +134,7 @@ export function AiQuestions({ data }: Props) {
   };
 
   const inputStyle: React.CSSProperties = {
-    background: "var(--surface-input)",
+    background: "var(--bg-base)",
     border: "1px solid var(--border-default)",
     borderRadius: "8px",
     padding: "10px 14px",

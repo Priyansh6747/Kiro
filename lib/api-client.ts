@@ -256,3 +256,22 @@ export const updateRecurringTask = (id: string, data: Partial<import("./db/model
 export const archiveRecurringTask = (id: string) => request<{ success: boolean }>(`/api/recurring/${id}`, { method: "DELETE" });
 export const getRecurringMarkers = (id: string, from: number, to: number) => request<import("./db/models").RecurringMarker[]>(`/api/recurring/${id}/markers?from=${from}&to=${to}`);
 export const markRecurringMarker = (id: string, date: number, status: string) => request<import("./db/models").RecurringMarker>(`/api/recurring/${id}/markers`, { method: "POST", body: JSON.stringify({ date, status }) });
+
+export const placeHabitDayPlanBlock = (habitId: string, planDate: number, startTime: number) =>
+  request<"ok">("/api/planner/habit-day-plan", {
+    method: "POST",
+    body: JSON.stringify({ habit_id: habitId, plan_date: planDate, start_time: startTime }),
+  });
+
+export const removeHabitDayPlanBlock = (habitId: string, planDate: number) =>
+  request<"ok">(`/api/planner/habit-day-plan/${habitId}?date=${planDate}`, { method: "DELETE" });
+
+export const placeRecurringDayPlanBlock = (recurringTaskId: string, planDate: number, startTime: number) =>
+  request<"ok">("/api/planner/recurring-day-plan", {
+    method: "POST",
+    body: JSON.stringify({ recurring_task_id: recurringTaskId, plan_date: planDate, start_time: startTime }),
+  });
+
+export const removeRecurringDayPlanBlock = (recurringTaskId: string, planDate: number) =>
+  request<"ok">(`/api/planner/recurring-day-plan/${recurringTaskId}?date=${planDate}`, { method: "DELETE" });
+

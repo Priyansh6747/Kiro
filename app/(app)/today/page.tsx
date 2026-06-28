@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { ArcDial } from "@/components/ArcDial";
 import { BucketDrawer } from "@/components/BucketDrawer";
 import { DayPlanner } from "@/components/DayPlanner";
+import type { HabitPlan, RecurringPlan } from "@/components/DayPlanner";
 import { DayView } from "@/components/DayView";
 import { TodaySkeleton } from "@/components/skeletons";
 import { ErrorBanner, QuickCapture } from "@/components/ui";
@@ -15,6 +16,10 @@ import {
   listTasks,
   placeDayPlanBlock,
   removeDayPlanBlock,
+  placeHabitDayPlanBlock,
+  removeHabitDayPlanBlock,
+  placeRecurringDayPlanBlock,
+  removeRecurringDayPlanBlock,
   updateTask,
   getHabitsDashboard,
   markHabitMarker,
@@ -53,6 +58,10 @@ function TodayPageContent() {
   const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
 
+  // Client-side placements for habits & recurring tasks (not persisted to DB)
+  const [habitDayPlans, setHabitDayPlans] = useState<HabitPlan[]>([]);
+  const [recurringDayPlans, setRecurringDayPlans] = useState<RecurringPlan[]>([]);
+
   const [animatingTasksStatus, setAnimatingTasksStatus] = useState<
     Record<string, "loading" | "success" | "error">
   >({});
@@ -84,6 +93,8 @@ function TodayPageContent() {
         getHabitsDashboard(selectedDate, selectedDate).catch(() => null),
       ]);
       setPlan(planData);
+      setHabitDayPlans(planData.habitDayPlans || []);
+      setRecurringDayPlans(planData.recurringDayPlans || []);
       setBucketTasks(bucket);
       setProjects(projs);
       if (habDash) setHabitsData(habDash);
@@ -510,6 +521,35 @@ function TodayPageContent() {
     }
   };
 
+  // ── Habit / Recurring planner handlers ──────────────────────────────────────
+  const handlePlaceHabit = (habitId: string, startTime: number) => {
+    setHabitDayPlans((prev) => [
+      ...prev.filter((p) => p.habitId !== habitId),
+      { habitId, startTime },
+    ]);
+    placeHabitDayPlanBlock(habitId, selectedDate, startTime).catch((e) => showToast(e.message, "error"));
+  };
+
+  const handleUnplaceHabit = (habitId: string) => {
+    setHabitDayPlans((prev) => prev.filter((p) => p.habitId !== habitId));
+    removeHabitDayPlanBlock(habitId, selectedDate).catch((e) => showToast(e.message, "error"));
+  };
+
+  const handlePlaceRecurring = (recurringTaskId: string, startTime: number) => {
+    setRecurringDayPlans((prev) => [
+      ...prev.filter((p) => p.recurringTaskId !== recurringTaskId),
+      { recurringTaskId, startTime },
+    ]);
+    placeRecurringDayPlanBlock(recurringTaskId, selectedDate, startTime).catch((e) => showToast(e.message, "error"));
+  };
+
+  const handleUnplaceRecurring = (recurringTaskId: string) => {
+    setRecurringDayPlans((prev) =>
+      prev.filter((p) => p.recurringTaskId !== recurringTaskId),
+    );
+    removeRecurringDayPlanBlock(recurringTaskId, selectedDate).catch((e) => showToast(e.message, "error"));
+  };
+
   const handleQuickAdd = () => {
     if (projects.length === 0) {
       showToast("Create a project first", "error");
@@ -832,6 +872,10 @@ function TodayPageContent() {
                   tasks={scheduledTasks}
                   projects={projects}
                   dayPlans={plan.dayPlans}
+                  habits={(habitsData?.habits ?? []).filter((h: any) => habitsData?.markers?.[h.id]?.[selectedDate])}
+                  habitDayPlans={habitDayPlans}
+                  recurringTasks={(habitsData?.recurringTasks ?? []).filter((rt: any) => habitsData?.recurringMarkers?.[rt.id]?.[selectedDate])}
+                  recurringDayPlans={recurringDayPlans}
                   onOpenPlanner={() => setIsPlannerOpen(true)}
                   onMarkDone={handleMarkDone}
                   animatingPlacements={animatingTasksStatus}
@@ -845,6 +889,18 @@ function TodayPageContent() {
                   dayPlans={plan.dayPlans}
                   onPlaceBlock={handlePlaceBlock}
                   onUnplaceBlock={handleUnplaceBlock}
+                  habits={(
+                    habitsData?.habits ?? []
+                  ).filter((h: any) => habitsData?.markers?.[h.id]?.[selectedDate])}
+                  habitDayPlans={habitDayPlans}
+                  onPlaceHabit={handlePlaceHabit}
+                  onUnplaceHabit={handleUnplaceHabit}
+                  recurringTasks={(
+                    habitsData?.recurringTasks ?? []
+                  ).filter((r: any) => habitsData?.recurringMarkers?.[r.id]?.[selectedDate])}
+                  recurringDayPlans={recurringDayPlans}
+                  onPlaceRecurring={handlePlaceRecurring}
+                  onUnplaceRecurring={handleUnplaceRecurring}
                   onClose={() => setIsPlannerOpen(false)}
                   onMarkDone={handleMarkDone}
                   animatingPlacements={animatingTasksStatus}

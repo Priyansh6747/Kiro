@@ -14,6 +14,8 @@ import {
   getOrCreatePreferences,
   insertTaskClosureSelf,
   listDayPlansForDate,
+  listHabitDayPlansForDate,
+  listRecurringDayPlansForDate,
   listRecurringTemplateTasks,
   listTaskDependenciesForTasks,
   listTasks,
@@ -96,6 +98,8 @@ export async function GET(req: Request): Promise<Response> {
 
   const dayLog = await findDayLog(userId, todayDate);
   const dayPlans = await listDayPlansForDate(userId, todayDate);
+  const habitDayPlans = await listHabitDayPlansForDate(userId, todayDate);
+  const recurringDayPlans = await listRecurringDayPlansForDate(userId, todayDate);
 
   const taskIds = scheduledTasks.map((t) => t.id);
   const taskDependencies = await listTaskDependenciesForTasks(taskIds);
@@ -109,6 +113,8 @@ export async function GET(req: Request): Promise<Response> {
       overloaded,
       dayLog: dayLog ?? null,
       dayPlans,
+      habitDayPlans,
+      recurringDayPlans,
       taskDependencies,
     },
   });

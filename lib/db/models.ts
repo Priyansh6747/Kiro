@@ -263,6 +263,52 @@ export const dayPlan = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// habit_day_plan
+// ---------------------------------------------------------------------------
+export const habitDayPlan = sqliteTable(
+  "habit_day_plan",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    habitId: text("habit_id")
+      .notNull()
+      .references(() => habits.id),
+    planDate: integer("plan_date").notNull(),
+    startTime: integer("start_time").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.habitId, t.planDate] }),
+    index("idx_habit_day_plan_user_date").on(t.userId, t.planDate),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// recurring_day_plan
+// ---------------------------------------------------------------------------
+export const recurringDayPlan = sqliteTable(
+  "recurring_day_plan",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    recurringTaskId: text("recurring_task_id")
+      .notNull()
+      .references(() => recurringTasks.id),
+    planDate: integer("plan_date").notNull(),
+    startTime: integer("start_time").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.recurringTaskId, t.planDate] }),
+    index("idx_recurring_day_plan_user_date").on(t.userId, t.planDate),
+  ]
+);
+
+// ---------------------------------------------------------------------------
 // habits
 // ---------------------------------------------------------------------------
 export const habits = sqliteTable("habits", {
@@ -375,6 +421,12 @@ export type NewMemoryBaseline = typeof memoryBaseline.$inferInsert;
 
 export type DayPlan = typeof dayPlan.$inferSelect;
 export type NewDayPlan = typeof dayPlan.$inferInsert;
+
+export type HabitDayPlan = typeof habitDayPlan.$inferSelect;
+export type NewHabitDayPlan = typeof habitDayPlan.$inferInsert;
+
+export type RecurringDayPlan = typeof recurringDayPlan.$inferSelect;
+export type NewRecurringDayPlan = typeof recurringDayPlan.$inferInsert;
 
 export type SchedulingStrategy = typeof schedulingStrategies.$inferSelect;
 export type NewSchedulingStrategy = typeof schedulingStrategies.$inferInsert;

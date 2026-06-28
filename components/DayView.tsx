@@ -1,10 +1,16 @@
 import React from "react";
 import type { DayPlan, Project, Task } from "@/lib/types";
+import type { Habit, RecurringTask } from "@/lib/db/models";
+import type { HabitPlan, RecurringPlan } from "@/components/DayPlanner";
 
 interface DayViewProps {
   tasks: Task[];
   projects: Project[];
   dayPlans: DayPlan[];
+  habits: Habit[];
+  habitDayPlans: HabitPlan[];
+  recurringTasks: RecurringTask[];
+  recurringDayPlans: RecurringPlan[];
   onOpenPlanner: () => void;
   onMarkDone: (task: Task) => void;
   animatingPlacements?: Record<string, "loading" | "success" | "error">;
@@ -14,12 +20,25 @@ export function DayView({
   tasks,
   projects,
   dayPlans,
+  habits,
+  habitDayPlans,
+  recurringTasks,
+  recurringDayPlans,
   onOpenPlanner,
   onMarkDone,
   animatingPlacements = {},
 }: DayViewProps) {
-  // Sort day plans chronologically
-  const sortedPlans = [...dayPlans].sort((a, b) => a.startTime - b.startTime);
+  // Combine all types of plans into a single sorted list
+  type UnifiedPlan =
+    | { type: "task"; plan: DayPlan; item: Task }
+    | { type: "habit"; plan: HabitPlan; item: Habit }
+    | { type: "recurring"; plan: RecurringPlan; item: RecurringTask };
+
+  const unifiedPlans: UnifiedPlan[] = [
+    ...dayPlans.map(p => ({ type: "task" as const, plan: p, item: tasks.find(t => t.id === p.taskId)! })),
+    ...habitDayPlans.map(p => ({ type: "habit" as const, plan: p, item: habits.find(h => h.id === p.habitId)! })),
+    ...recurringDayPlans.map(p => ({ type: "recurring" as const, plan: p, item: recurringTasks.find(r => r.id === p.recurringTaskId)! })),
+  ].filter(u => u.item).sort((a, b) => a.plan.startTime - b.plan.startTime);
 
   const formatTime = (unix: number) => {
     const d = new Date(unix * 1000);
@@ -50,7 +69,7 @@ export function DayView({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {sortedPlans.length === 0 ? (
+        {unifiedPlans.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-tertiary">
             <p className="mb-4 text-sm">Your day is empty.</p>
             <button
@@ -66,17 +85,41 @@ export function DayView({
             <div className="absolute top-0 bottom-0 left-[16px] md:left-[32px] w-px bg-border-default z-0"></div>
 
             <div className="space-y-6 relative z-10 py-2">
-              {sortedPlans.map((plan, index) => {
-                const task = tasks.find((t) => t.id === plan.taskId);
-                if (!task) return null;
-
-                const startStr = formatTime(plan.startTime);
-                const endUnix = plan.startTime + task.estimateMin * 60;
+              {unifiedPlans.map((u, index) => {
+                const startStr = formatTime(u.plan.startTime);
+                const estimateMin = u.type === "task" ? (u.item as Task).estimateMin : u.item.estimateMin;
+                const endUnix = u.plan.startTime + estimateMin * 60;
                 const endStr = formatTime(endUnix);
+                
+                const key = u.type === "task" ? u.plan.taskId : u.type === "habit" ? u.plan.habitId : u.plan.recurringTaskId;
+                const animState = animatingPlacements[key];
+
+                let title: string;
+                let subtitle: string;
+                let baseClass: string;
+                let isDone = false;
+
+                if (u.type === "task") {
+                  const task = u.item as Task;
+                  title = task.title;
+                  subtitle = projects.find((p) => p.id === task.projectId)?.name || "PROJECT";
+                  isDone = task.status === "done";
+                  baseClass = isDone
+                    ? "bg-transparent backdrop-blur-xl border-done/30 text-secondary"
+                    : "bg-transparent backdrop-blur-xl border-border-default hover:border-accent text-primary shadow-sm";
+                } else if (u.type === "habit") {
+                  title = (u.item as Habit).name;
+                  subtitle = "HABIT";
+                  baseClass = "bg-transparent backdrop-blur-xl border-cyan-500/50 hover:border-cyan-400 shadow-sm";
+                } else {
+                  title = (u.item as RecurringTask).title;
+                  subtitle = "ROUTINE";
+                  baseClass = "bg-transparent backdrop-blur-xl border-done/30 hover:border-done/70 shadow-sm";
+                }
 
                 return (
                   <div
-                    key={plan.taskId}
+                    key={`${u.type}-${key}`}
                     className="relative flex items-stretch group"
                   >
                     {/* Timeline Left Axis */}
@@ -110,72 +153,69 @@ export function DayView({
                       {/* Task Content */}
                       <div
                         className={`w-full border rounded-xl p-4 md:p-6 shadow-sm flex justify-between items-center transition-colors ${
-                          animatingPlacements[plan.taskId] === "success"
+                          animState === "success"
                             ? "bg-done-subtle border-done text-done"
-                            : animatingPlacements[plan.taskId] === "error"
+                            : animState === "error"
                               ? "bg-missed-subtle border-missed text-missed"
-                              : animatingPlacements[plan.taskId] === "loading"
+                              : animState === "loading"
                                 ? "bg-accent-subtle border-accent/50 animate-pulse text-secondary"
-                                : task.status === "done"
-                                  ? "bg-done-subtle border-done/30 text-secondary"
-                                  : "bg-surface-raised border-border-default hover:border-accent text-primary"
+                                : baseClass
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <button
-                            onClick={() => onMarkDone(task)}
-                            className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              task.status === "done"
-                                ? "border-done bg-done text-surface"
-                                : "border-border-strong hover:border-done"
-                            }`}
-                          >
-                            {task.status === "done" && (
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                              </svg>
-                            )}
-                          </button>
+                          {u.type === "task" && (
+                            <button
+                              onClick={() => onMarkDone(u.item as Task)}
+                              className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                isDone
+                                  ? "border-done bg-done text-surface"
+                                  : "border-border-strong hover:border-done"
+                              }`}
+                            >
+                              {isDone && (
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                              )}
+                            </button>
+                          )}
                           <div className="flex flex-col gap-1 min-w-0 flex-1">
                             <div className="relative flex max-w-full self-start min-w-0">
                               <span
-                                style={task.status === "done" ? { color: "rgba(0,0,0,0.5)" } : undefined}
-                                className={`text-sm md:text-base font-medium truncate ${
-                                  animatingPlacements[plan.taskId] === "loading"
-                                    ? "text-secondary"
-                                    : task.status === "done"
-                                      ? ""
-                                      : "text-primary"
-                                }`}
+                                style={{
+                                  color: isDone ? "rgba(0,0,0,0.5)" : "var(--text-primary)",
+                                  opacity: animState === "loading" ? 0.7 : 1
+                                }}
+                                className={`text-sm md:text-base font-medium truncate`}
                               >
-                                {task.title}
+                                {title}
                               </span>
-                              {task.status === "done" && (
+                              {isDone && (
                                 <div className="doodle-strikethrough block absolute left-0 right-0 top-0 bottom-0 pointer-events-none" />
                               )}
                             </div>
-                            {task.projectId && (
-                              <span
-                                className={`text-[10px] uppercase tracking-wider truncate ${task.status === "done" ? "text-secondary/60" : "text-tertiary"}`}
-                              >
-                                {projects.find((p) => p.id === task.projectId)
-                                  ?.name || "PROJECT"}
-                              </span>
-                            )}
+                            <span
+                              style={{
+                                color: isDone ? "var(--text-secondary)" : u.type === "habit" ? "var(--text-accent)" : u.type === "recurring" ? "var(--status-done)" : "var(--text-tertiary)"
+                              }}
+                              className={`text-[10px] uppercase tracking-wider truncate`}
+                            >
+                              {subtitle}
+                            </span>
                           </div>
                         </div>
                         {/* Duration */}
                         <div className="ml-4 shrink-0 text-xs font-mono text-tertiary">
-                          {formatDuration(task.estimateMin)}
+                          {formatDuration(estimateMin)}
                         </div>
                       </div>
                     </div>
