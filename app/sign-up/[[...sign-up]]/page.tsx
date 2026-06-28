@@ -1,13 +1,12 @@
-import { SignUp } from "@clerk/nextjs";
 import { Suspense } from "react";
-import ConsentDialog from "@/components/ConsentDialog";
+import CustomSignUp from "@/components/Auth/CustomSignUp";
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <ConsentDialog />
-      <Suspense fallback={<div>Loading...</div>}>
-        <SignUp />
+    <div className="flex min-h-screen items-center justify-center relative overflow-hidden bg-base">
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,138,61,0.05)_0%,transparent_50%)]" />
+      <Suspense fallback={<div className="text-secondary text-sm">Loading...</div>}>
+        <CustomSignUp />
       </Suspense>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-
+import Link from 'next/link';
 export default function Footer() {
   return (
     <footer className="w-full bg-[#0E0D0B] py-12 px-8 border-t border-[#332E27]">
@@ -9,8 +9,9 @@ export default function Footer() {
           <span className="italic">A crew that runs your day.</span>
         </div>
         
-        <div>
-          &copy; 2026 Kiro.
+        <div className="flex items-center gap-6">
+          <Link href="/privacy" className="hover:text-[#FF8A3D] transition-colors">Privacy Policy</Link>
+          <span>&copy; 2026 Kiro.</span>
         </div>
       </div>
     </footer>

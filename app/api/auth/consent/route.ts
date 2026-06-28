@@ -12,9 +12,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ consent: false }, { status: 401 });
     }
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    
+    const user = result[0];
 
     return NextResponse.json({ consent: !!user?.consent, agreedOn: user?.agreedOn });
   } catch (error) {
