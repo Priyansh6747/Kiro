@@ -143,6 +143,20 @@ export async function POST(req: NextRequest) {
     await processContextDecay(userId);
   }
 
+  // To prevent TPM rate limit issues on the LLM API, truncate the message history safely
+  const MAX_HISTORY = 12;
+  if (messages.length > MAX_HISTORY) {
+    let safeStart = messages.length - MAX_HISTORY;
+    // We must ensure we don't sever a tool_call from its tool response
+    // Safest place to cut is at a "user" message
+    while (safeStart < messages.length && messages[safeStart].role !== "user") {
+      safeStart++;
+    }
+    if (safeStart < messages.length) {
+      messages = messages.slice(safeStart);
+    }
+  }
+
   const ctx = await getUserContext(userId);
   const contextPyramidStr = JSON.stringify(ctx.contextPyramid, null, 2);
 
@@ -419,15 +433,7 @@ Delegation Rule:
           finalSystemPrompt = agents[selectedAgent].prompt;
         }
 
-        const recentUserMsgs = await db.select()
-          .from(messagesTable)
-          .where(and(eq(messagesTable.userId, userId), eq(messagesTable.role, "user")))
-          .orderBy(desc(messagesTable.createdAt))
-          .limit(10);
-        recentUserMsgs.reverse();
-        const recentUserMsgsStr = recentUserMsgs.map(m => `[User]: ${m.content}`).join("\n");
-
-        finalSystemPrompt += "\n" + SHARED_RULES + "\n\nHere is the User Context Pyramid (Standing Memory):\n" + contextPyramidStr + "\n\nRecent Past 10 User Messages:\n" + recentUserMsgsStr;
+        finalSystemPrompt += "\n" + SHARED_RULES + "\n\nHere is the User Context Pyramid (Standing Memory):\n" + contextPyramidStr;
 
         // Inject system prompt
         if (messages.length > 0 && messages[0].role !== "system") {
