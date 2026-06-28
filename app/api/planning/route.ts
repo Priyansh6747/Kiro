@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
           let questions = [];
           let attempts = 0;
           while (attempts < 3) {
+            attempts++;
             const completion = await groqChat([{ role: "user", content: prompt }], [], userId, "llama-3.3-70b-versatile");
             const rawContent = completion.choices[0]?.message?.content || "[]";
             
@@ -53,12 +54,13 @@ export async function POST(req: NextRequest) {
                const match = rawContent.match(/\[[\s\S]*\]/);
                questions = JSON.parse(match ? match[0] : rawContent);
                if (questions && Array.isArray(questions)) {
-                 console.log("[Planning API] Phase 2 LLM output successfully parsed on attempt", attempts + 1);
+                 console.log("[Planning API] Phase 2 LLM output successfully parsed on attempt", attempts);
                  break; // Success!
+               } else {
+                 console.warn(`[Planning API] Phase 2 parsed successfully but not an array on attempt ${attempts}`);
                }
             } catch(e) {
-               console.error(`[Planning API] Failed to parse AI questions on attempt ${attempts + 1}:`, e);
-               attempts++;
+               console.error(`[Planning API] Failed to parse AI questions on attempt ${attempts}:`, e);
             }
           }
           
@@ -99,6 +101,7 @@ export async function POST(req: NextRequest) {
            let stagesOutline: any[] = [];
            let outlineAttempts = 0;
            while (outlineAttempts < 3) {
+             outlineAttempts++;
              const completion = await groqChat([{ role: "user", content: outlinePrompt }], [], userId, "llama-3.3-70b-versatile");
              const raw = completion.choices[0]?.message?.content || "[]";
              try {
@@ -106,8 +109,7 @@ export async function POST(req: NextRequest) {
                stagesOutline = JSON.parse(match ? match[0] : raw);
                if (stagesOutline && Array.isArray(stagesOutline) && stagesOutline.length > 0) break;
              } catch(e) {
-               console.error(`[Planning API] Outline parse failed on attempt ${outlineAttempts + 1}:`, e);
-               outlineAttempts++;
+               console.error(`[Planning API] Outline parse failed on attempt ${outlineAttempts}:`, e);
              }
            }
 
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest) {
              let detailTasks = [];
              let detailAttempts = 0;
              while (detailAttempts < 3) {
+               detailAttempts++;
                const completion = await groqChat([{ role: "user", content: detailPrompt }], [], userId, "llama-3.3-70b-versatile");
                const raw = completion.choices[0]?.message?.content || "[]";
                try {
@@ -129,8 +132,7 @@ export async function POST(req: NextRequest) {
                  detailTasks = JSON.parse(match ? match[0] : raw);
                  if (detailTasks && Array.isArray(detailTasks)) break;
                } catch(e) {
-                 console.error(`[Planning API] Detail parse failed for stage ${stageObj.stage} on attempt ${detailAttempts + 1}:`, e);
-                 detailAttempts++;
+                 console.error(`[Planning API] Detail parse failed for stage ${stageObj.stage} on attempt ${detailAttempts}:`, e);
                }
              }
              

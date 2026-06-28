@@ -1,0 +1,88 @@
+[
+  {
+    "role": "user",
+    "content": "Yuki, give me a status update on Kiro."
+  },
+  {
+    "role": "assistant",
+    "name": "Yuki",
+    "content": "Here is your dashboard for today. You are doing well, keep it up.\n\n<ui:metrics>{\"title\":\"Productivity Score\", \"value\":92, \"unit\":\"%\", \"trend\": \"up\", \"percentage\": 92}</ui:metrics>\n\n<ui:table>{\"headers\":[\"Project\", \"Status\"], \"rows\":[[\"Launch\", \"On Track\"], [\"Redesign\", \"Delayed\"]]}</ui:table>"
+  },
+  {
+    "role": "user",
+    "content": "Okay, I want to plan the marketing launch."
+  },
+  {
+    "role": "assistant",
+    "name": "Sage",
+    "content": "Let's structure this project. Fill this out so I know what we're dealing with.\n\n<ui:planning-form>{\"phase\":1}</ui:planning-form>"
+  },
+  {
+    "role": "user",
+    "content": "Done."
+  },
+  {
+    "role": "assistant",
+    "name": "Sage",
+    "content": "Great. I have a few clarifying questions about the scope.\n\n<ui:ai-questions>{\"artifactId\":\"mkt_launch\",\"questions\":[{\"id\":\"q1\",\"question\":\"Who is the primary target audience?\",\"type\":\"text\"}]}</ui:ai-questions>"
+  },
+  {
+    "role": "user",
+    "content": "Answered. Can you draft the project spec?"
+  },
+  {
+    "role": "assistant",
+    "name": "Sage",
+    "content": "Here is the drafted spec.\n\n<ui:artifact-preview>{\"artifactId\":\"mkt_launch\",\"markdown\":\"# Marketing Launch\\n## Overview\\nLaunch plan for Q3.\\n- Target: Developers\\n- Timeline: 4 weeks\"}</ui:artifact-preview>"
+  },
+  {
+    "role": "user",
+    "content": "Looks good. Break it down into tasks."
+  },
+  {
+    "role": "assistant",
+    "name": "Sage",
+    "content": "I've generated the task dependency graph.\n\n<ui:task-graph>{\"artifactId\":\"mkt_launch\",\"stages\":[{\"stage\":1,\"stageName\":\"Foundation\",\"tasks\":[{\"id\":\"task_1\",\"title\":\"Draft Copy\",\"estimate_min\":60,\"deadline\":null,\"depends_on\":[]}]}]}</ui:task-graph>\n\n<ui:task-manager>{\"artifactId\":\"mkt_launch\",\"stages\":[{\"stage\":1,\"stageName\":\"Foundation\",\"tasks\":[{\"id\":\"task_1\",\"title\":\"Draft Copy\",\"estimate_min\":60,\"deadline\":null,\"depends_on\":[]}]}]}</ui:task-manager>"
+  },
+  {
+    "role": "user",
+    "content": "Let's schedule the first few tasks for today."
+  },
+  {
+    "role": "assistant",
+    "name": "Sage",
+    "content": "Launching the scheduling engine.\n\n<ui:scheduling-flow>{\"projectId\":\"mkt_launch\"}</ui:scheduling-flow>"
+  },
+  {
+    "role": "assistant",
+    "name": "Juno",
+    "content": "I've added them to your timeline. Here is the agenda and the first task.\n\n<ui:timeline>{\"items\": [{\"time\":\"14:00\", \"title\":\"Draft Copy\", \"durationMin\":60}]}</ui:timeline>\n\n<ui:task>{\"title\":\"Draft Copy\", \"projectName\":\"Marketing\", \"estimateMin\":60, \"status\":\"pending\", \"scheduledDate\":\"Today\"}</ui:task>"
+  },
+  {
+    "role": "user",
+    "content": "Wait, I also need to update my personal preferences."
+  },
+  {
+    "role": "assistant",
+    "name": "Echo",
+    "content": "Sure, you can update your settings here.\n\n<ui:form>{\"type\":\"updatePreferences\", \"title\":\"Settings\", \"fields\": [{\"name\":\"timezone\", \"type\":\"string\", \"label\":\"Timezone\"}]}</ui:form>"
+  },
+  {
+    "role": "user",
+    "content": "Time for deep work."
+  },
+  {
+    "role": "assistant",
+    "name": "Yuki",
+    "content": "Focus time. Don't slack off.\n\n<ui:timer>{\"durationMin\": 60, \"label\": \"Deep Work\"}</ui:timer>"
+  },
+  {
+    "role": "user",
+    "content": "I think I want to completely archive the old legacy project."
+  },
+  {
+    "role": "assistant",
+    "name": "Yuki",
+    "content": "Whoa. That's a big move. Are you sure?\n\n<ui:confirm>{\"action\":\"archiveProject\", \"message\":\"Are you sure you want to archive Legacy?\", \"buttonText\": \"Yes, Archive\"}</ui:confirm>"
+  }
+]

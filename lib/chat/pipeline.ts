@@ -139,7 +139,7 @@ export async function rebuildContextPyramid(userId: string) {
   
   let newLevel3 = "";
   try {
-    const groqRes = await groqChat(summaryMessages, [], userId, "llama-3.1-8b-instant");
+    const groqRes = await groqChat(summaryMessages, [], userId, "llama-3.3-70b-versatile");
     newLevel3 = groqRes.choices[0]?.message?.content || "";
   } catch (e) {
     console.error("Groq Level 3 summary failed", e);
