@@ -581,6 +581,8 @@ function TodayPageContent() {
 
   // Find tasks scheduled for today but NOT in dayPlans (Timeline)
   const placedTaskIds = new Set(plan.dayPlans.map((dp) => dp.taskId));
+  const placedHabitIds = new Set(habitDayPlans.map((dp) => dp.habitId));
+  const placedRecurringIds = new Set(recurringDayPlans.map((dp) => dp.recurringTaskId));
 
   // All tasks in the original plan for "Any Time Today"
   const anyTimeTasksOrig = scheduledTasks.filter(
@@ -741,6 +743,7 @@ function TodayPageContent() {
 
                 {/* Habits */}
                 {habitsData?.habits?.map((habit: any) => {
+                  if (placedHabitIds.has(habit.id)) return null;
                   const status = habitsData.markers[habit.id]?.[selectedDate];
                   if (!status) return null;
                   
@@ -789,6 +792,7 @@ function TodayPageContent() {
 
                 {/* Recurring Tasks */}
                 {habitsData?.recurringTasks?.map((rt: any) => {
+                  if (placedRecurringIds.has(rt.id)) return null;
                   const status = habitsData.recurringMarkers[rt.id]?.[selectedDate];
                   if (!status) return null;
                   
