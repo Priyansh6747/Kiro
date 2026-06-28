@@ -9,13 +9,6 @@ export default function Footer() {
           <span className="italic">A crew that runs your day.</span>
         </div>
         
-        <div className="flex flex-wrap items-center gap-6">
-          <a href="#" className="hover:text-[#F4EFE6] transition-colors">Crew</a>
-          <a href="#" className="hover:text-[#F4EFE6] transition-colors">How it works</a>
-          <a href="#" className="hover:text-[#F4EFE6] transition-colors">Themes</a>
-          <a href="#" className="hover:text-[#F4EFE6] transition-colors">Contact</a>
-        </div>
-        
         <div>
           &copy; 2026 Kiro.
         </div>

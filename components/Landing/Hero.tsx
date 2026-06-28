@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import ChatDemo from './ChatDemo';
 
 export default function Hero() {
@@ -27,12 +28,9 @@ export default function Hero() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-          <button className="px-8 py-3.5 rounded-full bg-[#F4EFE6] text-[#0E0D0B] text-sm font-bold hover:opacity-90 transition-opacity w-full sm:w-auto">
+          <Link href="/today" className="inline-block px-8 py-3.5 rounded-full bg-[#F4EFE6] text-[#0E0D0B] text-sm font-bold hover:opacity-90 transition-opacity w-full sm:w-auto text-center">
             Get Started
-          </button>
-          <a href="#" className="text-[#9C9488] text-sm font-medium hover:text-[#F4EFE6] transition-colors ml-4 sm:ml-0">
-            Watch her think &rarr;
-          </a>
+          </Link>
         </div>
       </div>
 
