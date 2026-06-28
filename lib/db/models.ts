@@ -20,6 +20,8 @@ export const users = sqliteTable("users", {
   avatarUrl: text("avatar_url"),
   createdAt: integer("created_at").notNull(), // unix timestamp
   updatedAt: integer("updated_at").notNull(),
+  consent: integer("consent", { mode: "boolean" }).default(false),
+  agreedOn: integer("agreed_on"),
 });
 
 // ---------------------------------------------------------------------------

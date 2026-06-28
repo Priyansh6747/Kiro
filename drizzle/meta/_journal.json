@@ -57,6 +57,20 @@
       "when": 1782584901850,
       "tag": "0007_sweet_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782650759293,
+      "tag": "0008_strong_toad",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1782650829631,
+      "tag": "0009_luxuriant_harry_osborn",
+      "breakpoints": true
     }
   ]
 }
