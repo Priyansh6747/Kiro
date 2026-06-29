@@ -1,5 +1,10 @@
 # Kiro: Advanced Task Orchestration & Scheduling
 
+<div align="center">
+  <img src="public/Demo/ProjectWorkspace.png" alt="Kiro Workspace" width="100%" />
+</div>
+<br />
+
 Kiro is a highly sophisticated, mathematically rigorous task management and scheduling engine wrapped in a premium, glassmorphic UI. Built on Next.js 16 and React 19, Kiro tackles some of the most complex challenges in modern frontend architecture, including graph-based dependency resolution, ultra-performant DOM virtualization, AI-driven data synthesis, and distributed timezone synchronization.
 
 This project is engineered to handle massive, multi-year project timelines with zero perceived latency.
@@ -9,6 +14,12 @@ This project is engineered to handle massive, multi-year project timelines with 
 ## 🏗️ Core Architectural Pillars
 
 ### 1. The Virtualized "Continuous Timeline" Engine
+
+<div align="center">
+  <img src="public/Demo/DayView.png" alt="Continuous Timeline" width="100%" />
+</div>
+<br />
+
 Rendering an unbounded timeline of days (past and future) typically crashes the browser DOM or causes severe Out-Of-Memory (OOM) faults on the server. Kiro solves this with a custom-built, extreme-performance DOM Virtualizer.
 
 - **Mathematical Windowing**: The engine dynamically bounds rendering to exactly a 21-day sliding window (`3x ViewHeight`). 
@@ -17,6 +28,12 @@ Rendering an unbounded timeline of days (past and future) typically crashes the 
 - **Animation Loop Avoidance**: When a user programmatically requests to "Return to Today", the system mathematically re-centers the sliding window (`offset = -10`) and instantly jumps the scrollbar to simulate directional physics before allowing the browser to execute a `smooth` scroll. A dual `requestAnimationFrame` lock temporarily suspends the `IntersectionObserver` to prevent infinite sliding loops as the view glides across thresholds.
 
 ### 2. Directed Acyclic Graph (DAG) Dependency Resolver
+
+<div align="center">
+  <img src="public/Demo/DependencyGraph.png" alt="Dependency Graph" width="100%" />
+</div>
+<br />
+
 Tasks in Kiro do not exist in a vacuum. The application utilizes advanced Graph Theory to manage complex project dependencies.
 
 - **Deadlock Avoidance Matrix**: Before any dependency is committed to the database, a recursive graph traversal algorithm (Depth-First Search) walks the dependency tree to validate that the new link will not introduce a cyclical reference (e.g., A → B → A). This guarantees the project remains mathematically solvable.
@@ -31,6 +48,12 @@ Dealing with dates across distributed clients and servers is notoriously difficu
 - **Preference Caching**: Timezone offsets are patched and synchronized on app load using `getOrCreatePreferences`, ensuring server-side rendering (SSR) aligns with the client's localized day boundaries.
 
 ### 4. Autonomous Multi-Agent Orchestration Team
+
+<div align="center">
+  <img src="public/Demo/Yuki.png" alt="Yuki Coordinator" width="100%" />
+</div>
+<br />
+
 Kiro runs a sophisticated multi-agent backend coordinated by **Yuki**, a sharp-tongued coordinator companion. Yuki delegates specialized sub-tasks to dedicated agents equipped with custom toolsets:
 - **Nova (ProjectAgent)**: Manages creation, priority weights, and deadlines for projects.
 - **Quill (TaskAgent)**: Manages granular task operations, scheduling, completions, and reschedules.
@@ -57,10 +80,33 @@ Every interaction in Kiro feels instantaneous, operating on a "trust but verify"
 - **Responsive Mobile Layout**: The layout features dynamic visibility components, sliding panels, and modal-based transitions for task details to ensure complete feature parity on mobile screens.
   
 ### 8. High-Performance Habit & Streak Tracking
+
+<div align="center">
+  <img src="public/Demo/Habbits.png" alt="Habit Dashboard" width="100%" />
+</div>
+<br />
+
 Building a dashboard to track numerous habits with hundreds of daily markers requires complex aggregations. Kiro solves this through optimized API and UI architecture.
 - **Concurrent Matrix Aggregation**: The `/api/habits/dashboard` endpoint concurrently resolves habit matrices, historical completion markers, and streak algorithms (current vs. best) into a single optimized payload.
 - **Drag-to-Select Custom Ranges**: The calendar UI abandons standard date pickers for a native, click-and-drag matrix that instantly calculates and rerenders custom completion ratios and stats on the fly, with zero network latency.
 - **Theme-Native Visualizations**: All calendar pills, matrices, and percentage indicators directly consume the dynamic CSS variables (`bg-done`, `bg-missed`), ensuring the dashboard natively adapts to any of Kiro's custom themes.
+
+---
+
+## 📸 Gallery
+
+<div align="center">
+  <img src="public/Demo/Today.png" width="49%" alt="Today View" />
+  <img src="public/Demo/DayPlanner.png" width="49%" alt="Day Planner" />
+</div>
+<div align="center">
+  <img src="public/Demo/Projects.png" width="49%" alt="Projects View" />
+  <img src="public/Demo/ToDo.png" width="49%" alt="To-Do List" />
+</div>
+<div align="center">
+  <img src="public/Demo/AnyTimeToday.png" width="49%" alt="AnyTime Today" />
+</div>
+<br />
 
 ---
 
