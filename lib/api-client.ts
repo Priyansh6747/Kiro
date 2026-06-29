@@ -100,6 +100,16 @@ export const ingestTasks = (body: {
     body: JSON.stringify(body),
   });
 
+export const batchIngestTasks = (body: {
+  project_id: string;
+  tasks: any[];
+  scheduled_date?: number | null;
+}) =>
+  request<import("./types").Task[]>("/api/tasks/batch", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
 export const updateTask = (
   id: string,
   body: Partial<{

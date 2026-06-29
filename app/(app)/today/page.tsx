@@ -47,6 +47,7 @@ function TodayPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<number>(0);
   const [displayedDate, setDisplayedDate] = useState<number>(0);
+  const [userTimezone, setUserTimezone] = useState("UTC");
   const [slideDirection, setSlideDirection] = useState<"left" | "right">(
     "left",
   );
@@ -108,14 +109,27 @@ function TodayPageContent() {
   }, [selectedDate]);
 
   useEffect(() => {
-    const today = todayUnixDay();
-    setSelectedDate(today);
-    setDisplayedDate(today);
+    import("@/lib/api-client").then(({ getPreferences }) => {
+      getPreferences()
+        .then((prefs) => {
+          setUserTimezone(prefs.timezone);
+          const today = todayUnixDay(prefs.timezone);
+          setSelectedDate(today);
+          setDisplayedDate(today);
+        })
+        .catch(() => {
+          const today = todayUnixDay();
+          setSelectedDate(today);
+          setDisplayedDate(today);
+        });
+    });
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (selectedDate !== 0) {
+      load();
+    }
+  }, [load, selectedDate]);
 
   const scheduleFromBucket = async (task: Task) => {
     // 1. Optimistic move to "Any Time Today"
@@ -567,7 +581,7 @@ function TodayPageContent() {
     );
   if (!plan) return null;
 
-  const isToday = selectedDate === todayUnixDay();
+  const isToday = selectedDate === todayUnixDay(userTimezone);
 
   const scheduledTasks = plan.tasks;
   const totalPlannedMin = scheduledTasks.reduce(
@@ -960,7 +974,7 @@ function TodayPageContent() {
             </div>
 
             {/* Bucket Toggle Bar (When closed) */}
-            {!isBucketOpen && selectedDate === todayUnixDay() && (
+            {!isBucketOpen && selectedDate === todayUnixDay(userTimezone) && (
               <div
                 className="w-12 border-l border-border-default bg-surface flex flex-col items-center justify-center cursor-pointer hover:bg-surface-raised transition-colors shrink-0"
                 onClick={() => setIsBucketOpen(true)}
@@ -978,7 +992,7 @@ function TodayPageContent() {
             )}
 
             {/* Bucket Drawer (When open) */}
-            {isBucketOpen && selectedDate === todayUnixDay() && (
+            {isBucketOpen && selectedDate === todayUnixDay(userTimezone) && (
               <BucketDrawer
                 bucketTasksByProject={bucketTasksByProject}
                 projects={projects}

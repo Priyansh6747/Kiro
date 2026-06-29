@@ -122,6 +122,7 @@ export function ProjectWorkspace({
         project={project}
         onBack={onBack}
         activityData={activityData}
+        onProjectUpdated={onProjectUpdated}
       />
       <ProjectProgressBar
         donePct={donePct}

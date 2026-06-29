@@ -19,6 +19,7 @@ import {
   EmptyState,
   ErrorBanner,
   TypeBadge,
+  QuickCapture,
 } from "@/components/ui";
 import { ProjectsSkeleton } from "@/components/skeletons";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -152,6 +153,7 @@ function ProjectDetails({
   onOpenWorkspace,
   onUpdateProject,
   onArchiveProject,
+  onOpenCapture,
 }: {
   project: Project;
   onOpenWorkspace: () => void;
@@ -160,6 +162,7 @@ function ProjectDetails({
     updates: Parameters<typeof updateProject>[1],
   ) => Promise<void>;
   onArchiveProject: (id: string) => Promise<void>;
+  onOpenCapture: () => void;
 }) {
   const { confirm, ConfirmModal } = useConfirm();
 
@@ -414,13 +417,19 @@ function ProjectDetails({
         </div>
       </div>
 
-      <div className="mt-auto pt-4 pb-4">
+      <div className="mt-auto pt-4 pb-4 flex flex-col gap-3">
         <button
           onClick={onOpenWorkspace}
           className="w-full py-3 rounded-xl bg-surface-raised border border-border-default text-primary font-semibold hover:bg-accent hover:text-white hover:border-accent transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           <span>Open Workspace</span>
           <ArrowRight className="w-4 h-4" />
+        </button>
+        <button
+          onClick={onOpenCapture}
+          className="w-full py-2.5 rounded-xl border border-border-default bg-surface text-secondary hover:text-primary hover:bg-surface-raised transition-colors text-sm font-medium shadow-sm"
+        >
+          Import JSON / Add Tasks
         </button>
       </div>
 
@@ -449,6 +458,7 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
 
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -752,6 +762,7 @@ export default function ProjectsPage() {
                     );
                   }
                 }}
+                onOpenCapture={() => setShowCapture(true)}
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center space-y-5 opacity-70">
@@ -784,6 +795,19 @@ export default function ProjectsPage() {
             setSelectedProject(p);
           }}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {showCapture && selectedProject && (
+        <QuickCapture
+          projects={projects.filter((p) => p.id === selectedProject.id)}
+          defaultProjectId={selectedProject.id}
+          onCreated={() => {
+            setShowCapture(false);
+            load();
+            showToast("Tasks imported successfully", "success");
+          }}
+          onClose={() => setShowCapture(false)}
         />
       )}
     </div>

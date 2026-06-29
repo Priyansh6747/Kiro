@@ -6,7 +6,7 @@ import {
   createProject,
   createTask,
   deleteTask,
-  ingestTasks,
+  batchIngestTasks,
   updateTask,
 } from "@/lib/api-client";
 import type { Project, ProjectType, Task, TaskStatus } from "@/lib/types";
@@ -486,7 +486,7 @@ export function QuickCapture({
         const schedDate = scheduleToday
           ? (defaultScheduledDate ?? todayUnixDay())
           : null;
-        const res = await ingestTasks({
+        const res = await batchIngestTasks({
           project_id: projectId,
           tasks: tasksData,
           scheduled_date: schedDate,

@@ -451,6 +451,18 @@ export async function createTask(data: Omit<NewTask, "id" | "createdAt" | "updat
   return task;
 }
 
+export async function batchCreateTasks(data: (Omit<NewTask, "id" | "createdAt" | "updatedAt"> & Partial<NewTask>)[]): Promise<Task[]> {
+  if (data.length === 0) return [];
+  const now = nowSec();
+  const values = data.map((d) => ({
+    ...d,
+    id: d.id || crypto.randomUUID(),
+    createdAt: d.createdAt || now,
+    updatedAt: d.updatedAt || now,
+  })) as NewTask[];
+  return db.insert(tasks).values(values).returning();
+}
+
 export async function updateTask(
   id: string,
   data: Partial<
@@ -634,6 +646,20 @@ export async function insertTaskClosureSelf(taskId: string): Promise<void> {
     .onConflictDoNothing();
 }
 
+export async function batchInsertTaskClosures(
+  data: { ancestorId: string; descendantId: string; depth: number }[],
+): Promise<void> {
+  if (data.length === 0) return;
+  
+  // SQLite has a limit on the number of variables in a single query (usually 32766 or 999).
+  // We can chunk the inserts just to be safe.
+  const chunkSize = 1000;
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+    await db.insert(taskClosure).values(chunk).onConflictDoNothing();
+  }
+}
+
 /**
  * Propagate all ancestors of `parentId` to `newTaskId` with depth + 1.
  * Run after inserting the self-reference.
@@ -696,6 +722,20 @@ export async function insertTaskDependency(
     .insert(taskDependencies)
     .values({ taskId, predecessorId, createdAt: nowSec() })
     .onConflictDoNothing();
+}
+
+export async function batchInsertTaskDependencies(
+  data: { taskId: string; predecessorId: string }[],
+): Promise<void> {
+  if (data.length === 0) return;
+  const now = nowSec();
+  const values = data.map((d) => ({ ...d, createdAt: now }));
+  
+  const chunkSize = 1000;
+  for (let i = 0; i < values.length; i += chunkSize) {
+    const chunk = values.slice(i, i + chunkSize);
+    await db.insert(taskDependencies).values(chunk).onConflictDoNothing();
+  }
 }
 
 export async function pullUnresolvedPredecessors(

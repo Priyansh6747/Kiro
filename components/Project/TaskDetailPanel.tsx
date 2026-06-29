@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatusBadge } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 import { updateTask } from "@/lib/api-client";
 import { formatTimestamp, type Task } from "@/lib/types";
+import { Pencil, X } from "lucide-react";
 
 export function TaskDetailPanel({
   task,
@@ -22,6 +23,22 @@ export function TaskDetailPanel({
   const [depPredId, setDepPredId] = useState("");
   const [addingDep, setAddingDep] = useState(false);
   const [depError, setDepError] = useState<string | null>(null);
+
+  const [isEditingDeadline, setIsEditingDeadline] = useState(false);
+  const [editDeadlineDate, setEditDeadlineDate] = useState(() =>
+    task.deadlineAt
+      ? new Date(task.deadlineAt * 1000).toISOString().split("T")[0]
+      : "",
+  );
+
+  useEffect(() => {
+    setEditDeadlineDate(
+      task.deadlineAt
+        ? new Date(task.deadlineAt * 1000).toISOString().split("T")[0]
+        : "",
+    );
+    setIsEditingDeadline(false);
+  }, [task]);
 
   const { showToast } = useToast();
 
@@ -54,6 +71,24 @@ export function TaskDetailPanel({
     }
   };
 
+  const handleSaveDeadline = async (dateStr: string) => {
+    let ts: number | null = null;
+    if (dateStr) {
+      const [year, month, day] = dateStr.split("-");
+      ts = Math.floor(
+        new Date(Number(year), Number(month) - 1, Number(day)).getTime() / 1000,
+      );
+    }
+    setEditDeadlineDate(dateStr);
+    try {
+      const updated = await updateTask(task.id, { deadline_at: ts });
+      onUpdated(updated);
+    } catch (e) {
+      showToast((e as Error).message, "error");
+    }
+    setIsEditingDeadline(false);
+  };
+
   return (
     <div className="p-4 space-y-4 overflow-y-auto">
       <div>
@@ -74,7 +109,34 @@ export function TaskDetailPanel({
         </div>
         <div>
           <p className="text-tertiary mb-0.5">Deadline</p>
-          <p className="font-medium">{formatTimestamp(task.deadlineAt)}</p>
+          {isEditingDeadline ? (
+            <div className="flex items-center gap-2 mt-0.5">
+              <input
+                type="date"
+                value={editDeadlineDate}
+                onChange={(e) => handleSaveDeadline(e.target.value)}
+                className="bg-surface-raised border border-border-strong rounded px-1.5 py-0.5 text-xs text-primary focus:outline-none focus:border-accent w-full"
+              />
+              <button
+                onClick={() => setIsEditingDeadline(false)}
+                className="p-0.5 rounded text-tertiary hover:text-primary shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div
+              className="flex items-center gap-1.5 group cursor-pointer -ml-1 p-1 rounded hover:bg-surface-raised transition-colors inline-flex"
+              onClick={() => setIsEditingDeadline(true)}
+            >
+              <span className="font-medium">
+                {task.deadlineAt ? formatTimestamp(task.deadlineAt) : "—"}
+              </span>
+              <div className="opacity-0 group-hover:opacity-100 text-tertiary transition-opacity">
+                <Pencil className="w-3 h-3" />
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <p className="text-tertiary mb-0.5">Created</p>

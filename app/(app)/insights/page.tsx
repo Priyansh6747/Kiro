@@ -6,7 +6,7 @@ import { InsightsSkeleton } from "@/components/skeletons";
 import { ErrorBanner } from "@/components/ui";
 import { listDayLogs, listProjects, listTasks, getTodayUsage } from "@/lib/api-client";
 import type { DayLog, Project, Task } from "@/lib/types";
-import { todayUnixDay } from "@/lib/types";
+import { todayUnixDay } from "@/lib/utils";
 
 export default function InsightsPage() {
   const [logs, setLogs] = useState<DayLog[]>([]);
@@ -24,7 +24,9 @@ export default function InsightsPage() {
     setLoading(true);
     setError(null);
     try {
-      const today = todayUnixDay();
+      const { getPreferences } = await import("@/lib/api-client");
+      const prefs = await getPreferences().catch(() => ({ timezone: "UTC" }));
+      const today = todayUnixDay(prefs.timezone);
       const from = today - days + 1;
       const [logData, projs, allTasksData, usageData] = await Promise.all([
         listDayLogs(from, today),

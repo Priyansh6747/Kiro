@@ -1,12 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import {
-  createTask,
+  batchCreateTasks,
+  batchInsertTaskClosures,
+  batchInsertTaskDependencies,
   findProjectById,
-  insertTaskClosureSelf,
-  propagateTaskClosure,
 } from "@/lib/storage";
 import { nowSec } from "@/lib/utils";
+import type { NewTask } from "@/lib/db/models";
 
 interface IngestTaskItem {
   id?: string;
@@ -108,17 +109,24 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
-  // ── Recursive Ingest & DB Insertions ──────────────────────────────────────
-  const createdTasks: any[] = [];
+  // ── In-Memory Construction for Batch Insert ────────────────────────────────
+  const tasksToInsert: (Omit<NewTask, "id" | "createdAt" | "updatedAt"> & Partial<NewTask>)[] = [];
+  const closuresToInsert: { ancestorId: string; descendantId: string; depth: number }[] = [];
+  const dependenciesToInsert: { taskId: string; predecessorId: string }[] = [];
+
   const idMap = new Map<string, string>(); // JSON id -> DB newTaskId
   const dependencyQueue: { taskId: string; dependsOn: string[] }[] = [];
+  
+  // Map to store ancestors for each task to build closures in-memory
+  const ancestorMap = new Map<string, { ancestorId: string; depth: number }[]>();
 
-  const insertImportedTasks = async (
+  const processImportedTasks = (
     list: IngestTaskItem[],
     parentId: string | null = null,
     inheritedDependsOn: string[] = [],
-  ): Promise<string[]> => {
+  ): string[] => {
     const createdIds: string[] = [];
+
     for (const item of list) {
       const now = nowSec();
       const newTaskId = crypto.randomUUID();
@@ -139,7 +147,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           ? item.estimate_min
           : 30;
 
-      const task = await createTask({
+      tasksToInsert.push({
         id: newTaskId,
         userId,
         projectId: project_id,
@@ -156,13 +164,25 @@ export async function POST(request: NextRequest): Promise<Response> {
         updatedAt: now,
       });
 
-      createdTasks.push(task);
-
-      await insertTaskClosureSelf(newTaskId);
+      // Closures
+      const selfClosure = { ancestorId: newTaskId, descendantId: newTaskId, depth: 0 };
+      closuresToInsert.push(selfClosure);
+      const myAncestors = [selfClosure];
 
       if (parentId) {
-        await propagateTaskClosure(newTaskId, parentId);
+        const parentAncestors = ancestorMap.get(parentId) || [];
+        for (const pa of parentAncestors) {
+          const closure = {
+            ancestorId: pa.ancestorId,
+            descendantId: newTaskId,
+            depth: pa.depth + 1,
+          };
+          closuresToInsert.push(closure);
+          myAncestors.push(closure);
+        }
       }
+      
+      ancestorMap.set(newTaskId, myAncestors);
 
       const itemDependsOn = item.depends_on || [];
       const combinedDependsOn = Array.from(
@@ -170,11 +190,10 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
 
       if (item.subtasks && Array.isArray(item.subtasks)) {
-        const subtaskIds = await insertImportedTasks(item.subtasks, newTaskId, combinedDependsOn);
-        // Add dependency: parent depends on subtasks
-        const { insertTaskDependency } = await import("@/lib/storage");
+        const subtaskIds = processImportedTasks(item.subtasks, newTaskId, combinedDependsOn);
+        // Parent task depends on all of its subtasks
         for (const subId of subtaskIds) {
-           await insertTaskDependency(newTaskId, subId);
+          dependenciesToInsert.push({ taskId: newTaskId, predecessorId: subId });
         }
       }
 
@@ -183,7 +202,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         idMap.set(item.id, newTaskId);
       }
 
-      // Keep track of dependencies to resolve after all insertions
+      // Keep track of dependencies to resolve after all processing
       if (combinedDependsOn.length > 0) {
         dependencyQueue.push({ taskId: newTaskId, dependsOn: combinedDependsOn });
       }
@@ -193,25 +212,29 @@ export async function POST(request: NextRequest): Promise<Response> {
   };
 
   try {
-    await insertImportedTasks(tasks as IngestTaskItem[]);
+    processImportedTasks(tasks as IngestTaskItem[]);
 
     // Resolve dependencies
-    const { insertTaskDependency } = await import("@/lib/storage");
     for (const { taskId, dependsOn } of dependencyQueue) {
       for (const depId of dependsOn) {
         const mappedId = idMap.get(depId);
         if (mappedId) {
-          await insertTaskDependency(taskId, mappedId);
+          dependenciesToInsert.push({ taskId, predecessorId: mappedId });
         }
       }
     }
 
-    return Response.json({ data: createdTasks }, { status: 201 });
+    // Perform batch insertions
+    await batchCreateTasks(tasksToInsert);
+    await batchInsertTaskClosures(closuresToInsert);
+    await batchInsertTaskDependencies(dependenciesToInsert);
+
+    return Response.json({ data: tasksToInsert }, { status: 201 });
   } catch (dbError) {
-    console.error("[JSON Ingest Error] Database insertion failed:", dbError);
+    console.error("[JSON Batch Ingest Error] Database insertion failed:", dbError);
     return Response.json(
       {
-        error: "Failed to import tasks due to a database error",
+        error: "Failed to batch import tasks due to a database error",
         details: dbError instanceof Error ? dbError.message : String(dbError),
       },
       { status: 500 },

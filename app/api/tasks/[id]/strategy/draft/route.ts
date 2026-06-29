@@ -23,8 +23,10 @@ export async function POST(
     errors.activeDays = "must be a non-empty array of days (1-7)";
   }
 
+  const { getOrCreatePreferences } = await import("@/lib/storage");
+  const prefs = await getOrCreatePreferences(userId);
   const preferredStartDate = Number(body.preferredStartDate);
-  const today = todayUnixDay();
+  const today = todayUnixDay(prefs.timezone);
   if (isNaN(preferredStartDate) || preferredStartDate < today) {
     errors.preferredStartDate = "must not be in the past";
   }
