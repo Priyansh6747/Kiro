@@ -1170,20 +1170,36 @@ export async function placeDayPlanBlock(
 
   if (hasOverlap) throw new OverlapConflictError();
 
-  await db
-    .insert(dayPlan)
-    .values({
-      userId,
-      taskId,
-      planDate,
-      startTime,
-      createdAt: nowSec(),
-      updatedAt: nowSec(),
-    })
-    .onConflictDoUpdate({
-      target: [dayPlan.userId, dayPlan.taskId],
-      set: { startTime, planDate, updatedAt: nowSec() },
-    });
+  await db.transaction(async (tx) => {
+    const existing = await tx
+      .select()
+      .from(dayPlan)
+      .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const e = existing[0];
+      await tx
+        .delete(dayPlan)
+        .where(and(eq(dayPlan.userId, userId), eq(dayPlan.taskId, taskId)));
+      
+      await tx.insert(dayPlan).values({
+        ...e,
+        planDate,
+        startTime,
+        updatedAt: nowSec(),
+      });
+    } else {
+      await tx.insert(dayPlan).values({
+        userId,
+        taskId,
+        planDate,
+        startTime,
+        createdAt: nowSec(),
+        updatedAt: nowSec(),
+      });
+    }
+  });
 }
 
 export async function listDayPlansForDate(

@@ -59,6 +59,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (msg === "Task not found") {
       return Response.json({ error: "Task not found" }, { status: 404 });
     }
+    
+    console.error("[POST /api/planner/day-plan] Unexpected error:", err);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
