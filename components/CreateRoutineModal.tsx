@@ -19,6 +19,7 @@ export function CreateRoutineModal({
   const [title, setTitle] = useState("");
   const [cadence, setCadence] = useState<"daily" | "weekly" | "custom">("daily");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [estimateMin, setEstimateMin] = useState<number>(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -28,6 +29,7 @@ export function CreateRoutineModal({
       setType(isHabit ? "habit" : "recurring");
       setTitle(isHabit ? editItem.name : editItem.title);
       setCadence(editItem.cadence || "daily");
+      setEstimateMin(editItem.estimateMin || 30);
       
       if (isHabit) {
         setSelectedDays(editItem.activeDays || []);
@@ -45,6 +47,7 @@ export function CreateRoutineModal({
       setTitle("");
       setCadence("daily");
       setSelectedDays([]);
+      setEstimateMin(30);
     }
   }, [editItem, isOpen]);
 
@@ -76,18 +79,18 @@ export function CreateRoutineModal({
       if (type === "habit") {
         const activeDays = cadence === "custom" ? selectedDays : null;
         if (editItem) {
-          await updateHabit(editItem.id, { name: title, cadence, activeDays });
+          await updateHabit(editItem.id, { name: title, cadence, activeDays, estimateMin });
         } else {
-          await createHabit({ name: title, cadence, activeDays, estimateMin: 30 });
+          await createHabit({ name: title, cadence, activeDays, estimateMin });
         }
       } else {
         const recurrenceRule = cadence === "custom" 
           ? selectedDays.map(d => DAYS.find(x => x.value === d)?.label.toUpperCase()).join(",") 
           : null;
         if (editItem) {
-          await updateRecurringTask(editItem.id, { title, cadence, recurrenceRule });
+          await updateRecurringTask(editItem.id, { title, cadence, recurrenceRule, estimateMin });
         } else {
-          await createRecurringTask({ title, cadence, activeDays: null, recurrenceRule, estimateMin: 30, projectId: null });
+          await createRecurringTask({ title, cadence, activeDays: null, recurrenceRule, estimateMin, projectId: null });
         }
       }
       showToast(`${type === "habit" ? "Habit" : "Recurring Task"} ${editItem ? "updated" : "created"}!`, "success");
@@ -148,6 +151,18 @@ export function CreateRoutineModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={type === "habit" ? "e.g. Drink 2L Water" : "e.g. Take out trash"}
+              className="w-full bg-surface-raised border border-border-subtle rounded-lg px-3 py-2 text-primary focus:outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Duration (minutes)</label>
+            <input
+              type="number"
+              min="1"
+              value={estimateMin || ""}
+              onChange={(e) => setEstimateMin(parseInt(e.target.value) || 0)}
               className="w-full bg-surface-raised border border-border-subtle rounded-lg px-3 py-2 text-primary focus:outline-none focus:border-accent"
               required
             />
