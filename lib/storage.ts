@@ -1179,6 +1179,11 @@ export async function checkOverlap(
       and(
         eq(dayPlan.userId, userId),
         eq(dayPlan.planDate, planDate),
+        // Only check tasks that are actually scheduled for this date and not deleted.
+        // Without this, ghost dayPlan entries from rescheduled/deleted tasks would
+        // silently block placements that the client correctly shows as available.
+        eq(tasks.scheduledDate, planDate),
+        isNull(tasks.deletedAt),
         excludeTaskId ? ne(dayPlan.taskId, excludeTaskId) : undefined,
       ),
     );

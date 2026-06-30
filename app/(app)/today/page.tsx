@@ -307,8 +307,6 @@ function TodayPageContent() {
   const handlePlaceBlock = async (taskId: string, startTime: number) => {
     if (!plan) return;
 
-    const prevDayPlans = [...plan.dayPlans];
-
     // 1. Optimistic Update
     setPlan((prev) => {
       if (!prev) return prev;
@@ -338,24 +336,22 @@ function TodayPageContent() {
         });
       }, 500);
     } catch (e) {
-      // 3. Error Blink & Revert
+      // 3. Error Blink & Refresh from server to avoid stale optimistic state
       showToast("Failed to place block: " + (e as Error).message, "error");
       setAnimatingTasksStatus((prev) => ({ ...prev, [taskId]: "error" }));
       setTimeout(() => {
-        setPlan((prev) => (prev ? { ...prev, dayPlans: prevDayPlans } : prev));
         setAnimatingTasksStatus((prev) => {
           const next = { ...prev };
           delete next[taskId];
           return next;
         });
+        load(); // Refresh from server — local prevDayPlans can be stale if multiple ops are in-flight
       }, 500);
     }
   };
 
   const handleUnplaceBlock = async (taskId: string) => {
     if (!plan) return;
-
-    const prevDayPlans = [...plan.dayPlans];
 
     // 1. Optimistic Update
     setPlan((prev) => {
@@ -381,15 +377,15 @@ function TodayPageContent() {
       }, 500);
     } catch (e) {
       showToast("Failed to remove block: " + (e as Error).message, "error");
-      // 3. Error Blink & Revert
+      // 3. Error Blink & Refresh from server
       setAnimatingTasksStatus((prev) => ({ ...prev, [taskId]: "error" }));
       setTimeout(() => {
-        setPlan((prev) => (prev ? { ...prev, dayPlans: prevDayPlans } : prev));
         setAnimatingTasksStatus((prev) => {
           const next = { ...prev };
           delete next[taskId];
           return next;
         });
+        load(); // Refresh from server — local prevDayPlans can be stale if multiple ops are in-flight
       }, 500);
     }
   };

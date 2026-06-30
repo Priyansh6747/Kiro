@@ -9,6 +9,7 @@ import {
   findProjectById,
   findTaskById,
   findTaskWithProject,
+  removeDayPlanBlock,
   softDeleteTask,
   syncDayLogStats,
   updateTask,
@@ -171,6 +172,12 @@ export async function PATCH(
       }
       updates.scheduledDate = scheduledDate;
     }
+    // Clean up dayPlan entry when a task moves to a different date or the bucket.
+    // Without this, the old placement becomes a ghost: invisible to the client
+    // but still blocking server-side overlap checks.
+    if (task.scheduledDate !== null) {
+      await removeDayPlanBlock(userId, task.id);
+    }
   }
 
   // ── deadline_at ────────────────────────────────────────────────────────────
@@ -250,6 +257,9 @@ export async function DELETE(
   if (task.scheduledDate !== null) {
     await syncDayLogStats(userId, task.scheduledDate);
   }
+
+  // Clean up any dayPlan entry for this task so it doesn't ghost-block the timeline.
+  await removeDayPlanBlock(userId, task.id);
 
   return Response.json({ data: "ok" });
 }
