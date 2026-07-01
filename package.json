@@ -16,6 +16,7 @@
     "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.17.4",
     "@tursodatabase/database": "^0.6.1",
+    "@vercel/analytics": "^2.0.1",
     "@xyflow/react": "^12.11.0",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",

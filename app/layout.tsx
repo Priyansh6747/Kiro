@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/hooks/useToast";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,10 +54,14 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-base text-primary">
         <ClerkProvider>
           <ThemeProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              {children}
+              <Analytics />
+            </ToastProvider>
           </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>
   );
 }
+
