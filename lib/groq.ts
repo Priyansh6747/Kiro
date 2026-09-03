@@ -5,8 +5,8 @@ import { eq, and } from "drizzle-orm";
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export const DEFAULT_GROQ_MODEL = "groq/compound";
-export const MAX_COMPLETION_TOKENS = 8192;
+export const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+export const MAX_COMPLETION_TOKENS = 65536;
 
 /**
  * Main function for demonstration.
