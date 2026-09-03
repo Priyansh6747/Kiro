@@ -5,6 +5,9 @@ import { eq, and } from "drizzle-orm";
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+export const DEFAULT_GROQ_MODEL = "groq/compound";
+export const MAX_COMPLETION_TOKENS = 8192;
+
 /**
  * Main function for demonstration.
  */
@@ -71,7 +74,7 @@ export async function executeWithQuota(userId: string | undefined, executeCall: 
   return completion;
 }
 
-export async function getGroqChatCompletion(prompt: string, maxTokens = 300, userId?: string) {
+export async function getGroqChatCompletion(prompt: string, maxTokens = MAX_COMPLETION_TOKENS, userId?: string) {
   return executeWithQuota(userId, () => groq.chat.completions.create({
     messages: [
       {
@@ -79,8 +82,8 @@ export async function getGroqChatCompletion(prompt: string, maxTokens = 300, use
         content: prompt,
       },
     ],
-    model: "openai/gpt-oss-120b",
-    max_tokens: maxTokens,
+    model: DEFAULT_GROQ_MODEL,
+    max_tokens: Math.min(maxTokens, MAX_COMPLETION_TOKENS),
   }));
 }
 
@@ -89,7 +92,7 @@ export async function getGroqChatCompletion(prompt: string, maxTokens = 300, use
  */
 export async function callGroq(
   prompt: string,
-  maxTokens = 300,
+  maxTokens = MAX_COMPLETION_TOKENS,
   userId?: string
 ): Promise<string> {
   const response = await getGroqChatCompletion(prompt, maxTokens, userId);
@@ -107,9 +110,9 @@ export async function groqChat(
 ) {
   return executeWithQuota(userId, () => groq.chat.completions.create({
     messages,
-    model: model || "llama-3.3-70b-versatile",
+    model: model || DEFAULT_GROQ_MODEL,
     tools,
     tool_choice: tools && tools.length > 0 ? "auto" : "none",
-    max_tokens: 4000,
+    max_tokens: MAX_COMPLETION_TOKENS,
   }));
 }

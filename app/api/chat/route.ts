@@ -472,7 +472,7 @@ Delegation Rule:
           responseMessage = lastMsg;
           messages.pop();
         } else {
-          response = await fetchGroqWithRetry(messages, requestTools, userId, "openai/gpt-oss-120b");
+          response = await fetchGroqWithRetry(messages, requestTools, userId);
           responseMessage = response.choices[0]?.message;
           debugInfo.firstLlmResponse = responseMessage;
         }
@@ -605,7 +605,7 @@ Delegation Rule:
           debugInfo.finalPrompt = JSON.parse(JSON.stringify(messages));
           debugInfo.newLlmCall = true;
 
-          response = await fetchGroqWithRetry(messages, requestTools, userId, "openai/gpt-oss-120b");
+          response = await fetchGroqWithRetry(messages, requestTools, userId);
           responseMessage = response.choices[0]?.message;
           iterations++;
         }
